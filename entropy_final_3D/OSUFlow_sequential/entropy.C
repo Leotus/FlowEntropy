@@ -24,7 +24,7 @@
 // ADD-BY-LEETEN 12/01/2009-END
 
 // ADD-BY-LEETEN 2009/11/10-BEGIN
-#include "../myinterface/FlowDiffusionCuda.h"
+#include "FlowDiffusion3DConfig.h"
 // ADD-BY-LEETEN 2009/11/10-END
 
 #if	0	// DEL-BY-LEETEN 12/01/2009-BEGIN
@@ -1882,33 +1882,35 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 			{
 				int idx=x+y*grid_res[0]+z*grid_res[0]*grid_res[1];
 
-				// ADD-BY-LEETEN 2009/11/25-BEGIN
-				if( x == 0 || x == grid_res[0]-1 ||
-					y == 0 || y == grid_res[1]-1 ||
-					z == 0 || z == grid_res[2]-1 )
-				{
-					float vx=vectors[idx*3+0];
-					float vy=vectors[idx*3+1];
-					float vz=vectors[idx*3+2];
-					//normalize
-					float len=sqrt(vx*vx+vy*vy+vz*vz);
-					if(len>0)
+				#if	0	// DEL-BY-LEETEN 12/07/2009-BEGIN
+					// ADD-BY-LEETEN 2009/11/25-BEGIN
+					if( x == 0 || x == grid_res[0]-1 ||
+						y == 0 || y == grid_res[1]-1 ||
+						z == 0 || z == grid_res[2]-1 )
 					{
-						vx=vx/len;	vy=vy/len; vz=vz/len;
+						float vx=vectors[idx*3+0];
+						float vy=vectors[idx*3+1];
+						float vz=vectors[idx*3+2];
+						//normalize
+						float len=sqrt(vx*vx+vy*vy+vz*vz);
+						if(len>0)
+						{
+							vx=vx/len;	vy=vy/len; vz=vz/len;
+						}
+						//rotate by 90 degree
+						//calc kx and ky
+						kx[idx]=vx;
+						ky[idx]=vy;
+						kz[idx]=vz;
+						//initial GVF  to kx ky
+						new_vectors[idx*3+0]=kx[idx];
+						new_vectors[idx*3+1]=ky[idx];
+						new_vectors[idx*3+2]=kz[idx];
+						donot_change[idx]=1;
 					}
-					//rotate by 90 degree
-					//calc kx and ky
-					kx[idx]=vx;
-					ky[idx]=vy;
-					kz[idx]=vz;
-					//initial GVF  to kx ky
-					new_vectors[idx*3+0]=kx[idx];
-					new_vectors[idx*3+1]=ky[idx];
-					new_vectors[idx*3+2]=kz[idx];
-					donot_change[idx]=1;
-				}
-				// ADD-BY-LEETEN 2009/11/25-END
-
+					// ADD-BY-LEETEN 2009/11/25-END
+				#endif	// DEL-BY-LEETEN 12/07/2009-END
+	
 				b[idx]=kx[idx]*kx[idx]+ky[idx]*ky[idx]+kz[idx]*kz[idx];
 				c1[idx]=b[idx]*kx[idx];
 				c2[idx]=b[idx]*ky[idx];
@@ -1941,7 +1943,11 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 
 	// ADD-BY-LEETEN 2009/11/23-BEGIN
 	#if	USE_CUDA	
-	_FlowFusion(
+	// MOD-BY-LEETEN 12/07/2009-FROM:
+		// _FlowFusion(
+	// TO:
+	_FlowDiffusion(
+	// MOD-BY-LEETEN 12/07/2009-END
 		mu, 
 		iter, 
 		grid_res[0], grid_res[1], grid_res[2],
@@ -1963,20 +1969,35 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 		//start iterations
 		//update the GVF
 //double dwStart = GetTickCount();
-
-		for(int z=1; z<grid_res[2]-1;z++)
-		{
-			for(int y=1; y<grid_res[1]-1;y++)
+		#if	0	// MOD-BY-LEETEN 12/07/2009-FROM:
+			for(int z=1; z<grid_res[2]-1;z++)
 			{
-				for(int x=1; x<grid_res[0]-1;x++)//cut boundary for now
+				for(int y=1; y<grid_res[1]-1;y++)
+				{
+					for(int x=1; x<grid_res[0]-1;x++)//cut boundary for now
+					{
+						int idx=x+y*grid_res[0]+z*grid_res[0]*grid_res[1]; 
+						int idx_1=x+1+y*grid_res[0]+z*grid_res[0]*grid_res[1]; 
+						int idx_2=x+(y+1)*grid_res[0]+z*grid_res[0]*grid_res[1]; 
+						int idx_3=x+y*grid_res[0]+(z+1)*grid_res[0]*grid_res[1]; 
+						int idx_4=x-1+y*grid_res[0]+z*grid_res[0]*grid_res[1]; 
+						int idx_5=x+(y-1)*grid_res[0]+z*grid_res[0]*grid_res[1]; 
+						int idx_6=x+y*grid_res[0]+(z-1)*grid_res[0]*grid_res[1]; 
+		#else	// MOD-BY-LEETEN 12/07/2009-TO:
+		for(int z=0; z<grid_res[2];z++)
+		{
+			for(int y=0; y<grid_res[1];y++)
+			{
+				for(int x=0; x<grid_res[0];x++)//cut boundary for now
 				{
 					int idx=x+y*grid_res[0]+z*grid_res[0]*grid_res[1]; 
-					int idx_1=x+1+y*grid_res[0]+z*grid_res[0]*grid_res[1]; 
-					int idx_2=x+(y+1)*grid_res[0]+z*grid_res[0]*grid_res[1]; 
-					int idx_3=x+y*grid_res[0]+(z+1)*grid_res[0]*grid_res[1]; 
-					int idx_4=x-1+y*grid_res[0]+z*grid_res[0]*grid_res[1]; 
-					int idx_5=x+(y-1)*grid_res[0]+z*grid_res[0]*grid_res[1]; 
-					int idx_6=x+y*grid_res[0]+(z-1)*grid_res[0]*grid_res[1]; 
+					int idx_1=min(x+1, grid_res[0]-1)+y*grid_res[0]+z*grid_res[0]*grid_res[1]; 
+					int idx_2=x+min(y+1, grid_res[1]-1)*grid_res[0]+z*grid_res[0]*grid_res[1]; 
+					int idx_3=x+y*grid_res[0]+min(z+1,grid_res[2]-1)*grid_res[0]*grid_res[1]; 
+					int idx_4=max(x-1, 0)+y*grid_res[0]+z*grid_res[0]*grid_res[1]; 
+					int idx_5=x+max(y-1, 0)*grid_res[0]+z*grid_res[0]*grid_res[1]; 
+					int idx_6=x+y*grid_res[0]+max(z-1, 0)*grid_res[0]*grid_res[1]; 
+		#endif	// MOD-BY-LEETEN 12/07/2009-END
 
 					tmp_new_vectors[idx*3+0]=	(1-b[idx])*new_vectors[idx*3+0]+
 												mu*(new_vectors[idx_1*3+0]+new_vectors[idx_2*3+0]+new_vectors[idx_3*3+0]+new_vectors[idx_4*3+0]+new_vectors[idx_5*3+0]+new_vectors[idx_6*3+0]
@@ -2009,7 +2030,9 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 				for(int x=0; x<grid_res[0];x++)
 				{
 					int idx=x+y*grid_res[0]+z*grid_res[0]*grid_res[1]; 
-					if(donot_change[idx]==0)
+					// DEL-BY-LEETEN 12/07/2009-BEGIN
+						// if(donot_change[idx]==0)
+					// DEL-BY-LEETEN 12/07/2009-END
 					{
 					new_vectors[idx*3+0]=tmp_new_vectors[idx*3+0];
 					new_vectors[idx*3+1]=tmp_new_vectors[idx*3+1];
@@ -2039,5 +2062,10 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.1.1.1  2009/12/05 21:31:08  leeten
+
+[12/04/2009]
+1. [1ST] First time checkin.
+
 
 */
