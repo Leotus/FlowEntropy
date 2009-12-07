@@ -25,20 +25,25 @@
 #include <list>
 #include <iterator>
 
-// ADD-BY-LEETEN 2009/11/10-BEGIN
-#include "../myinterface/FlowDiffusionCuda.h"
-// ADD-BY-LEETEN 2009/11/10-END
+#if	0	// MOD-BY-LEETEN 12/07/2009-FROM:
+	// ADD-BY-LEETEN 2009/11/10-BEGIN
+	#include "FlowDiffusionCuda.h"
+	// ADD-BY-LEETEN 2009/11/10-END
 
-// ADD-BY-LEETEN 12/01/2009-BEGIN
-#include "../myinterface/FlowDiffusion.h"
-// ADD-BY-LEETEN 12/01/2009-END
+	// ADD-BY-LEETEN 12/01/2009-BEGIN
+	#include "../myinterface/FlowDiffusion.h"
+	// ADD-BY-LEETEN 12/01/2009-END
 
-// ADD-BY-LEETEN 12/01/2009-BEGIN
-#include "cuda_macro.h"
+	// ADD-BY-LEETEN 12/01/2009-BEGIN
+	#include "cuda_macro.h"
 
-#define SHOW_COMPUTE_STREAMLINE_TIMING	1
-#define SHOW_SELECT_NEXT_SEED_3_TIMING	0
-// ADD-BY-LEETEN 12/01/2009-END
+	#define SHOW_COMPUTE_STREAMLINE_TIMING	1
+	#define SHOW_SELECT_NEXT_SEED_3_TIMING	0
+	// ADD-BY-LEETEN 12/01/2009-END
+#else	// MOD-BY-LEETEN 12/07/2009-TO:
+#include "FlowDiffusion3DConfig.h"	
+#endif	// MOD-BY-LEETEN 12/07/2009-END
+
 
 float* g_vectors=0;
 int g_grid_res[3];
@@ -2878,22 +2883,24 @@ void compute_streamlines_by_click_initialize()
 	new_vectors=new float[grid_res[0]*grid_res[1]*grid_res[2]*3];
 	memset(new_vectors,0,sizeof(float)*grid_res[0]*grid_res[1]*grid_res[2]*3);
 
-	//set boundary condition
-	for(int z=0;z<grid_res[2];z++)
-	for(int y=0;y<grid_res[1];y++)
-	for(int x=0;x<grid_res[0];x++)
-	{
-		if( x==0||x==grid_res[0]-1||
-			y==0||y==grid_res[1]-1||
-			z==0||z==grid_res[2]-1)
+	#if	0	// DEL-BY-LEETEN 12/07/2009-BEGIN
+		//set boundary condition
+		for(int z=0;z<grid_res[2];z++)
+		for(int y=0;y<grid_res[1];y++)
+		for(int x=0;x<grid_res[0];x++)
 		{
-			int idx=x+y*grid_res[0]+z*grid_res[0]*grid_res[1];
-			new_vectors[idx*3+0]=vectors[idx*3+0];
-			new_vectors[idx*3+1]=vectors[idx*3+1];
-			new_vectors[idx*3+2]=vectors[idx*3+2];
-			donot_change[idx]=1;
+			if( x==0||x==grid_res[0]-1||
+				y==0||y==grid_res[1]-1||
+				z==0||z==grid_res[2]-1)
+			{
+				int idx=x+y*grid_res[0]+z*grid_res[0]*grid_res[1];
+				new_vectors[idx*3+0]=vectors[idx*3+0];
+				new_vectors[idx*3+1]=vectors[idx*3+1];
+				new_vectors[idx*3+2]=vectors[idx*3+2];
+				donot_change[idx]=1;
+			}
 		}
-	}
+	#endif	// DEL-BY-LEETEN 12/07/2009-END
 	old_bin=new int [grid_res[0]*grid_res[1]*grid_res[2]];
 	new_bin=new int [grid_res[0]*grid_res[1]*grid_res[2]];
 	printf("calculate the bin number\n");
@@ -3235,22 +3242,24 @@ void compute_streamlines()
 	int selected_line_num=0;
 	// ADD-BY-LEETEN 12/01/2009-END
 
-	//set boundary condition
-	for(int z=0;z<grid_res[2];z++)
-	for(int y=0;y<grid_res[1];y++)
-	for(int x=0;x<grid_res[0];x++)
-	{
-		if( x==0||x==grid_res[0]-1||
-			y==0||y==grid_res[1]-1||
-			z==0||z==grid_res[2]-1)
+	#if	0 // DEL-BY-LEETEN 12/07/2009-BEGIN
+		//set boundary condition
+		for(int z=0;z<grid_res[2];z++)
+		for(int y=0;y<grid_res[1];y++)
+		for(int x=0;x<grid_res[0];x++)
 		{
-			int idx=x+y*grid_res[0]+z*grid_res[0]*grid_res[1];
-			new_vectors[idx*3+0]=vectors[idx*3+0];
-			new_vectors[idx*3+1]=vectors[idx*3+1];
-			new_vectors[idx*3+2]=vectors[idx*3+2];
-			donot_change[idx]=1;
+			if( x==0||x==grid_res[0]-1||
+				y==0||y==grid_res[1]-1||
+				z==0||z==grid_res[2]-1)
+			{
+				int idx=x+y*grid_res[0]+z*grid_res[0]*grid_res[1];
+				new_vectors[idx*3+0]=vectors[idx*3+0];
+				new_vectors[idx*3+1]=vectors[idx*3+1];
+				new_vectors[idx*3+2]=vectors[idx*3+2];
+				donot_change[idx]=1;
+			}
 		}
-	}
+	#endif	// DEL-BY-LEETEN 12/07/2009-END
 	
 	float entropy=9999;
 //	while(entropy>1)
@@ -3316,7 +3325,11 @@ void compute_streamlines()
 
 	// ADD-BY-LEETEN 2009/11/10-BEGIN
 	#if	USE_CUDA	
-	_FlowFusionInit(grid_res[0], grid_res[1], grid_res[2]);
+	// MOD-BY-LEETEN 12/07/2009-FROM:
+		// _FlowFusionInit(grid_res[0], grid_res[1], grid_res[2]);
+	// TO:
+	_FlowDiffusionInit(grid_res[0], grid_res[1], grid_res[2]);
+	// MOD-BY-LEETEN 12/07/2009-END
 	#endif
 	// ADD-BY-LEETEN 2009/11/10-END
 
@@ -3543,11 +3556,13 @@ CLOCK_PRINT(SHOW_COMPUTE_STREAMLINE_TIMING);
 	printf("\n Elapsed time to place seeds is %.3f milli-seconds.\n",dCompElapsed); 	
 	// ADD-BY-LEETEN 2009/11/25-END
 
-	// ADD-BY-LEETEN 2009/11/10-BEGIN
-	#if	USE_CUDA	
-	_FlowFusionFree();
-	#endif
-	// ADD-BY-LEETEN 2009/11/10-END
+	#if	0	// DEL-BY-LEETEN 12/07/2009-BEGIN
+		// ADD-BY-LEETEN 2009/11/10-BEGIN
+		#if	USE_CUDA	
+		_FlowFusionFree();
+		#endif
+		// ADD-BY-LEETEN 2009/11/10-END
+	#endif	// DEL-BY-LEETEN 12/07/2009-END
 
 	//dump_entrpy_every_point(Tree,entropy_every_point,grid_res,
 	//						 vectors, new_vectors, theta, phi, old_bin, new_bin,occupied);
@@ -3593,7 +3608,11 @@ CLOCK_PRINT(SHOW_COMPUTE_STREAMLINE_TIMING);
 	*/
 	// ADD-BY-LEETEN 2009/11/10-BEGIN
 	#if	USE_CUDA	
-	_FlowFusionFree();
+	// MOD-BY-LEETEN 12/07/2009-FROM:
+		// _FlowFusionFree();
+	// TO:
+	_FlowDiffusionFree();
+	// MOD-BY-LEETEN 12/07/2009-END
 	#endif
 	// ADD-BY-LEETEN 2009/11/10-END
 }
@@ -5215,5 +5234,10 @@ readPatches_region();
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.1.1.1  2009/12/05 21:31:08  leeten
+
+[12/04/2009]
+1. [1ST] First time checkin.
+
 
 */
