@@ -8,6 +8,7 @@
 #include "cuda_macro.h"
 
 #pragma comment (lib, "cutil32.lib ")      // link with my own library libfps
+
 #pragma comment (lib, "cudart.lib")      // link with my own library libfps
 
 #define MALLOC(p, type, size)\
@@ -31,6 +32,28 @@
 // ADD-BY-LEETEN 12/07/2009-END
 
 extern "C" {
+
+// ADD-BY-LEETEN 12/14/2009-BEGIN
+void 
+_FlowDiffusionSetAngleMap(int *piAngleMap, int iNrOfPhis, int iNrOfThetas);
+
+void 
+_GetSrcBinVolume(int *piBinVolume);
+
+void 
+_GetDstBinVolume(int *piBinVolume);
+
+void
+_ComputeSrcBinVolume
+(
+	int iVolumeWidth,
+	int iVolumeHeight,
+	int iVolumeDepth,
+	int iBlockZSize,
+	float *pfSrcVolume
+);
+
+// ADD-BY-LEETEN 12/14/2009-END
 
 void
 // MOD-BY-LEETEN 12/07/2009-FROM:
@@ -103,6 +126,11 @@ void _FlowDiffusionFree();
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.1.1.1  2009/12/07 20:04:02  leeten
+
+[12/07/2009]
+1. [1ST] First time checkin.
+
 Revision 1.3  2009/12/05 21:21:50  leeten
 
 [12/05/2009]
