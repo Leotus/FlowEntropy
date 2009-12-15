@@ -885,8 +885,8 @@ int get_bin_number_3D(VECTOR3 v, float* theta, float* phi)
 	// ADD-BY-LEETEN 12/01/2009-BEGIN
 	#else	// #if	!BIN_LOOKUP
 	static bool bIsAngleMapInitialized = false;
-	static const int iNrOfThetas = 720;
-	static const int iNrOfPhis = 360;
+	static const int iNrOfThetas = 1440;
+	static const int iNrOfPhis = 720;
 	static const double dNrOfThetas = double(iNrOfThetas);
 	static const double dNrOfPhis	= double(iNrOfPhis);
 	static int	piAngleMap[iNrOfThetas][iNrOfPhis];
@@ -989,6 +989,32 @@ void UpdateOccupied(list<vtListSeedTrace*> lines, int* occupied,int* grid_res)
 
 	
 }
+
+// ADD-BY-LEETEN 12/14/2009-BEGIN
+
+static bool bIsCalcRelativeEntropy6Initialized = false;
+
+static int *histo_puv;
+static int *histo_pv;
+static int *histo_pu;
+static float* puv;
+static float* pu;
+static float* pv;
+static float* entropy_tmp;
+
+void 
+calcRelativeEntropy6Free()
+{
+	FREE(puv);
+	FREE(pv);
+	FREE(histo_puv);
+	FREE(histo_pv);
+	FREE(entropy_tmp);
+	FREE(histo_pu);
+	FREE(pu);
+}
+// ADD-BY-LEETEN 12/14/2009-END
+
 float calcRelativeEntropy6( float* vectors,float* new_vectors, int* grid_res, VECTOR3 startpt,VECTOR3 endpt,
 						   float* theta, float* phi,
 						   int* old_bin, int* new_bin,int* occupied)
@@ -997,9 +1023,18 @@ float calcRelativeEntropy6( float* vectors,float* new_vectors, int* grid_res, VE
 	float penalty=0;
 
 	//start calc p(u|v)
-	int *histo_puv=new int[binnum*binnum];
-	int *histo_pv=new int[binnum];
-	int *histo_pu=new int[binnum];
+	#if	0	// MOD-BY-LEETEN 12/14/2009-FROM:
+		int *histo_puv=new int[binnum*binnum];
+		int *histo_pv=new int[binnum];
+		int *histo_pu=new int[binnum];
+	#else	// MOD-BY-LEETEN 12/14/2009-TO:
+	if( !bIsCalcRelativeEntropy6Initialized )
+	{
+		MALLOC(histo_puv,	int, binnum*binnum);
+		MALLOC(histo_pv,	int, binnum);
+		MALLOC(histo_pu,	int, binnum);
+	}
+	#endif	// MOD-BY-LEETEN 12/14/2009-END
 	memset(histo_puv,0,sizeof(int)*binnum*binnum);
 	memset(histo_pv,0,sizeof(int)*binnum);
 	memset(histo_pu,0,sizeof(int)*binnum);
@@ -1055,16 +1090,44 @@ float calcRelativeEntropy6( float* vectors,float* new_vectors, int* grid_res, VE
 		}
 	}
 	//calc probs.
-	float* puv=new float[binnum*binnum];
-	float* pu=new float[binnum];
-	float* pv=new float[binnum];
+	#if	0	// MOD-BY-LEETEN 12/14/2009-FROM:
+		float* puv=new float[binnum*binnum];
+		float* pu=new float[binnum];
+		float* pv=new float[binnum];
+	#else	// MOD-BY-LEETEN 12/14/2009-TO:
+	if( !bIsCalcRelativeEntropy6Initialized )
+	{
+		MALLOC(puv,	float, binnum*binnum);
+		MALLOC(pu,	float, binnum);
+		MALLOC(pv,	float, binnum);
+	}
+	memset(puv, 0, sizeof(float)*binnum*binnum);
+	memset(pu, 0, sizeof(float)*binnum);
+	memset(pv, 0, sizeof(float)*binnum);
+	#endif	// MOD-BY-LEETEN 12/14/2009-END
 
 	int total_num=0;
 	for(int i=0; i<binnum*binnum; i++)
 		total_num+=histo_puv[i];
 
 	//H(x|y=a)
-	float* entropy_tmp=new float[binnum];
+	// MOD-BY-LEETEN 12/14/2009-FROM:
+		// float* entropy_tmp=new float[binnum];
+	// TO: 
+	if( !bIsCalcRelativeEntropy6Initialized )
+	{
+		MALLOC(entropy_tmp, float, binnum);
+	}
+	memset(entropy_tmp, 0, sizeof(float)*binnum);
+	// MOD-BY-LEETEN 12/14/2009-END
+
+	// ADD-BY-LEETEN 12/14/2009-BEGIN
+	if( !bIsCalcRelativeEntropy6Initialized )
+	{
+		atexit(calcRelativeEntropy6Free);
+		bIsCalcRelativeEntropy6Initialized = true;
+	}
+	// ADD-BY-LEETEN 12/14/2009-END
 
 	for(int y=0; y<binnum; y++)
 	{
@@ -1113,15 +1176,17 @@ float calcRelativeEntropy6( float* vectors,float* new_vectors, int* grid_res, VE
 //	if(tmp_entropy>0)
 //	entropy=entropy/tmp_entropy;
 
-	delete [] puv;
-	delete [] pv;
-	delete [] histo_puv;
-	delete [] histo_pv;
-	delete [] entropy_tmp;
-	// ADD-BY-LEETEN 2009/11/25-BEGIN
-	delete [] histo_pu;
-	delete [] pu;
-	// ADD-BY-LEETEN 2009/11/25-END
+	#if	0	// DEL-BY-LEETEN 12/14/2009-BEGIN
+		delete [] puv;
+		delete [] pv;
+		delete [] histo_puv;
+		delete [] histo_pv;
+		delete [] entropy_tmp;
+		// ADD-BY-LEETEN 2009/11/25-BEGIN
+		delete [] histo_pu;
+		delete [] pu;
+		// ADD-BY-LEETEN 2009/11/25-END
+	#endif	// MOD-BY-LEETEN 12/14/2009-END
 	return entropy;
 
 }
@@ -1882,8 +1947,12 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 			{
 				int idx=x+y*grid_res[0]+z*grid_res[0]*grid_res[1];
 
-				#if	0	// DEL-BY-LEETEN 12/07/2009-BEGIN
-					// ADD-BY-LEETEN 2009/11/25-BEGIN
+				// MOD-BY-LEETEN 12/14/2009-FROM:
+					// #if	0	// DEL-BY-LEETEN 12/07/2009-BEGIN
+				// TO:
+				#if	KEEP_BOUNDARY
+				// MOD-BY-LEETEN 12/14/2009-END
+				// ADD-BY-LEETEN 2009/11/25-BEGIN
 					if( x == 0 || x == grid_res[0]-1 ||
 						y == 0 || y == grid_res[1]-1 ||
 						z == 0 || z == grid_res[2]-1 )
@@ -1909,8 +1978,12 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 						donot_change[idx]=1;
 					}
 					// ADD-BY-LEETEN 2009/11/25-END
-				#endif	// DEL-BY-LEETEN 12/07/2009-END
-	
+				// MOD-BY-LEETEN 12/14/2009-FROM:
+					// #endif	// DEL-BY-LEETEN 12/07/2009-END
+				// TO:
+				#endif	// #if	KEEP_BOUNDARY
+				// MOD-BY-LEETEN 12/14/2009-END
+
 				b[idx]=kx[idx]*kx[idx]+ky[idx]*ky[idx]+kz[idx]*kz[idx];
 				c1[idx]=b[idx]*kx[idx];
 				c2[idx]=b[idx]*ky[idx];
@@ -2062,6 +2135,12 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.2  2009/12/07 20:08:01  leeten
+
+[12/07/2009]
+1. [MOD] Use the new API from the library FlowDiffusionCudaLib.
+2. [MOD] Not to initilize boundary condition; instead, apply diffusion over the whole field.
+
 Revision 1.1.1.1  2009/12/05 21:31:08  leeten
 
 [12/04/2009]
