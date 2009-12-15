@@ -12,11 +12,22 @@
 
 	#include "cuda_macro.h"
 
+	// ADD-BY-LEETEN 12/14/2009-BEGIN
+	#include "liblog.h"
+	using namespace std;
+
+	#define	M_PI	3.1415926535897932384626433832795f
+	// ADD-BY-LEETEN 12/14/2009-END
+
 	#include "libbuf.h"
 
 ////////////////////////////////////////////
 	#define PRINT_FLOW_FUSION_TIMING	1
 	#define USE_SHARED_MEMORY			0
+
+	// ADD-BY-LEETEN 12/14/2009-BEGIN
+	#define SHOW_COMPUTE_SRC_BIN_VOLUME_TIMING	1	
+	// ADD-BY-LEETEN 12/14/2009-END
 
 	// ADD-BY-LEETEN 11/04/2009-BEGIN
 						// if this preprocessor is non zero, the volume is scanned via a for loop on the host
@@ -52,6 +63,21 @@
 	static cudaPitchedPtr cErrorVolume_device;
 	static cudaPitchedPtr cErrorSum_device;
 	// ADD-BY-LEETEN 2009/11/25-END
+
+	// ADD-BY-LEETEN 12/14/2009-BEGIN
+	int iNrOfVoxels;
+
+	static texture<int, 2, cudaReadModeElementType> t2dAngleMap;
+	static cudaArray *pcAngleMap_array;	// cuda array to hold the Gaussian kernels
+
+	static cudaExtent cBinVolumeExtent;
+	static cudaPitchedPtr cSrcBinVolumePtr_global;
+	static cudaPitchedPtr cDstBinVolumePtr_global;
+	static int *piSrcAngleBinVolume_host;
+	static int *piDstAngleBinVolume_host;
+
+	static texture<float4, 2, cudaReadModeElementType> t2dBinVolumeSrc;
+	// ADD-BY-LEETEN 12/14/2009-END
 
 // ADD-BY-LEETEN 12/07/2009-BEGIN
 __global__ 
@@ -113,6 +139,65 @@ _FlowDiffusion2D_kernel
 
 // ADD-BY-LEETEN 12/07/2009-END
 
+// ADD-BY-LEETEN 12/14/2009-BEGIN
+__global__ 
+static 
+void 
+// MOD-BY-LEETEN 12/07/2009-FROM:
+	// _FlowFusion_kernel
+// TO:
+_Vector3DToVolume_kernel
+// MOD-BY-LEETEN 12/07/2009-END
+(
+	int iVolumeWidth,
+	int iVolumeHeight,
+	int iVolumeDepth,
+
+	int iNrOfYBlocks,
+	int iBlockZSize,
+
+	// texture<float4, 2, cudaReadModeElementType> t2dSrc,
+	cudaPitchedPtr cBinVolumePtr_global
+)
+{
+ 	int iVoxelX = blockIdx.x * blockDim.x + threadIdx.x;
+	int iVoxelY = (blockIdx.y % iNrOfYBlocks) * blockDim.y + threadIdx.y;
+	int iBeginZ = (blockIdx.y / iNrOfYBlocks) * iBlockZSize;
+	int iEndZ = min(iBeginZ + iBlockZSize, iVolumeDepth);
+
+	for(int z = iBeginZ; z < iEndZ; z++)
+	{
+		float4 f4Vector = tex2D(t2dBinVolumeSrc, iVoxelX,		iVoxelY + z				* iVolumeHeight);;
+		
+		float fLength	= sqrt(f4Vector.x * f4Vector.x + f4Vector.y * f4Vector.y + f4Vector.z * f4Vector.z);
+		float fTheta	= 0.0f;
+		float fPhi		= 0.0f;
+		int iBin = 0;
+
+		if( 0 < fLength )
+		{
+			f4Vector.x /= fLength;
+			f4Vector.y /= fLength;
+			f4Vector.z /= fLength;
+			fTheta = ( 0.0f == f4Vector.x && 0.0f == f4Vector.y )?0.0f:(M_PI+(atan2(f4Vector.y, f4Vector.x)));
+			fTheta /= 2.0f * M_PI;
+
+			float fLength2D = sqrt(f4Vector.x * f4Vector.x + f4Vector.y * f4Vector.y);
+			fPhi = ((0.0f == fLength2D)&&(0.0f == f4Vector.z))?0.0f:fabs(M_PI/2.0f-(atan2(f4Vector.z, fLength2D)));
+			fPhi /= M_PI;
+			iBin = tex2D(t2dAngleMap, fPhi, fTheta);
+		}
+
+		if( iVoxelX < iVolumeWidth && iVoxelY < iVolumeHeight )
+		{
+			*ADDRESS_2D(
+				int,			cBinVolumePtr_global.ptr, 
+				sizeof(int),	cBinVolumePtr_global.pitch, 
+				iVoxelX, iVoxelY + z * iVolumeHeight) = iBin;
+		}
+	}
+}
+// ADD-BY-LEETEN 12/14/2009-END
 
 ////////////////////////////////////////////
 __global__ 
@@ -204,19 +289,19 @@ _FlowDiffusion3D_kernel
 			else
 		#endif	// DEL-BY-LEETEN 12/07/2009-END
 
-			#if	0	// MOD-BY-LEETEN 12/07/2009-FROM:
-				f4Result = make_float4(
-					f4WeightOffset.w * f4Value.x + (f4PX.x + f4NX.x + f4PY.x + f4NY.x + f4PZ.x + f4NZ.x - 6.0f * f4Value.x) * fAttenuationDividedBy6 + f4WeightOffset.x,
-					f4WeightOffset.w * f4Value.y + (f4PX.y + f4NX.y + f4PY.y + f4NY.y + f4PZ.y + f4NZ.y - 6.0f * f4Value.y) * fAttenuationDividedBy6 + f4WeightOffset.y,
-					f4WeightOffset.w * f4Value.z + (f4PX.z + f4NX.z + f4PY.z + f4NY.z + f4PZ.z + f4NZ.z - 6.0f * f4Value.z) * fAttenuationDividedBy6 + f4WeightOffset.z,
-					0);
-			#else	// MOD-BY-LEETEN 12/07/2009-TO:
+		#if	0	// MOD-BY-LEETEN 12/07/2009-FROM:
 			f4Result = make_float4(
-				f4WeightOffset.w * f4Value.x + (f4PX.x + f4NX.x + f4PY.x + f4NY.x + f4PZ.x + f4NZ.x - 6.0f * f4Value.x) * fAttenuation + f4WeightOffset.x,
-				f4WeightOffset.w * f4Value.y + (f4PX.y + f4NX.y + f4PY.y + f4NY.y + f4PZ.y + f4NZ.y - 6.0f * f4Value.y) * fAttenuation + f4WeightOffset.y,
-				f4WeightOffset.w * f4Value.z + (f4PX.z + f4NX.z + f4PY.z + f4NY.z + f4PZ.z + f4NZ.z - 6.0f * f4Value.z) * fAttenuation + f4WeightOffset.z,
+				f4WeightOffset.w * f4Value.x + (f4PX.x + f4NX.x + f4PY.x + f4NY.x + f4PZ.x + f4NZ.x - 6.0f * f4Value.x) * fAttenuationDividedBy6 + f4WeightOffset.x,
+				f4WeightOffset.w * f4Value.y + (f4PX.y + f4NX.y + f4PY.y + f4NY.y + f4PZ.y + f4NZ.y - 6.0f * f4Value.y) * fAttenuationDividedBy6 + f4WeightOffset.y,
+				f4WeightOffset.w * f4Value.z + (f4PX.z + f4NX.z + f4PY.z + f4NY.z + f4PZ.z + f4NZ.z - 6.0f * f4Value.z) * fAttenuationDividedBy6 + f4WeightOffset.z,
 				0);
-			#endif	// MOD-BY-LEETEN 12/07/2009-END
+		#else	// MOD-BY-LEETEN 12/07/2009-TO:
+		f4Result = make_float4(
+			f4WeightOffset.w * f4Value.x + (f4PX.x + f4NX.x + f4PY.x + f4NY.x + f4PZ.x + f4NZ.x - 6.0f * f4Value.x) * fAttenuation + f4WeightOffset.x,
+			f4WeightOffset.w * f4Value.y + (f4PX.y + f4NX.y + f4PY.y + f4NY.y + f4PZ.y + f4NZ.y - 6.0f * f4Value.y) * fAttenuation + f4WeightOffset.y,
+			f4WeightOffset.w * f4Value.z + (f4PX.z + f4NX.z + f4PY.z + f4NY.z + f4PZ.z + f4NZ.z - 6.0f * f4Value.z) * fAttenuation + f4WeightOffset.z,
+			0);
+		#endif	// MOD-BY-LEETEN 12/07/2009-END
 
 		if( iVoxelX < iVolumeWidth && iVoxelY < iVolumeHeight )
 		{
@@ -318,7 +403,7 @@ _FlowDiffusion3D_kernel
 					f4WeightOffset.w * f4Value.x + (f4PX.x + f4NX.x + f4PY.x + f4NY.x + f4PZ.x + f4NZ.x - 6.0f * f4Value.x) * fAttenuation + f4WeightOffset.x,
 					f4WeightOffset.w * f4Value.y + (f4PX.y + f4NX.y + f4PY.y + f4NY.y + f4PZ.y + f4NZ.y - 6.0f * f4Value.y) * fAttenuation + f4WeightOffset.y,
 					f4WeightOffset.w * f4Value.z + (f4PX.z + f4NX.z + f4PY.z + f4NY.z + f4PZ.z + f4NZ.z - 6.0f * f4Value.z) * fAttenuation + f4WeightOffset.z,
-					0);
+					0.0);
 				#endif	// MOD-BY-LEETEN 12/07/2009-END
 			#endif	// MOD-BY-LEETEN 2009/11/10-TO:
 
@@ -376,6 +461,15 @@ _FlowDiffusionFree()
 	cudppDestroyPlan(cScanplan);
 	#endif	// #if	USE_CUDPP
 	// ADD-BY-LEETEN 2009/11/25-END
+
+	// ADD-BY-LEETEN 12/14/2009-BEGIN
+	FREE_ARRAY(pcAngleMap_array);	
+
+	FREE_MEMORY(cSrcBinVolumePtr_global.ptr);
+	FREE_MEMORY(cDstBinVolumePtr_global.ptr);
+	FREE_MEMORY_ON_HOST(piSrcAngleBinVolume_host);
+	FREE_MEMORY_ON_HOST(piDstAngleBinVolume_host);
+	// ADD-BY-LEETEN 12/14/2009-END
 }
 
 void
@@ -392,10 +486,15 @@ _FlowDiffusionInit(
 	// MOD-BY-LEETEN 12/07/2009-FROM:
 		// CLOCK_INIT(PRINT_FLOW_FUSION_TIMING, "_FlowFusionInit(): ");
 	// TO:
-	CLOCK_INIT(PRINT_FLOW_FUSION_TIMING, __FUNCTION__);
+	CLOCK_INIT(PRINT_FLOW_FUSION_TIMING, __FUNCTION__ ": ");
 	// MOD-BY-LEETEN 12/07/2009-END
 
-	int iNrOfVoxels = iVolumeWidth * iVolumeHeight * iVolumeDepth;
+	// MOD-BY-LEETEN 12/14/2009-FROM:
+		// int iNrOfVoxels = iVolumeWidth * iVolumeHeight * iVolumeDepth;
+	// TO:
+	iNrOfVoxels = iVolumeWidth * iVolumeHeight * iVolumeDepth;
+	// MOD-BY-LEETEN 12/14/2009-END
+
 	cVolumeExtent	= make_cudaExtent(
 		iVolumeWidth * sizeof(float4),
 		iVolumeHeight,
@@ -460,6 +559,196 @@ _FlowDiffusionInit(
 	CLOCK_PRINT(PRINT_FLOW_FUSION_TIMING);
 }
 
+// ADD-BY-LEETEN 12/14/2009-BEGIN
+void 
+_FlowDiffusionSetAngleMap(int *piAngleMap, int iNrOfPhis, int iNrOfThetas)
+{
+	// allocate an array on the GPU side
+
+	// upload the angle map to the araray
+
+	// setup the texture for the angle map
+	/*
+    t2dAngleMap.addressMode[0] =	cudaAddressModeClamp;
+    t2dAngleMap.addressMode[1] =	cudaAddressModeClamp;
+    t2dAngleMap.filterMode =		cudaFilterModePoint;
+    t2dAngleMap.normalized =		true;
+	*/
+	SETUP_ARRAY(pcAngleMap_array, iNrOfPhis, iNrOfThetas, 32, 0, 0, 0, cudaChannelFormatKindSigned);	
+	BIND_ARRAY_AS_TEXTURE(
+		t2dAngleMap, pcAngleMap_array, 
+		cudaAddressModeClamp, cudaAddressModeClamp, cudaFilterModePoint, true);	
+
+    CUDA_SAFE_CALL( 
+		cudaMemcpy2DToArray(
+			pcAngleMap_array, 
+			0, 
+			0, 
+			(void*)piAngleMap, 
+			iNrOfPhis * sizeof(piAngleMap), 
+			iNrOfPhis * sizeof(piAngleMap), 
+			iNrOfThetas, 
+			cudaMemcpyHostToDevice) );
+
+	// check whether the volume extent has been setup
+	assert( NULL != pcVolumePtrs_global[0].ptr );
+
+	// allocate the volume of bins in the global memorty on GPUs
+	cBinVolumeExtent	= make_cudaExtent(
+		cVolumeExtent_array.width * sizeof(int),
+		cVolumeExtent_array.height,
+		cVolumeExtent_array.depth);
+	CUDA_SAFE_CALL( 
+		cudaMalloc3D(&cSrcBinVolumePtr_global, cBinVolumeExtent) );
+	CUDA_SAFE_CALL( 
+		cudaMalloc3D(&cDstBinVolumePtr_global, cBinVolumeExtent) );
+
+	// allocate the volume of bins in the host side
+	CUDA_SAFE_CALL(
+		cudaMallocHost(
+			(void**)&piSrcAngleBinVolume_host,
+			sizeof(piSrcAngleBinVolume_host[0]) * iNrOfVoxels) );
+
+	CUDA_SAFE_CALL(
+		cudaMallocHost(
+			(void**)&piDstAngleBinVolume_host,
+			sizeof(piDstAngleBinVolume_host[0]) * iNrOfVoxels) );
+
+	// setup the src. texture for bin lookup
+	t2dBinVolumeSrc.addressMode[0] = cudaAddressModeClamp;
+	t2dBinVolumeSrc.addressMode[1] = cudaAddressModeClamp;
+	t2dBinVolumeSrc.filterMode =	cudaFilterModePoint;
+	t2dBinVolumeSrc.normalized =	false;
+}
+
+void
+_Vector3DToVolume(
+	int iVolumeWidth,
+	int iVolumeHeight,
+	int iVolumeDepth,
+	int iBlockZSize,
+	cudaPitchedPtr cVolumePtr_global,	// input
+	cudaPitchedPtr cBinVolumePtr_global	// output
+)
+{
+	CUDA_SAFE_CALL_NO_SYNC(
+		cudaBindTexture2D(
+			0, 
+			t2dBinVolumeSrc, 
+			cVolumePtr_global.ptr, 
+			cudaCreateChannelDesc<float4>(),
+			iVolumeWidth, 
+			iVolumeHeight * iVolumeDepth, 
+			cVolumePtr_global.pitch) );
+
+	dim3 v3Blk = dim3(BLOCK_DIM_X, BLOCK_DIM_Y);
+	dim3 v3Grid = dim3(
+		(unsigned int)ceilf((float)iVolumeWidth	 / (float)v3Blk.x),
+		unsigned int(ceilf( float(iVolumeHeight) / float(v3Blk.y) ) ) *
+		unsigned int(ceilf( float(iVolumeDepth) /  float(iBlockZSize) ) ) );
+
+	_Vector3DToVolume_kernel<<<v3Grid, v3Blk, 0>>>
+	(
+		iVolumeWidth,
+		iVolumeHeight,
+		iVolumeDepth,
+		int(ceilf(float(iVolumeHeight) / float(BLOCK_DIM_Y))),
+		iBlockZSize,
+		cBinVolumePtr_global
+	);
+	CUT_CHECK_ERROR("_Vector3DToVolume_kernel() failed");
+}
+
+void
+_ComputeSrcBinVolume
+(
+	int iVolumeWidth,
+	int iVolumeHeight,
+	int iVolumeDepth,
+	int iBlockZSize,
+	float *pfSrcVolume
+)
+{
+	CLOCK_INIT(SHOW_COMPUTE_SRC_BIN_VOLUME_TIMING, __FUNCTION__ ": ");
+
+	CLOCK_BEGIN(SHOW_COMPUTE_SRC_BIN_VOLUME_TIMING);
+	for(int v = 0,		d = 0; d < iVolumeDepth;	d++)
+		for(int			h = 0; h < iVolumeHeight;	h++)
+			for(int		w = 0; w < iVolumeWidth;	w++, v++)
+			{
+				pf4Volume_host[v].x = pfSrcVolume[v * 3 + 0];
+				pf4Volume_host[v].y = pfSrcVolume[v * 3 + 1];
+				pf4Volume_host[v].z = pfSrcVolume[v * 3 + 2];
+				pf4Volume_host[v].w = 0.0f;
+			}
+	CLOCK_END(SHOW_COMPUTE_SRC_BIN_VOLUME_TIMING, false);
+
+	CLOCK_BEGIN(SHOW_COMPUTE_SRC_BIN_VOLUME_TIMING);
+    cudaMemcpy3DParms cCopyParamsHostToDevice = {0};
+
+    cCopyParamsHostToDevice.srcPtr   = make_cudaPitchedPtr(
+		(void*)pf4Volume_host, 
+		cVolumeExtent.width, 
+		iVolumeWidth * sizeof(float4), 
+		iVolumeHeight);
+    cCopyParamsHostToDevice.dstPtr		= pcVolumePtrs_global[0];
+    cCopyParamsHostToDevice.extent		= cVolumeExtent;
+    cCopyParamsHostToDevice.kind		= cudaMemcpyHostToDevice;
+    CUDA_SAFE_CALL( cudaMemcpy3D(&cCopyParamsHostToDevice) );  
+
+	CLOCK_END(SHOW_COMPUTE_SRC_BIN_VOLUME_TIMING, false);
+
+	CLOCK_BEGIN(SHOW_COMPUTE_SRC_BIN_VOLUME_TIMING);
+	_Vector3DToVolume(
+		iVolumeWidth,
+		iVolumeHeight,
+		iVolumeDepth,
+		iBlockZSize,
+		pcVolumePtrs_global[0],
+		cSrcBinVolumePtr_global);
+	CLOCK_END(SHOW_COMPUTE_SRC_BIN_VOLUME_TIMING, false);
+
+	CLOCK_PRINT(SHOW_COMPUTE_SRC_BIN_VOLUME_TIMING);
+}
+
+void 
+_GetSrcBinVolume(int *piBinVolume)
+{
+	cudaMemcpy3DParms cCopyParamsDeviceToHost = {0};
+	cCopyParamsDeviceToHost.srcPtr		= cSrcBinVolumePtr_global;
+	cCopyParamsDeviceToHost.dstPtr		= make_cudaPitchedPtr(
+		(void*)piSrcAngleBinVolume_host, 
+		cVolumeExtent_array.width * sizeof(int),	// cSrcBinVolumePtr_global.width, 
+		cVolumeExtent_array.width * sizeof(int), 
+		cVolumeExtent_array.height);
+	cCopyParamsDeviceToHost.extent		= cBinVolumeExtent;
+	cCopyParamsDeviceToHost.kind		= cudaMemcpyDeviceToHost;
+
+	CUDA_SAFE_CALL( cudaMemcpy3D(&cCopyParamsDeviceToHost) );  
+
+	memcpy(piBinVolume, piSrcAngleBinVolume_host, sizeof(piBinVolume) * iNrOfVoxels);
+}
+
+void 
+_GetDstBinVolume(int *piBinVolume)
+{
+	cudaMemcpy3DParms cCopyParamsDeviceToHost = {0};
+	cCopyParamsDeviceToHost.srcPtr		= cDstBinVolumePtr_global;
+	cCopyParamsDeviceToHost.dstPtr		= make_cudaPitchedPtr(
+		(void*)piDstAngleBinVolume_host, 
+		cVolumeExtent_array.width * sizeof(int),	// cDstBinVolumePtr_global.width, 
+		cVolumeExtent_array.width * sizeof(int), 
+		cVolumeExtent_array.height);
+	cCopyParamsDeviceToHost.extent		= cBinVolumeExtent;
+	cCopyParamsDeviceToHost.kind		= cudaMemcpyDeviceToHost;
+
+	CUDA_SAFE_CALL( cudaMemcpy3D(&cCopyParamsDeviceToHost) );  
+
+	memcpy(piBinVolume, piDstAngleBinVolume_host, sizeof(piBinVolume) * iNrOfVoxels);
+}
+
+// ADD-BY-LEETEN 12/14/2009-END
+
 void
 // MOD-BY-LEETEN 12/07/2009-FROM:
 	// _FlowFusion(
@@ -492,7 +781,10 @@ _FlowDiffusion(
 	// MOD-BY-LEETEN 12/07/2009-FROM:
 		// CLOCK_INIT(PRINT_FLOW_FUSION_TIMING, "_FlowFusion(): ");
 	// TO:
-	CLOCK_INIT(PRINT_FLOW_FUSION_TIMING, __FUNCTION__);
+	// MOD-BY-LEETEN 12/14/2009-FROM:
+		// CLOCK_INIT(PRINT_FLOW_FUSION_TIMING, __FUNCTION__);
+	// TO:
+	CLOCK_INIT(PRINT_FLOW_FUSION_TIMING, __FUNCTION__ ": ");
 	// MOD-BY-LEETEN 12/07/2009-END
 
 	#if	0	// DEL-BY-LEETEN 12/07/2009-BEGIN
@@ -615,6 +907,7 @@ _FlowDiffusion(
     t2dSrc.normalized =		false;
 
 	int iSrc = 0;
+
 	for(int i = 0; 
 			i < iNrOfIterations; 
 			i++,				iSrc = 1 - iSrc)
@@ -634,6 +927,7 @@ _FlowDiffusion(
 				iVolumeHeight * iVolumeDepth, 
 				pcVolumePtrs_global[iSrc].pitch) );
 
+
 		// ADD-BY-LEETEN 12/07/2009-BEGIN
 		if( iVolumeDepth <= 2 )
 			_FlowDiffusion2D_kernel<<<v3Grid, v3Blk, 0>>>
@@ -647,7 +941,6 @@ _FlowDiffusion(
 		else
 		{
 		// ADD-BY-LEETEN 12/07/2009-END
-
 
 		// launch the kernel to compute the diffusion operator for 1 iteration
 		// MOD-BY-LEETEN 11/04/2009-FROM:
@@ -736,6 +1029,21 @@ _FlowDiffusion(
 		// ADD-BY-LEETEN 2009/11/25-END
 
 	}
+
+	// ADD-BY-LEETEN 12/14/2009-BEGIN
+	if( iVolumeDepth > 2 )
+	{
+		_Vector3DToVolume(
+			iVolumeWidth,
+			iVolumeHeight,
+			iVolumeDepth,
+			iBlockZSize,
+			pcVolumePtrs_global[iSrc],
+			cDstBinVolumePtr_global);
+			// piDstAngleBinVolume_host);
+	}
+	// ADD-BY-LEETEN 12/14/2009-END
+
 	CLOCK_END(PRINT_FLOW_FUSION_TIMING, true);
 
 	int iDst = iSrc;
@@ -860,6 +1168,11 @@ _FlowDiffusion(
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.1.1.1  2009/12/07 20:04:02  leeten
+
+[12/07/2009]
+1. [1ST] First time checkin.
+
 Revision 1.3  2009/12/05 21:19:51  leeten
 
 [12/05/2009]
