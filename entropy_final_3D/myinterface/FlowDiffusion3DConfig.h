@@ -1,13 +1,18 @@
 #ifndef __FLOW_DIFFUSION_CUDA_H__
 #define	__FLOW_DIFFUSION_CUDA_H__
 
-#define USE_CUDA			0
+#define USE_CUDA			1
 #define ENTER_GLUT_LOOP		1
 #define BIN_LOOKUP			1
 
+// ADD-BY-LEETEN 12/14/2009-BEGIN
+#define BIN_LOOKUP_ON_GPU	0
+#define KEEP_BOUNDARY		1
+// ADD-BY-LEETEN 12/14/2009-END
+
 #define NR_OF_STREAMLINES	30
 
-#define SCALE_SIZE			3
+#define SCALE_SIZE			3.0
 
 #define SHOW_COMPUTE_STREAMLINE_TIMING	1
 #define SHOW_SELECT_NEXT_SEED_3_TIMING	0
@@ -47,6 +52,11 @@
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.1  2009/12/07 20:16:04  leeten
+
+[12/07/2009]
+1. [1ST] First time checkin.
+
 Revision 1.1.1.1  2009/12/05 21:31:07  leeten
 
 [12/04/2009]
