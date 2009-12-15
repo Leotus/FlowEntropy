@@ -3280,12 +3280,18 @@ void compute_streamlines()
 	MALLOC(new_bin, int, grid_res[0]*grid_res[1]*grid_res[2]);
 	#endif	// MOD-BY-LEETEN 2009/11/25-END
 
+	// ADD-BY-LEETEN 12/14/2009-BEGIN
+	#if	!BIN_LOOKUP_ON_GPU		
+	// ADD-BY-LEETEN 12/14/2009-END
 	for(int i=0;i<grid_res[0]*grid_res[1]*grid_res[2];i++)
 	{
 		VECTOR3 orif;
 		orif.Set(vectors[i*3+0],vectors[i*3+1],vectors[i*3+2]);
 		old_bin[i]=get_bin_number_3D(orif,theta, phi);
 	}
+	// ADD-BY-LEETEN 12/14/2009-BEGIN
+	#endif						
+	// ADD-BY-LEETEN 12/14/2009-END
 	//dumphistogram(old_bin,grid_res, 360,0);
 
 	//used to check entropy
@@ -3330,6 +3336,42 @@ void compute_streamlines()
 	// TO:
 	_FlowDiffusionInit(grid_res[0], grid_res[1], grid_res[2]);
 	// MOD-BY-LEETEN 12/07/2009-END
+
+	// ADD-BY-LEETEN 12/14/2009-BEGIN
+	int get_bin_by_angle(float mytheta, float myphi, int binnum, float* theta, float* phi);
+
+	static const int iNrOfThetas = 720;
+	static const int iNrOfPhis = 360;
+	static const double dNrOfThetas = double(iNrOfThetas);
+	static const double dNrOfPhis	= double(iNrOfPhis);
+	static int	ppiAngleMap[iNrOfThetas][iNrOfPhis];
+	for(int t = 0; t < iNrOfThetas; t++)
+		for(int p = 0; p < iNrOfPhis; p++)
+		{
+			float fTheta =	M_PI * 2.0f * float(t) / float(iNrOfThetas);
+			float fPhi =	M_PI * float(p) / float(iNrOfPhis);
+			int iBin = get_bin_by_angle(fTheta, fPhi, binnum, theta, phi);
+			if( iBin >= 0 )
+				ppiAngleMap[t][p] = iBin;
+		}
+
+	_FlowDiffusionSetAngleMap(&ppiAngleMap[0][0], iNrOfPhis, iNrOfThetas);
+	// ADD-BY-LEETEN 12/14/2009-END
+
+	// ADD-BY-LEETEN 12/14/2009-BEGIN
+	#if	BIN_LOOKUP_ON_GPU	
+	_ComputeSrcBinVolume
+	(
+		grid_res[0],
+		grid_res[1],
+		grid_res[2],
+		16,
+		vectors
+	);
+	_GetSrcBinVolume(old_bin);
+	#endif	
+	// ADD-BY-LEETEN 12/14/2009-END
+
 	#endif
 	// ADD-BY-LEETEN 2009/11/10-END
 
@@ -3442,6 +3484,10 @@ CLOCK_END(	SHOW_COMPUTE_STREAMLINE_TIMING, true);
 CLOCK_BEGIN(SHOW_COMPUTE_STREAMLINE_TIMING);
 // ADD-BY-LEETEN 12/01/2009-END
 
+	// ADD-BY-LEETEN 12/14/2009-BEGIN
+	#if	!BIN_LOOKUP_ON_GPU
+	// ADD-BY-LEETEN 12/14/2009-END
+
 	//printf("calculate the bin number\r");
 	for(int i=0;i<grid_res[0]*grid_res[1]*grid_res[2];i++)
 	{
@@ -3457,6 +3503,12 @@ CLOCK_BEGIN(SHOW_COMPUTE_STREAMLINE_TIMING);
 			new_bin[i]=get_bin_number_3D(newf,theta, phi);
 	}
 	
+	// ADD-BY-LEETEN 12/14/2009-BEGIN
+	#else	//	#if	!BIN_LOOKUP_ON_GPU
+	_GetDstBinVolume(new_bin);
+	#endif	//	#if	!BIN_LOOKUP_ON_GPU
+	// ADD-BY-LEETEN 12/14/2009-END
+
 // ADD-BY-LEETEN 12/01/2009-BEGIN
 CLOCK_END(	SHOW_COMPUTE_STREAMLINE_TIMING, true);
 
@@ -5234,6 +5286,11 @@ readPatches_region();
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.2  2009/12/07 20:08:15  leeten
+
+[12/07/2009]
+1. [MOD] Use the new API from the library FlowDiffusionCudaLib.
+
 Revision 1.1.1.1  2009/12/05 21:31:08  leeten
 
 [12/04/2009]
