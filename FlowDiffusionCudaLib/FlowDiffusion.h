@@ -5,6 +5,11 @@
 #define _USE_MATH_DEFINES	1
 #include <math.h>
 
+// ADD-BY-LEETEN 12/07/2009-BEGIN
+#include "cudpp/cudpp.h"
+#pragma comment (lib, "cudpp32.lib")
+// ADD-BY-LEETEN 12/07/2009-END
+
 #include "cuda_macro.h"
 
 #pragma comment (lib, "cutil32.lib ")      // link with my own library libfps
@@ -126,6 +131,11 @@ void _FlowDiffusionFree();
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.2  2009/12/15 20:00:20  leeten
+
+[12/15/2009]
+1. [ADD] Declare new functions _FlowDiffusionSetAngleMap(), _GetSrcBinVolume(), _GetDstBinVolume() and _ComputeSrcBinVolume().
+
 Revision 1.1.1.1  2009/12/07 20:04:02  leeten
 
 [12/07/2009]
