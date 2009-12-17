@@ -156,6 +156,10 @@
 				RelativePath=".\FlowDiffusion.h"
 				>
 			</File>
+			<File
+				RelativePath=".\FlowDiffusion_cuda.h"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Resource Files"
@@ -164,6 +168,28 @@
 			>
 		</Filter>
 		<File
+			RelativePath=".\EntropyField_kernel.cu"
+			>
+			<FileConfiguration
+				Name="Debug|Win32"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+					CommandLine=""
+					Outputs=""
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Release|Win32"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+					CommandLine=""
+					Outputs=""
+				/>
+			</FileConfiguration>
+		</File>
+		<File
 			RelativePath=".\FlowDiffusion.cu"
 			>
 			<FileConfiguration
@@ -171,7 +197,7 @@
 				>
 				<Tool
 					Name="VCCustomBuildTool"
-					CommandLine="&quot;$(CUDA_BIN_PATH)\nvcc.exe&quot; -ccbin &quot;$(VCInstallDir)bin&quot; -c -D_DEBUG -DWIN32 -D_CONSOLE -D_MBCS -Xcompiler /EHsc,/W3,/nologo,/Wp64,/Od,/Zi,/RTC1,/MDd -o $(ConfigurationName)\$(InputName).obj $(InputPath)"
+					CommandLine="&quot;$(CUDA_BIN_PATH)\nvcc.exe&quot; -ccbin &quot;$(VCInstallDir)bin&quot; -c -arch sm_11 -D_DEBUG -DWIN32 -D_CONSOLE -D_MBCS -Xcompiler /EHsc,/W3,/nologo,/Wp64,/Od,/Zi,/RTC1,/MDd -o $(ConfigurationName)\$(InputName).obj $(InputPath)&#x0D;&#x0A;"
 					Outputs="$(ConfigurationName)\$(InputName).obj"
 				/>
 			</FileConfiguration>
@@ -180,10 +206,18 @@
 				>
 				<Tool
 					Name="VCCustomBuildTool"
-					CommandLine="&quot;$(CUDA_BIN_PATH)\nvcc.exe&quot; -keep -ccbin &quot;$(VCInstallDir)bin&quot; -c -D_DEBUG -DWIN32 -D_CONSOLE -D_MBCS -Xcompiler /EHsc,/W3,/nologo,/Wp64,/O2,/Zi,/MD -o $(ConfigurationName)\$(InputName).obj $(InputPath)"
+					CommandLine="&quot;$(CUDA_BIN_PATH)\nvcc.exe&quot; -ccbin &quot;$(VCInstallDir)bin&quot; -c -arch sm_11 -D_DEBUG -DWIN32 -D_CONSOLE -D_MBCS -Xcompiler /EHsc,/W3,/nologo,/Wp64,/O2,/Zi,/MD -o $(ConfigurationName)\$(InputName).obj $(InputPath)&#x0D;&#x0A;"
 					Outputs="$(ConfigurationName)\$(InputName).obj"
 				/>
 			</FileConfiguration>
+		</File>
+		<File
+			RelativePath=".\FlowDiffusion2D_kernel.cu"
+			>
+		</File>
+		<File
+			RelativePath=".\FlowDiffusion3D_kernel.cu"
+			>
 		</File>
 		<File
 			RelativePath=".\ReadMe.txt"
