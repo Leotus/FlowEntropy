@@ -70,6 +70,7 @@
 	static texture<float4, 2, cudaReadModeElementType> t2dVectorVolume;
 	// ADD-BY-LEETEN 12/14/2009-END
 
+////////////////////////////////////////////
 // ADD-BY-LEETEN 12/07/2009-BEGIN
 #if	0	// MOD-BY-LEETEN 2009/12/17-FROM:
 #else	// MOD-BY-LEETEN 2009/12/17-TO:
@@ -86,932 +87,44 @@
 
 #include "EntropyField_kernel.cu"
 
-__host__
-static 
-int 
-IMirrorCoord_host(int iCoord, int iSize)
-{
-	int iMirroredCoord = iCoord;
-	if( iCoord < 0 )
-		iMirroredCoord = -iCoord;
-	if( iCoord > iSize - 1 )
-		iMirroredCoord = iSize - (iCoord - (iSize - 1));
-	return iMirroredCoord;
-}
-
-static 
-void 
-_UpdateSliceToHistogram_host
-(
-	int iU,
-	int iV,
-
-	int3 i3Center, 
-	int	iUpdateDir, 
-	int iHisotgramOp, 
-
-	int3 i3UDir, 
-	int3 i3VDir,
-	int iUKernelSize, 
-	int iVKernelSize,
-
-	int3 i3VolumeSize,
-	int *piBinVolume_host,
-
-	int iNrOfBins,
-	int *piHistorgram_host
-)
-{
-	int3 i3Point;
-	i3Point.x = i3Center.x + (iU - iUKernelSize) * i3UDir.x + (iV - iVKernelSize) * i3VDir.x;
-	i3Point.y = i3Center.y + (iU - iUKernelSize) * i3UDir.y + (iV - iVKernelSize) * i3VDir.y;
-	i3Point.z = i3Center.z + (iU - iUKernelSize) * i3UDir.z + (iV - iVKernelSize) * i3VDir.z;
-
-	// read the bin
-	int3 i3TexCoord;
-	i3TexCoord.x = IMirrorCoord_host(i3Point.x, i3VolumeSize.x);
-	i3TexCoord.y = IMirrorCoord_host(i3Point.y, i3VolumeSize.y);
-	i3TexCoord.z = IMirrorCoord_host(i3Point.z, i3VolumeSize.z);
-
-	int iSrcBin = piBinVolume_host[i3TexCoord.x + i3TexCoord.y * i3VolumeSize.x + i3TexCoord.z * i3VolumeSize.x * i3VolumeSize.y];
-
-	// update the histogram
-	piHistorgram_host[iSrcBin] += iHisotgramOp; 
-}
-
-static 
-void
-_BuildHistogram_host
-(
-	int3 i3Center,
-						// res. of the neighboring region
-	int3 i3KernelSize,	
-						// the bin volume
-	int3 i3VolumeSize,	
-	int *piBinVolume_host,								
-						// res. of the joint histogram
-	int iNrOfBins,		
-	int *piHistorgram_host
-)
-{
-	int3 i3Point = i3Center;
-	i3Point.x -= i3KernelSize.x;
-	for(int			xi = 0; xi < 2 * i3KernelSize.x + 1; xi++, i3Point.x++)
-		for(int		iV = 0; iV < 2 * i3KernelSize.z + 1; iV++)
-			for(int iU = 0; iU < 2 * i3KernelSize.y + 1; iU++)
-				_UpdateSliceToHistogram_host(
-					iU,
-					iV,
-
-					i3Point , 
-					UPDATE_DIR_X, 
-					HISTOGRAM_OP_ADD_SLICE, 
-
-					make_int3(0, 1, 0), 
-					make_int3(0, 0, 1),
-					i3KernelSize.y, 
-					i3KernelSize.z,
-
-					i3VolumeSize,
-					piBinVolume_host,
-
-					iNrOfBins,
-					piHistorgram_host
-				);
-}
-
-static 
-void 
-_UpdateSliceToHistogram_host
-(
-	int3 i3Point,										// the coordinate to be computed
-
-	int iUpdateDir, 
-	int iDir,
-
-	int3 i3KernelSize,	// res. of the neighboring region
-
-	int3 i3VolumeSize,	// res. of the volume
-	int *piBinVolume_host,								
-
-
-	int iNrOfBins,		// res. of the joint histogram
-	int *piHistogram_host
-)
-{
-	int3 i3Prev = i3Point;
-	int3 i3Next = i3Point;
-	int3 i3UDir;
-	int3 i3VDir;
-	int iUKernelSize ;
-	int iVKernelSize ;
-
-						// according the direction to divide the new slice into blocks
-	switch(iUpdateDir)
-	{
-	case UPDATE_DIR_X:	
-		i3UDir = make_int3(0, 1, 0);
-		i3VDir = make_int3(0, 0, 1);
-		iUKernelSize = i3KernelSize.y;
-		iVKernelSize = i3KernelSize.z;
-		i3Prev.x -= iDir * (i3KernelSize.x + 1);
-		i3Next.x += iDir * i3KernelSize.x;
-		break;
-	case UPDATE_DIR_Y:	
-		i3UDir = make_int3(1, 0, 0);
-		i3VDir = make_int3(0, 0, 1);
-		iUKernelSize = i3KernelSize.x;
-		iVKernelSize = i3KernelSize.z;
-		i3Prev.y -= iDir * (i3KernelSize.y + 1);
-		i3Next.y += iDir * i3KernelSize.y;
-		break;
-	case UPDATE_DIR_Z:	
-		i3UDir = make_int3(1, 0, 0);
-		i3VDir = make_int3(0, 1, 0);
-		iUKernelSize = i3KernelSize.x;
-		iVKernelSize = i3KernelSize.y;
-		i3Prev.z -= iDir * (i3KernelSize.z + 1);
-		i3Next.z += iDir * i3KernelSize.z;
-		break;
-	} // switch
-
-	for(int		iV = 0; iV < 2 * iVKernelSize + 1; iV++)
-		for(int iU = 0; iU < 2 * iUKernelSize + 1; iU++)
-		{
-			_UpdateSliceToHistogram_host
-			(
-				iU,
-				iV,
-
-				i3Next, 
-				iUpdateDir, 
-				HISTOGRAM_OP_ADD_SLICE, 
-
-				i3UDir, 
-				i3VDir,
-				iUKernelSize, 
-				iVKernelSize,
-
-				i3VolumeSize,
-				piBinVolume_host,
-
-				iNrOfBins,
-				piHistogram_host
-			);
-
-			_UpdateSliceToHistogram_host
-			(
-				iU,
-				iV,
-
-				i3Prev, 
-				iUpdateDir, 
-				HISTOGRAM_OP_SUB_SLICE, 
-
-				i3UDir, 
-				i3VDir,
-				iUKernelSize, 
-				iVKernelSize,
-
-				i3VolumeSize,
-				piBinVolume_host,
-
-				iNrOfBins,
-				piHistogram_host
-			);
-		}
-}
-
-static 
-void
-_ComputeEntropy_host
-(
-	int3 i3Point,
-	int3 i3KernelSize,
-
-						// the histogram
-	int iNrOfBins,
-	int *piHistogram_host,
-
-	int3 i3VolumeSize,
-	// MOD-BY-LEETEN 12/19/2009-FROM:
-		// cudaPitchedPtr cEntropyVolume_pitched
-	// TO:
-	float* pfEntropyVolume_host
-	// MOD-BY-LEETEN 12/19/2009-END
-)
-{
-	float fEntropy = 0.0f;
-	for(int b = 0; b < iNrOfBins; b++)
-	{
-		if( 0 == piHistogram_host[b] )
-			continue;
-
-		float fProb = 
-			float(piHistogram_host[b]) / 
-			float(
-				(2 * i3KernelSize.x + 1) * 
-				(2 * i3KernelSize.y + 1) * 
-				(2 * i3KernelSize.z + 1) );
-		fEntropy += fProb * log2f(fProb);
-	}
-	fEntropy = -fEntropy;
-	// ADD-BY-LEETEN 12/19/2009-BEGIN
-	fEntropy = max(fEntropy, 0.0f);
-	// ADD-BY-LEETEN 12/19/2009-END
-
-	// fprintf(stderr, "Entropy(%d, %d, %d) = %f\n", i3Point.x, i3Point.y, i3Point.z, fEntropy); // TEST-DEBUG
-
-	#if	0	// MOD-BY-LEETEN 12/19/2009-FROM:
-		CUDA_SAFE_CALL(
-			cudaMemcpy(
-				ADDRESS_2D(
-					float, cEntropyVolume_pitched.ptr, 
-					sizeof(float), cEntropyVolume_pitched.pitch, 
-					i3Point.x, i3Point.y + i3Point.z * i3VolumeSize.y),
-				&fEntropy,
-				sizeof(fEntropy),
-				cudaMemcpyHostToDevice) );
-	#else	// MOD-BY-LEETEN 12/19/2009-TO:
-	pfEntropyVolume_host[i3Point.x + i3Point.y * i3VolumeSize.x + i3Point.z * i3VolumeSize.x * i3VolumeSize.y] = fEntropy;
-	#endif	// MOD-BY-LEETEN 12/19/2009-END
-}
-
-// ADD-BY-LEETEN 12/18/2009-BEGIN
-
-void 
-_ComputeEntropyVolumeWithSorting_cuda
-(
-						// res. of the neighboring region
-	int3 i3KernelSize,
-
-						// the histogram
-	int iNrOfBins,
-	int *piHistogram_global,
-	float *pfLogHistogram_global,
-
-						// res. of the volume																
-	int3 i3VolumeSize,	
-						// bin volume																	
-	cudaPitchedPtr		cBinVolume_pitched,								
-	cudaPitchedPtr		cEntropyVolume_pitched
-)
-{
-CLOCK_INIT(_ComputeEntropyVolume_PRINT_TIMING, __FUNCTION__ ": ");
-
-CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_TIMING);
-	const int iNrOfRows = (2 * i3KernelSize.x + 1) * (2 * i3KernelSize.y + 1) * (2 * i3KernelSize.z + 1);
-
-	dim3 v3Blk = dim3(BLOCK_DIM_X, BLOCK_DIM_Y);
-	/*
-	const unsigned int iMaxMemorySpace = MAX_MEMORY_SIZE;
-	int iMaxNrOfBlocks = int(floorf(
-		float(iMaxMemorySpace/2) / 
-		float(sizeof(int) * iNrOfRows * v3Blk.x * v3Blk.y)));
-	*/
-	int iNrOfXBlocks = int(ceilf(float(i3VolumeSize.x) / float(v3Blk.x)));
-	#if	0	// MOD-BY-LEETEN 12/19/2009-FROM:
-		int iNrOfZBlocks = int(ceilf(float(i3VolumeSize.z) / float(v3Blk.y)));
-		int iMaxNrOfThreads = int(floor(double(1<<(RADIX_SORT_BITS-1)) / double(iNrOfBins)));
-		int iMaxNrOfBlocks	= int(floorf(float(iMaxNrOfThreads) / float(v3Blk.x * v3Blk.y)));
-		iMaxNrOfBlocks = min(iMaxNrOfBlocks, iNrOfXBlocks * iNrOfZBlocks);
-		iNrOfXBlocks = min(iNrOfXBlocks, iMaxNrOfBlocks);
-		iNrOfZBlocks = int(ceilf(float(iMaxNrOfBlocks) / float(iNrOfXBlocks)));
-		dim3 v3Grid = dim3(iNrOfXBlocks, iNrOfZBlocks);
-	#else	// MOD-BY-LEETEN 12/19/2009-TO:
-	int iNrOfYBlocks = int(ceilf(float(i3VolumeSize.y) / float(v3Blk.y)));
-	int iMaxNrOfThreads = int(floor(double(1<<(RADIX_SORT_BITS-1)) / double(iNrOfBins)));
-	int iMaxNrOfBlocks	= int(floorf(float(iMaxNrOfThreads) / float(v3Blk.x * v3Blk.y)));
-	iMaxNrOfBlocks = min(iMaxNrOfBlocks, iNrOfXBlocks * iNrOfYBlocks);
-	iNrOfXBlocks = min(iNrOfXBlocks, iMaxNrOfBlocks);
-	iNrOfYBlocks = int(ceilf(float(iMaxNrOfBlocks) / float(iNrOfXBlocks)));
-	dim3 v3Grid = dim3(iNrOfXBlocks, iNrOfYBlocks);
-	#endif	// MOD-BY-LEETEN 12/19/2009-END
-
-	fprintf(stderr, "#BLOCKS = %d x %d\n", v3Grid.x, v3Grid.y);
-
-	cudaPitchedPtr cActiveVoxelNeighbors_pitched;
-	cActiveVoxelNeighbors_pitched.xsize = v3Grid.x * v3Grid.y * v3Blk.x * v3Blk.y;
-	cActiveVoxelNeighbors_pitched.ysize = iNrOfRows;
-	CUDA_SAFE_CALL_NO_SYNC(
-		cudaMallocPitch(
-			(void**)&cActiveVoxelNeighbors_pitched.ptr, 
-			&cActiveVoxelNeighbors_pitched.pitch,
-			cActiveVoxelNeighbors_pitched.xsize * sizeof(int), 
-			cActiveVoxelNeighbors_pitched.ysize)	);
-
-	CUDA_SAFE_CALL_NO_SYNC(
-		cudaMemset2D(
-			cActiveVoxelNeighbors_pitched.ptr, 
-			cActiveVoxelNeighbors_pitched.pitch,
-			0, 
-			cActiveVoxelNeighbors_pitched.xsize * sizeof(int), 
-			cActiveVoxelNeighbors_pitched.ysize)	);
-
-	cudaPitchedPtr cActiveVoxelSortedNeighbors_pitched = cActiveVoxelNeighbors_pitched;
-	CUDA_SAFE_CALL_NO_SYNC(
-		cudaMallocPitch(
-			(void**)&cActiveVoxelSortedNeighbors_pitched.ptr, 
-			&cActiveVoxelSortedNeighbors_pitched.pitch,
-			cActiveVoxelSortedNeighbors_pitched.xsize * sizeof(int), 
-			cActiveVoxelSortedNeighbors_pitched.ysize)	);
-
-	// bind the input vin volume to the texture that represents the src. bin volume 
-	t2dSrcBinVolume.addressMode[0] = cudaAddressModeClamp;
-	t2dSrcBinVolume.addressMode[1] = cudaAddressModeClamp;
-	t2dSrcBinVolume.filterMode =	cudaFilterModePoint;
-	t2dSrcBinVolume.normalized =	false;
-	CUDA_SAFE_CALL_NO_SYNC(
-		cudaBindTexture2D(
-			0, 
-			t2dSrcBinVolume, 
-			cBinVolume_pitched.ptr, 
-			cudaCreateChannelDesc<int>(),
-			cVolumeExtent_array.width, 
-			cVolumeExtent_array.height * cVolumeExtent_array.depth, 
-			cBinVolume_pitched.pitch) );
-
-	// bind the histogram as a texture
-	#if	0	// MOD-BY-LEETEN 12/18/2009-FROM:
-		t1dActiveVoxelSortedNeighbors.addressMode[0] = cudaAddressModeClamp;
-		t1dActiveVoxelSortedNeighbors.filterMode =	cudaFilterModePoint;
-		t1dActiveVoxelSortedNeighbors.normalized =	false;
-
-		CUDA_SAFE_CALL_NO_SYNC(
-			cudaBindTexture(
-				0, 
-				t1dActiveVoxelSortedNeighbors, 
-				cActiveVoxelSortedNeighbors_pitched.ptr, 
-				cudaCreateChannelDesc<unsigned int>(),
-				// cudaCreateChannelDesc(32, 0, 0, 0, cudaChannelFormatKindUnsigned),
-				cActiveVoxelSortedNeighbors_pitched.pitch * cActiveVoxelSortedNeighbors_pitched.ysize) );
-	#else	// MOD-BY-LEETEN 12/18/2009-TO:
-	t2dActiveVoxelSortedNeighbors.addressMode[0] = cudaAddressModeClamp;
-	t2dActiveVoxelSortedNeighbors.addressMode[1] = cudaAddressModeClamp;
-	t2dActiveVoxelSortedNeighbors.filterMode =	cudaFilterModePoint;
-	t2dActiveVoxelSortedNeighbors.normalized =	false;
-
-	CUDA_SAFE_CALL_NO_SYNC(
-		cudaBindTexture2D(
-			0, 
-			t2dActiveVoxelSortedNeighbors, 
-			cActiveVoxelSortedNeighbors_pitched.ptr, 
-			cudaCreateChannelDesc<unsigned int>(),
-			cActiveVoxelSortedNeighbors_pitched.xsize,
-			cActiveVoxelSortedNeighbors_pitched.ysize, 
-			cActiveVoxelSortedNeighbors_pitched.pitch) );
-	#endif	// MOD-BY-LEETEN 12/18/2009-END
-
-	CUDPPHandle hScanPlan = 0;
-
-	CUDPPConfiguration	cConfig;
-	cConfig.op =		CUDPP_ADD;
-	cConfig.datatype =	CUDPP_UINT;
-	cConfig.algorithm =	CUDPP_SORT_RADIX;
-	cConfig.options =	CUDPP_OPTION_KEYS_ONLY;
-
-	assert( 
-		CUDPP_SUCCESS  == cudppPlan(
-			&hScanPlan,	
-			cConfig, 
-			cActiveVoxelSortedNeighbors_pitched.pitch * cActiveVoxelSortedNeighbors_pitched.ysize / sizeof(unsigned int),
-			1, 
-			0) );
-
-CLOCK_END(_ComputeEntropyVolume_PRINT_TIMING, false);
-
-CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_TIMING);
-
-	#if	0	// MOD-BY-LEETEN 12/19/2009-FROM:
-		for(int			z = 0; z < i3VolumeSize.z; z += v3Grid.y * v3Blk.y)
-			for(int		x = 0; x < i3VolumeSize.x; x += v3Grid.x * v3Blk.x)
-				for(int y = 0; y < i3VolumeSize.y; y++)
-	#else	// MOD-BY-LEETEN 12/19/2009-TO:
-	for(int			y = 0; y < i3VolumeSize.y; y += v3Grid.y * v3Blk.y)
-		for(int		x = 0; x < i3VolumeSize.x; x += v3Grid.x * v3Blk.x)
-			for(int	z = 0; z < i3VolumeSize.z; z ++ )
-	#endif	// MOD-BY-LEETEN 12/19/2009-END
-			{
-				CLOCK_INIT(_ComputeEntropyVolume_PRINT_LOOP_TIMING, __FUNCTION__ " (main loop): ");
-
-				CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_LOOP_TIMING);
-
-				int3 i3BlockCorner = make_int3(x, y, z);
-				_CollectNeighbors_kernel<<<v3Grid, v3Blk, 0>>>
-				(
-					i3BlockCorner,
-					i3KernelSize,
-					i3VolumeSize,
-					iNrOfBins,
-					cActiveVoxelNeighbors_pitched
-				);
-				CUT_CHECK_ERROR("_CollectNeighbors_kernel() failed");
-
-				#if	0	// TEST-DEBUG
-											unsigned int *puActiveVoxelNeighbors_host;
-											CUDA_SAFE_CALL_NO_SYNC(
-												cudaMallocHost(
-													(void**)&puActiveVoxelNeighbors_host,
-													cActiveVoxelNeighbors_pitched.pitch * cActiveVoxelSortedNeighbors_pitched.ysize) );
-
-											CUDA_SAFE_CALL_NO_SYNC(
-												cudaMemcpy(
-													puActiveVoxelNeighbors_host, 
-													cActiveVoxelNeighbors_pitched.ptr,
-													cActiveVoxelSortedNeighbors_pitched.pitch * cActiveVoxelSortedNeighbors_pitched.ysize,
-													cudaMemcpyDeviceToHost) );
-											for(unsigned int p = 0,	n = 0; n < cActiveVoxelSortedNeighbors_pitched.ysize; n++)
-												for(unsigned int	i = 0; i < cActiveVoxelNeighbors_pitched.pitch / sizeof(unsigned int); i++, p++)
-												{
-													unsigned int uTemp = puActiveVoxelNeighbors_host[p];
-													unsigned int uId = uTemp / unsigned int(iNrOfBins);
-													unsigned int uBin = uTemp % unsigned int(iNrOfBins);
-
-													fprintf(stderr, "%d, %d, %d\n", n, uId, uBin);
-												}
-											FREE_MEMORY_ON_HOST(puActiveVoxelNeighbors_host);
-				#endif
-
-CLOCK_END(_ComputeEntropyVolume_PRINT_LOOP_TIMING, false);
-
-CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_LOOP_TIMING);
-
-				// copy the memory from the buffer _CollectNeighbors_kernel to another buffer _CollectNeighborsToBeSorted_kernel
-				#if	0	// MOD-BY-LEETEN 12/18/2009-FROM:
-					CUDA_SAFE_CALL_NO_SYNC(
-						cudaMemcpy(
-							cActiveVoxelSortedNeighbors_pitched.ptr, 
-							cActiveVoxelNeighbors_pitched.ptr, 
-							cActiveVoxelSortedNeighbors_pitched.pitch * cActiveVoxelSortedNeighbors_pitched.ysize,
-							cudaMemcpyDeviceToDevice));
-				#else	// MOD-BY-LEETEN 12/18/2009-TO:
-				CUDA_SAFE_CALL_NO_SYNC(
-					cudaMemcpy2D(
-						cActiveVoxelSortedNeighbors_pitched.ptr, 
-						cActiveVoxelSortedNeighbors_pitched.pitch,
-						cActiveVoxelNeighbors_pitched.ptr, 
-						cActiveVoxelNeighbors_pitched.pitch,
-						cActiveVoxelSortedNeighbors_pitched.pitch,
-						cActiveVoxelSortedNeighbors_pitched.ysize,
-						cudaMemcpyDeviceToDevice) );
-				#endif	// MOD-BY-LEETEN 12/18/2009-END
-
-CLOCK_END(_ComputeEntropyVolume_PRINT_LOOP_TIMING, false);
-
-CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_LOOP_TIMING);
-
-				// call cudpp to sort the buffer _CollectNeighborsToBeSorted_kernel
-				cudppSort(
-					hScanPlan,
-					cActiveVoxelSortedNeighbors_pitched.ptr,
-					NULL,
-					RADIX_SORT_BITS,
-					cActiveVoxelSortedNeighbors_pitched.pitch * cActiveVoxelSortedNeighbors_pitched.ysize / sizeof(unsigned int)) ;
-				CUT_CHECK_ERROR("cudppSort() failed");
-CLOCK_END(_ComputeEntropyVolume_PRINT_LOOP_TIMING, false);
-
-CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_LOOP_TIMING);
-
-				#if	0	// TEST-DEBUG
-										unsigned int *puActiveVoxelNeighbors_host;
-										CUDA_SAFE_CALL_NO_SYNC(
-											cudaMallocHost(
-												(void**)&puActiveVoxelNeighbors_host,
-												cActiveVoxelSortedNeighbors_pitched.pitch * cActiveVoxelSortedNeighbors_pitched.ysize) );
-										CUDA_SAFE_CALL_NO_SYNC(
-											cudaMemcpy(
-												puActiveVoxelNeighbors_host, 
-												cActiveVoxelSortedNeighbors_pitched.ptr,
-												cActiveVoxelSortedNeighbors_pitched.pitch * cActiveVoxelSortedNeighbors_pitched.ysize,
-												cudaMemcpyDeviceToHost) );
-										for(unsigned int n = 0, i = 0; i < cActiveVoxelSortedNeighbors_pitched.pitch / sizeof(unsigned int);	i++)
-										{
-											unsigned int uPrevBin = 0;
-											int iCount = 0;
-											float fEntropy = 0.0f;
-											for(unsigned		r = 0; r < cActiveVoxelSortedNeighbors_pitched.ysize;					r++,	n++)
-											{
-												unsigned int uBin = puActiveVoxelNeighbors_host[n];
-												unsigned int uId = uBin / unsigned int(iNrOfBins);
-												// unsigned int uBin = uTemp % unsigned int(iNrOfBins);
-
-												if( uId != i )
-													fprintf(stderr, "%d, %d, %d\n", n, uId, uBin);
-
-												if( r == 0 || uBin == uPrevBin )
-												{
-													iCount++;
-												}
-												else
-												{
-													assert( uPrevBin < uBin );
-
-
-													{
-														float fProb = float(iCount)/float(iNrOfRows);
-														fEntropy += fProb * log2f(fProb);
-													}
-													
-													iCount = 1;
-												}
-												uPrevBin = uBin;
-											}
-											if( iCount > 0 )
-											{
-												float fProb = float(iCount)/iNrOfRows;
-												fEntropy += fProb * log2f(fProb);
-											}
-
-											fEntropy *= -1.0f;
-											fEntropy = max(0.0f, fEntropy);
-
-											fprintf(stderr, "%f\n", fEntropy);
-										}
-										FREE_MEMORY_ON_HOST(puActiveVoxelNeighbors_host);
-				#endif
-
-CLOCK_END(_ComputeEntropyVolume_PRINT_LOOP_TIMING, false);
-
-CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_LOOP_TIMING);
-				// 
-				_ComputeEntropyOnSortedNeighbors_kernel<<<v3Grid, v3Blk, 0>>>
-				(
-					i3BlockCorner,
-					iNrOfBins,
-					i3KernelSize,
-					(unsigned int *)cActiveVoxelSortedNeighbors_pitched.ptr,
-					i3VolumeSize,
-					cEntropyVolume_pitched
-				);
-				CUT_CHECK_ERROR("_ComputeEntropyOnSortedNeighbors_kernel() failed");
-CLOCK_END(_ComputeEntropyVolume_PRINT_LOOP_TIMING, false);
-
-CLOCK_PRINT(_ComputeEntropyVolume_PRINT_LOOP_TIMING);
-			}
-
-
-CLOCK_END(_ComputeEntropyVolume_PRINT_TIMING, false);
-
-CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_TIMING);
-
-	cudppDestroyPlan(hScanPlan);
-	FREE_MEMORY(cActiveVoxelNeighbors_pitched.ptr);
-
-CLOCK_END(_ComputeEntropyVolume_PRINT_TIMING, false);
-
-CLOCK_PRINT(_ComputeEntropyVolume_PRINT_TIMING);
-}
-
-void 
-_ComputeEntropyVolume_cuda
-(
-						// res. of the neighboring region
-	int3 i3KernelSize,
-
-						// the histogram
-	int iNrOfBins,
-	int *piHistogram_global,
-	float *pfLogHistogram_global,
-
-						// res. of the volume																
-	int3 i3VolumeSize,	
-						// bin volume																	
-	cudaPitchedPtr		cBinVolume_pitched,								
-	cudaPitchedPtr		cEntropyVolume_pitched
-)
-{
-CLOCK_INIT(_ComputeEntropyVolume_PRINT_TIMING, __FUNCTION__ ": ");
-
-CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_TIMING);
-	dim3 v3Blk = dim3(BLOCK_DIM_X, BLOCK_DIM_Y);
-	const unsigned int iMaxMemorySpace = MAX_MEMORY_SIZE;
-	int iMaxNrOfBlocks = int(floorf(float(iMaxMemorySpace) / float(sizeof(int) * iNrOfBins * v3Blk.x * v3Blk.y)));
-	int iNrOfXBlocks = int(ceilf(float(i3VolumeSize.x) / float(v3Blk.x)));
-	#if	0	// MOD-BY-LEETEN 12/19/2009-FROM:
-		int iNrOfZBlocks = int(ceilf(float(i3VolumeSize.z) / float(v3Blk.y)));
-		iMaxNrOfBlocks = min(iMaxNrOfBlocks, iNrOfXBlocks * iNrOfZBlocks);
-		iNrOfXBlocks = min(iNrOfXBlocks, iMaxNrOfBlocks);
-		iNrOfZBlocks = int(ceilf(float(iMaxNrOfBlocks) / float(iNrOfXBlocks)));
-		dim3 v3Grid = dim3(iNrOfXBlocks, iNrOfZBlocks);
-	#else	// MOD-BY-LEETEN 12/19/2009-TO:
-	int iNrOfYBlocks = int(ceilf(float(i3VolumeSize.y) / float(v3Blk.y)));
-	iMaxNrOfBlocks = min(iMaxNrOfBlocks, iNrOfXBlocks * iNrOfYBlocks);
-	iNrOfXBlocks = min(iNrOfXBlocks, iMaxNrOfBlocks);
-	iNrOfYBlocks = int(ceilf(float(iMaxNrOfBlocks) / float(iNrOfXBlocks)));
-	dim3 v3Grid = dim3(iNrOfXBlocks, iNrOfYBlocks);
-	#endif	// MOD-BY-LEETEN 12/19/2009-END
-	fprintf(stderr, "MEM = %d MB; #BLOCKS = %d x %d\n", iMaxMemorySpace/(1<<20), v3Grid.x, v3Grid.y);
-
-	cudaPitchedPtr cActiveVoxelHistorgrams_pitched;
-	cActiveVoxelHistorgrams_pitched.xsize = v3Grid.x * v3Grid.y * v3Blk.x * v3Blk.y;
-	cActiveVoxelHistorgrams_pitched.ysize = iNrOfBins;
-	CUDA_SAFE_CALL_NO_SYNC(
-		cudaMallocPitch(
-			(void**)&cActiveVoxelHistorgrams_pitched.ptr, 
-			&cActiveVoxelHistorgrams_pitched.pitch,
-			cActiveVoxelHistorgrams_pitched.xsize * sizeof(int), 
-			cActiveVoxelHistorgrams_pitched.ysize)	);
-
-	CUDA_SAFE_CALL_NO_SYNC(
-		cudaMemset2D(
-			cActiveVoxelHistorgrams_pitched.ptr, 
-			cActiveVoxelHistorgrams_pitched.pitch,
-			0, 
-			cActiveVoxelHistorgrams_pitched.xsize * sizeof(int), 
-			cActiveVoxelHistorgrams_pitched.ysize)	);
-
-	// bind the input vin volume to the texture that represents the src. bin volume 
-	t2dSrcBinVolume.addressMode[0] = cudaAddressModeClamp;
-	t2dSrcBinVolume.addressMode[1] = cudaAddressModeClamp;
-	t2dSrcBinVolume.filterMode =	cudaFilterModePoint;
-	t2dSrcBinVolume.normalized =	false;
-	CUDA_SAFE_CALL_NO_SYNC(
-		cudaBindTexture2D(
-			0, 
-			t2dSrcBinVolume, 
-			cBinVolume_pitched.ptr, 
-			cudaCreateChannelDesc<int>(),
-			cVolumeExtent_array.width, 
-			cVolumeExtent_array.height * cVolumeExtent_array.depth, 
-			cBinVolume_pitched.pitch) );
-
-	// bind the histogram as a texture
-	t2dActiveVoxelHistorgrams.addressMode[0] = cudaAddressModeClamp;
-	t2dActiveVoxelHistorgrams.addressMode[1] = cudaAddressModeClamp;
-	t2dActiveVoxelHistorgrams.filterMode =	cudaFilterModePoint;
-	t2dActiveVoxelHistorgrams.normalized =	false;
-	CUDA_SAFE_CALL_NO_SYNC(
-		cudaBindTexture2D(
-			0, 
-			t2dActiveVoxelHistorgrams, 
-			cActiveVoxelHistorgrams_pitched.ptr, 
-			cudaCreateChannelDesc<int>(),
-			cActiveVoxelHistorgrams_pitched.xsize, 
-			cActiveVoxelHistorgrams_pitched.ysize,
-			cActiveVoxelHistorgrams_pitched.pitch) );
-
-CLOCK_END(_ComputeEntropyVolume_PRINT_TIMING, false);
-
-CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_TIMING);
-
-	#if	0	// MOD-BY-LEETEN 12/19/2009-FROM:
-		for(int			z = 0; z < i3VolumeSize.z; z += v3Grid.y * v3Blk.y)
-			for(int		x = 0; x < i3VolumeSize.x; x += v3Grid.x * v3Blk.x)
-				for(int y = 0; y < i3VolumeSize.y; y++)
-	#else	// MOD-BY-LEETEN 12/19/2009-TO:
-	for(int			y = 0; y < i3VolumeSize.y; y += v3Grid.y * v3Blk.y)
-		for(int		x = 0; x < i3VolumeSize.x; x += v3Grid.x * v3Blk.x)
-			for(int z = 0; z < i3VolumeSize.z; z++)
-	#endif	// MOD-BY-LEETEN 12/19/2009-END
-			{
-				int3 i3BlockCorner = make_int3(x, y, z);
-				// MOD-BY-LEETEN 12/19/2009-FROM:
-					// if( 0 == y )
-				// TO:
-				if( 0 == z )
-				// MOD-BY-LEETEN 12/19/2009-END
-				{
-					_CreateHistogram_kernel<<<v3Grid, v3Blk, 0>>>
-					(
-						i3BlockCorner,
-						i3KernelSize,
-						i3VolumeSize,
-						iNrOfBins,
-						cActiveVoxelHistorgrams_pitched
-					);
-					CUT_CHECK_ERROR("_CreateHistogram_kernel() failed");
-				}
-				else
-				{
-					_UpdateHistogram_kernel<<<v3Grid, v3Blk, 0>>>
-					(
-						i3BlockCorner,
-						i3KernelSize,
-						i3VolumeSize,
-						iNrOfBins,
-						cActiveVoxelHistorgrams_pitched
-					);
-					CUT_CHECK_ERROR("_UpdateHistogram_kernel() failed");
-				}
-
-				_ComputeEntropy_kernel<<<v3Grid, v3Blk, 0>>>
-				(
-					i3BlockCorner,
-					iNrOfBins,
-					i3KernelSize,
-					i3VolumeSize,
-					cEntropyVolume_pitched
-				);
-				CUT_CHECK_ERROR("_ComputeEntropy_kernel() failed");
-			}
-
-CLOCK_END(_ComputeEntropyVolume_PRINT_TIMING, false);
-
-CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_TIMING);
-
-	FREE_MEMORY(cActiveVoxelHistorgrams_pitched.ptr);
-
-CLOCK_END(_ComputeEntropyVolume_PRINT_TIMING, false);
-
-CLOCK_PRINT(_ComputeEntropyVolume_PRINT_TIMING);
-}
-// ADD-BY-LEETEN 12/18/2009-END
-
-void 
-// MOD-BY-LEETEN 12/18/2009-FROM:
-	// _ComputeEntropyVolume
-// TO:
-_ComputeEntropyVolume_host
-// MOD-BY-LEETEN 12/18/2009-END
-(
-						// res. of the neighboring region
-	int3 i3KernelSize,
-
-						// the histogram
-	int iNrOfBins,
-	int *piHistogram_global,
-	float *pfLogHistogram_global,
-
-	// DEL-BY-LEETEN 12/18/2009-BEGIN
-		// CUDPPHandle cScanPlanSum,
-	// DEL-BY-LEETEN 12/18/2009-END
-
-						// res. of the volume																
-	int3 i3VolumeSize,	
-						// bin volume																	
-	cudaPitchedPtr		cBinVolume_pitched,								
-	cudaPitchedPtr		cEntropyVolume_pitched
-)
-{
-CLOCK_INIT(_ComputeEntropyVolume_PRINT_TIMING, __FUNCTION__ ": ");
-
-CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_TIMING);
-
-	int *piHistogram_host;
-	piHistogram_host = (int*)calloc(sizeof(piHistogram_host[0]), iNrOfBins);
-	assert(piHistogram_host);
-
-	int *piBinVolume_host;
-	piBinVolume_host = (int*)calloc(sizeof(piBinVolume_host[0]), i3VolumeSize.x * i3VolumeSize.y * i3VolumeSize.z);
-	assert(piBinVolume_host);
-
-	_GetSrcBinVolume(piBinVolume_host);
-
-	// ADD-BY-LEETEN 12/19/2009-BEGIN
-	float* pfEntropyVolume_host;
-	pfEntropyVolume_host = (float*)calloc(sizeof(pfEntropyVolume_host[0]), i3VolumeSize.x * i3VolumeSize.y * i3VolumeSize.z);
-	assert( pfEntropyVolume_host );
-	// ADD-BY-LEETEN 12/19/2009-END
-
-CLOCK_END(_ComputeEntropyVolume_PRINT_TIMING, false);
-
-CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_TIMING);
-
-	int xdir = +1;
-	int ydir = +1;
-	int zdir = +1;
-	int x = 0;
-	int y = 0;
-	int z = 0;
-
-	_BuildHistogram_host
-	(
-		make_int3(x, y, z),
-							// res. of the neighboring region
-		i3KernelSize,	
-							// the bin volume
-		i3VolumeSize,	
-		piBinVolume_host,
-							// the joint histogram
-		iNrOfBins,		
-		piHistogram_host
-	);
-CLOCK_END(_ComputeEntropyVolume_PRINT_TIMING, false);
-
-CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_TIMING);
-
-	for(int				zi = 0; zi < i3VolumeSize.z;	zi++, z += zdir)
-	{
-		for(int			yi = 0; yi < i3VolumeSize.y;	yi++, y += ydir)
-		{
-			for(int		xi = 0; xi < i3VolumeSize.x;	xi++, x += xdir)
-			{
-				// fprintf(stderr, "%d, %d, %d\n", x, y, z);
-				// (x,y,z): center of the volume
-				// before enter this loop, the histogram in the region centering at (x, y, z) should have been available
-				_ComputeEntropy_host
-				(
-					make_int3(x, y, z),
-					i3KernelSize,
-
-										// the joint histogram
-					iNrOfBins,
-					piHistogram_host,
-
-					i3VolumeSize,
-					// MOD-BY-LEETEN 12/19/2009-FROM:
-						// cEntropyVolume_pitched
-					// TO:
-					pfEntropyVolume_host
-					// MOD-BY-LEETEN 12/19/2009-END
-				);
-
-				if( xi < i3VolumeSize.x - 1 )
-					_UpdateSliceToHistogram_host(
-						make_int3(x + xdir, y, z), 
-						UPDATE_DIR_X,	
-						xdir, 
-
-						i3KernelSize, 
-
-											// the bin volume
-						i3VolumeSize,	
-						piBinVolume_host,
-											// the joint histogram
-						iNrOfBins,		
-						piHistogram_host
-						);
-			}
-			x -= xdir;
-			xdir *= -1;
-			if( yi < i3VolumeSize.y - 1 )
-				_UpdateSliceToHistogram_host(
-					make_int3(x, y + ydir, z), 
-					UPDATE_DIR_Y,	
-					ydir, 
-					
-					i3KernelSize, 
-
-										// the bin volume
-					i3VolumeSize,	
-					piBinVolume_host,
-										// the joint histogram
-					iNrOfBins,		
-					piHistogram_host
-					);
-		}
-		y -= ydir;
-		ydir *= -1;
-		if( zi < i3VolumeSize.z - 1 )
-			_UpdateSliceToHistogram_host(
-				make_int3(x, y, z + zdir), 
-				UPDATE_DIR_Z,	
-				zdir, 
-
-				i3KernelSize, 
-
-											// the bin volume
-				i3VolumeSize,	
-				piBinVolume_host,
-									// the joint histogram
-				iNrOfBins,		
-				piHistogram_host
-			);
-	}
-CLOCK_END(_ComputeEntropyVolume_PRINT_TIMING, false);
-
-CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_TIMING);
-	// ADD-BY-LEETEN 12/19/2009-BEGIN
-	CUDA_SAFE_CALL_NO_SYNC(
-		cudaMemcpy2D(
-			cEntropyVolume_pitched.ptr, 
-			cEntropyVolume_pitched.pitch,
-			pfEntropyVolume_host,
-			i3VolumeSize.x * sizeof(pfEntropyVolume_host[0]),
-			i3VolumeSize.x * sizeof(pfEntropyVolume_host[0]),
-			i3VolumeSize.y * i3VolumeSize.z,
-			cudaMemcpyHostToDevice) );
-	free(pfEntropyVolume_host);
-	// ADD-BY-LEETEN 12/19/2009-END
-
-	free(piHistogram_host);
-	free(piBinVolume_host);
-CLOCK_END(_ComputeEntropyVolume_PRINT_TIMING, false);
-
-CLOCK_PRINT(_ComputeEntropyVolume_PRINT_TIMING);
-}
-// ADD-BY-LEETEN 12/18/2009-END
-
-#if	0	// DEL-BY-LEETEN 12/18/2009-BEGIN
-	CUDPPHandle 
-	CInitEntropyField
-	(
-		int iNrOfBins
-	)
-	{
-		CUDPPHandle cScanPlan = 0;
-
-		CUDPPConfiguration	cConfig;
-		cConfig.op =		CUDPP_ADD;
-		cConfig.datatype =	CUDPP_FLOAT;
-		cConfig.algorithm =	CUDPP_SCAN;
-		cConfig.options =	CUDPP_OPTION_BACKWARD | CUDPP_OPTION_INCLUSIVE;
-
-		assert( CUDPP_SUCCESS  == cudppPlan(&cScanPlan,	cConfig, iNrOfBins, 1, 0) );
-
-		return cScanPlan;
-	}
-#endif	// DEL-BY-LEETEN 12/18/2009-END
+	// ADD-BY-LEETEN 12/23/2009-BEGIN
+	#if	COMPUTE_ENTROPY_VOLUME_HOST
+		#include	"EntropyField_host.cu"
+	#endif
+
+	#if	COMPUTE_ENTROPY_VOLUME_CUDA
+		#include	"EntropyField_cuda.cu"
+	#endif
+
+	#if	COMPUTE_ENTROPY_VOLUME_WITH_SORTING_CUDA	
+		#include	"EntropyFieldWithSorting_cuda.cu"
+	#endif
+
+	#if	COMPUTE_ENTROPY_VOLUME_PER_SCANLINE_CUDA
+		#include	"EntropyFieldPerScanline_cuda.cu"
+	#endif
+
+	#if	COMPUTE_ENTROPY_VOLUME_SORT_PER_VOXEL_CUDA	
+		#include	"EntropyFieldSortPerVoxel_cuda.cu"
+	#endif
+
+	#if	COMPUTE_ENTROPY_VOLUME_ON_SPARSE_HISTOGRAM_CUDA	
+		#include	"EntropyFieldOnSparseHistogram_cuda.cu"
+	#endif
+
+	#if	COMPUTE_ENTROPY_VOLUME_WITH_MARGINAL_HISTOGRAM	
+		#include	"EntropyFieldWithMarginalHistogram_cuda.cu"
+	#endif
+
+	// ADD-BY-LEETEN 12/29/2009-BEGIN
+	#if	COMPUTE_ENTROPY_VOLUME_WITH_SORTING_IN_VECTORS_CUDA	
+		#include	"EntropyFieldWithSortingInVectors_cuda.cu"
+	#endif
+	// ADD-BY-LEETEN 12/29/2009-END
+
+	// ADD-BY-LEETEN 12/23/2009-END
+
+////////////////////////////////////////////
 
 void
 _GetSrcEntropyVolume
@@ -1076,6 +189,29 @@ _GetSrcEntropyVolume
 	#if	COMPUTE_ENTROPY_VOLUME == COMPUTE_ENTROPY_VOLUME_WITH_SORTING_CUDA
 		_ComputeEntropyVolumeWithSorting_cuda
 	#endif	
+
+	// ADD-BY-LEETEN 12/20/2009-BEGIN
+	#if	COMPUTE_ENTROPY_VOLUME == COMPUTE_ENTROPY_VOLUME_PER_SCANLINE_CUDA	
+		_ComputeEntropyVolumePerScanline_cuda
+	#endif	
+	// ADD-BY-LEETEN 12/20/2009-END
+
+	// ADD-BY-LEETEN 12/23/2009-BEGIN
+	#if	COMPUTE_ENTROPY_VOLUME == COMPUTE_ENTROPY_VOLUME_SORT_PER_VOXEL_CUDA	
+		_ComputeEntropyVolumePerVoxel_cuda
+	#endif	
+
+	#if	COMPUTE_ENTROPY_VOLUME == COMPUTE_ENTROPY_VOLUME_ON_SPARSE_HISTOGRAM_CUDA
+		_ComputeEntropyVolumeOnSparseHistogram_cuda
+	#endif	
+	// ADD-BY-LEETEN 12/23/2009-END
+
+	// ADD-BY-LEETEN 12/29/2009-BEGIN
+	#if	COMPUTE_ENTROPY_VOLUME == COMPUTE_ENTROPY_VOLUME_WITH_SORTING_IN_VECTORS_CUDA
+		_ComputeEntropyVolumeWithSortingInVectors_cuda
+	#endif	
+	// ADD-BY-LEETEN 12/29/2009-END
+
 	(
 						// res. of the neighboring region
 		make_int3(iKernelWidth, iKernelHeight, iKernelDepth),
@@ -1112,13 +248,17 @@ _GetSrcEntropyVolume
 
 	#if	1	// TEST-DEBUG
 	FILE *fpFile;
-	fpFile = fopen( __FUNCTION__ "_" SRC_ENTROPY_VOLUME_POSTFIX ".txt", "wt");
+	// MOD-BY-LEETEN 12/20/2009-FROM:
+		// fpFile = fopen( __FUNCTION__ "_" SRC_ENTROPY_VOLUME_POSTFIX ".txt", "wt");
+	// TO:
+	fpFile = fopen( __FUNCTION__ "_" ENTROPY_VOLUME_POSTFIX ".txt", "wt");
+	// MOD-BY-LEETEN 12/20/2009-END
 	assert(fpFile);
 
 	for(int	v = 0,		z = 0; z < int(cVolumeExtent_array.depth);	z++)
 		for(int			y = 0; y < int(cVolumeExtent_array.height);	y++)
 			for(int		x = 0; x < int(cVolumeExtent_array.width);	x++, v++)
-				fprintf(fpFile, "E(%d, %d, %d) = %f\n", x, y, z, pfEntropyVolume_host[v]);
+				fprintf(fpFile, "E(%d, %d, %d) = %.4f\n", x, y, z, pfEntropyVolume_host[v]);
 
 	fclose(fpFile);
 	#endif
@@ -1244,6 +384,29 @@ _GetJointEntropyVolume
 		_ComputeEntropyVolumeWithSorting_cuda
 	#endif
 
+	// ADD-BY-LEETEN 12/20/2009-BEGIN
+	#if	COMPUTE_ENTROPY_VOLUME == COMPUTE_ENTROPY_VOLUME_PER_SCANLINE_CUDA	
+		_ComputeEntropyVolumePerScanline_cuda
+	#endif	
+	// ADD-BY-LEETEN 12/20/2009-END
+
+	// ADD-BY-LEETEN 12/23/2009-END
+	#if	COMPUTE_ENTROPY_VOLUME == COMPUTE_ENTROPY_VOLUME_SORT_PER_VOXEL_CUDA	
+		_ComputeEntropyVolumePerVoxel_cuda
+	#endif	
+
+	#if	COMPUTE_ENTROPY_VOLUME == COMPUTE_ENTROPY_VOLUME_ON_SPARSE_HISTOGRAM_CUDA
+		_ComputeEntropyVolumeOnSparseHistogram_cuda
+	#endif	 
+
+	#if	COMPUTE_ENTROPY_VOLUME == COMPUTE_ENTROPY_VOLUME_WITH_MARGINAL_HISTOGRAM
+		_ComputeEntropyVolumeWithMarginalHistogram_cuda
+	#endif	
+	// ADD-BY-LEETEN 12/23/2009-END
+
+	#if	COMPUTE_ENTROPY_VOLUME == COMPUTE_ENTROPY_VOLUME_WITH_SORTING_IN_VECTORS_CUDA
+		_ComputeEntropyVolumeWithSortingInVectors_cuda
+	#endif	
 // MOD-BY-LEETEN 12/18/2009-END
 	(
 						// res. of the neighboring region
@@ -1287,6 +450,19 @@ _GetJointEntropyVolume
 			for(int		x = 0; x < i3VolumeSize.x; x++, v++)
 				fprintf(stderr, "E(%d, %d, %d) = %f\n", x, y, z, pfEntropyVolume_host[v]);
 	*/
+	#if	1	// TEST-DEBUG
+	FILE *fpFile;
+	fpFile = fopen( __FUNCTION__ "_" ENTROPY_VOLUME_POSTFIX ".txt", "wt");
+	assert(fpFile);
+
+	for(int	v = 0,		z = 0; z < int(cVolumeExtent_array.depth);	z++)
+		for(int			y = 0; y < int(cVolumeExtent_array.height);	y++)
+			for(int		x = 0; x < int(cVolumeExtent_array.width);	x++, v++)
+				fprintf(fpFile, "E(%d, %d, %d) = %.4f\n", x, y, z, pfEntropyVolume_host[v]);
+
+	fclose(fpFile);
+	#endif
+
 	FREE_MEMORY_ON_HOST(pfEntropyVolume_host);
 	// ADD-BY-LEETEN 12/19/2009-END
 
@@ -2039,6 +1215,21 @@ _FlowDiffusion(
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.4  2009/12/20 03:31:22  leeten
+
+[12/19/2009]
+1. [DEL] remove deleted code segments.
+2. [MOD] the variable cErrorvolume_exten is not declared if CHECK_ERROR_CONVERGENCE_BY_CUDPP is not given.
+3. [MOD] Change the scanning order when subdividing the volume into blocks: before the blocks are subdsived along the XZ plane, while now the XY plane is subdivided instead.
+4. [DEBUG] Change the #neighboring from i3KernelSize.x * i3KernelSize.y * i3KernelSize.z to (2 * i3KernelSize.x + 1) *  (2 * i3KernelSize.y + 1) * (2 * i3KernelSize.z + 1) )
+5. [ADD] Define a function _ComputeEntropyVolumeWithSorting_cuda to compute the entropy field without computing the histogram.
+6. [ADD] Define a function _ComputeEntropyVolume_cuda to compute the entropy field based on the histogram.
+7. [ADD] Define a function _ComputeEntropyVolume_host  to compute the entropy field by CPUs.
+8. [MOD] Modfy the functions _GetSrcEntropyVolume and _GetJointEntropyVolume s.t. different function will be called depending on the value of the preprocessor COMPUTE_ENTROPY_VOLUME
+COMPUTE_ENTROPY_VOLUME_CUDA: _ComputeEntropyVolumeWithSorting_cuda
+COMPUTE_ENTROPY_VOLUME_WITH_SORTING_CUDA: _ComputeEntropyVolumeWithSorting_cuda
+COMPUTE_ENTROPY_VOLUME_HOST: _ComputeEntropyVolume_host
+
 Revision 1.3  2009/12/17 20:20:32  leeten
 
 [12/17/2009]
