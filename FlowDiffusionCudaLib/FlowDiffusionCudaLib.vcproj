@@ -167,58 +167,98 @@
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
 		</Filter>
-		<File
-			RelativePath=".\EntropyField_kernel.cu"
+		<Filter
+			Name="Cuda Files"
 			>
-			<FileConfiguration
-				Name="Debug|Win32"
+			<File
+				RelativePath=".\FlowDiffusion.cu"
 				>
-				<Tool
-					Name="VCCustomBuildTool"
-					CommandLine=""
-					Outputs=""
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+						CommandLine="&quot;$(CUDA_BIN_PATH)\nvcc.exe&quot; -keep -ccbin &quot;$(VCInstallDir)bin&quot; -c -arch sm_11 -D_DEBUG -DWIN32 -D_CONSOLE -D_MBCS -Xcompiler /EHsc,/W3,/nologo,/Wp64,/Od,/Zi,/RTC1,/MDd -o $(ConfigurationName)\$(InputName).obj $(InputPath)&#x0D;&#x0A;"
+						Outputs="$(ConfigurationName)\$(InputName).obj"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+						CommandLine="&quot;$(CUDA_BIN_PATH)\nvcc.exe&quot; -ccbin &quot;$(VCInstallDir)bin&quot; -c -arch sm_11 -D_DEBUG -DWIN32 -D_CONSOLE -D_MBCS -Xcompiler /EHsc,/W3,/nologo,/Wp64,/O2,/Zi,/MD -o $(ConfigurationName)\$(InputName).obj $(InputPath)&#x0D;&#x0A;"
+						Outputs="$(ConfigurationName)\$(InputName).obj"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath=".\FlowDiffusion2D_kernel.cu"
 				>
-				<Tool
-					Name="VCCustomBuildTool"
-					CommandLine=""
-					Outputs=""
-				/>
-			</FileConfiguration>
-		</File>
-		<File
-			RelativePath=".\FlowDiffusion.cu"
-			>
-			<FileConfiguration
-				Name="Debug|Win32"
+			</File>
+			<File
+				RelativePath=".\FlowDiffusion3D_kernel.cu"
 				>
-				<Tool
-					Name="VCCustomBuildTool"
-					CommandLine="&quot;$(CUDA_BIN_PATH)\nvcc.exe&quot; -ccbin &quot;$(VCInstallDir)bin&quot; -c -arch sm_11 -D_DEBUG -DWIN32 -D_CONSOLE -D_MBCS -Xcompiler /EHsc,/W3,/nologo,/Wp64,/Od,/Zi,/RTC1,/MDd -o $(ConfigurationName)\$(InputName).obj $(InputPath)&#x0D;&#x0A;"
-					Outputs="$(ConfigurationName)\$(InputName).obj"
-				/>
-			</FileConfiguration>
-			<FileConfiguration
-				Name="Release|Win32"
+			</File>
+			<Filter
+				Name="EntropyField"
 				>
-				<Tool
-					Name="VCCustomBuildTool"
-					CommandLine="&quot;$(CUDA_BIN_PATH)\nvcc.exe&quot; -ccbin &quot;$(VCInstallDir)bin&quot; -c -arch sm_11 -D_DEBUG -DWIN32 -D_CONSOLE -D_MBCS -Xcompiler /EHsc,/W3,/nologo,/Wp64,/O2,/Zi,/MD -o $(ConfigurationName)\$(InputName).obj $(InputPath)&#x0D;&#x0A;"
-					Outputs="$(ConfigurationName)\$(InputName).obj"
-				/>
-			</FileConfiguration>
-		</File>
-		<File
-			RelativePath=".\FlowDiffusion2D_kernel.cu"
-			>
-		</File>
-		<File
-			RelativePath=".\FlowDiffusion3D_kernel.cu"
-			>
-		</File>
+				<File
+					RelativePath=".\EntropyField_cuda.cu"
+					>
+				</File>
+				<File
+					RelativePath=".\EntropyField_host.cu"
+					>
+				</File>
+				<File
+					RelativePath=".\EntropyField_kernel.cu"
+					>
+					<FileConfiguration
+						Name="Debug|Win32"
+						>
+						<Tool
+							Name="VCCustomBuildTool"
+							CommandLine=""
+							Outputs=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Win32"
+						>
+						<Tool
+							Name="VCCustomBuildTool"
+							CommandLine=""
+							Outputs=""
+						/>
+					</FileConfiguration>
+				</File>
+				<File
+					RelativePath=".\EntropyFieldOnSparseHistogram_cuda.cu"
+					>
+				</File>
+				<File
+					RelativePath=".\EntropyFieldPerScanline_cuda.cu"
+					>
+				</File>
+				<File
+					RelativePath=".\EntropyFieldSortPerVoxel_cuda.cu"
+					>
+				</File>
+				<File
+					RelativePath=".\EntropyFieldWithMarginalHistogram_cuda.cu"
+					>
+				</File>
+				<File
+					RelativePath=".\EntropyFieldWithSorting_cuda.cu"
+					>
+				</File>
+				<File
+					RelativePath=".\EntropyFieldWithSortingInVectors_cuda.cu"
+					>
+				</File>
+			</Filter>
+		</Filter>
 		<File
 			RelativePath=".\ReadMe.txt"
 			>
