@@ -234,8 +234,6 @@ _ComputeEntropy_host
 	fEntropy = max(fEntropy, 0.0f);
 	// ADD-BY-LEETEN 12/19/2009-END
 
-	// fprintf(stderr, "Entropy(%d, %d, %d) = %f\n", i3Point.x, i3Point.y, i3Point.z, fEntropy); // TEST-DEBUG
-
 	#if	0	// MOD-BY-LEETEN 12/19/2009-FROM:
 		CUDA_SAFE_CALL(
 			cudaMemcpy(
@@ -433,5 +431,10 @@ CLOCK_PRINT(_ComputeEntropyVolume_PRINT_TIMING);
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.1  2009/12/27 19:05:04  leeten
+
+[12/27/2009]
+1. [1ST] First time checkin. Ths file define the functions to compute the entropy field on CPU.
+
 
 */
