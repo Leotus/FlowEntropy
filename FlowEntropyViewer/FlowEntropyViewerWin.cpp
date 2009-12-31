@@ -314,3 +314,9 @@ CFlowEntropyViewerWin::CFlowEntropyViewerWin(void)
 CFlowEntropyViewerWin::~CFlowEntropyViewerWin(void)
 {
 }
+
+/*
+
+$Log: not supported by cvs2svn $
+
+*/

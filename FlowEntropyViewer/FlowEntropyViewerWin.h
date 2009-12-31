@@ -68,3 +68,9 @@ public:
 	CFlowEntropyViewerWin(void);
 	virtual ~CFlowEntropyViewerWin(void);
 };
+
+/*
+
+$Log: not supported by cvs2svn $
+
+*/
