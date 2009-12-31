@@ -248,6 +248,7 @@ _GetSrcEntropyVolume
 
 	#if	1	// TEST-DEBUG
 	FILE *fpFile;
+#if	0	// TEST-DEL
 	// MOD-BY-LEETEN 12/20/2009-FROM:
 		// fpFile = fopen( __FUNCTION__ "_" SRC_ENTROPY_VOLUME_POSTFIX ".txt", "wt");
 	// TO:
@@ -261,6 +262,21 @@ _GetSrcEntropyVolume
 				fprintf(fpFile, "E(%d, %d, %d) = %.4f\n", x, y, z, pfEntropyVolume_host[v]);
 
 	fclose(fpFile);
+#endif
+
+	// ADD-BY-LEETEN 12/28/2009-BEGIN
+	fpFile = fopen( __FUNCTION__ "_" ENTROPY_VOLUME_POSTFIX ".bin", "wb");
+	assert(fpFile);
+	fwrite(&cVolumeExtent_array.width,	sizeof(cVolumeExtent_array.width), 1, fpFile);
+	fwrite(&cVolumeExtent_array.height, sizeof(cVolumeExtent_array.height), 1, fpFile);
+	fwrite(&cVolumeExtent_array.depth,	sizeof(cVolumeExtent_array.depth), 1, fpFile);
+	fwrite(pfEntropyVolume_host, 
+		sizeof(pfEntropyVolume_host[0]), 
+		cVolumeExtent_array.depth * cVolumeExtent_array.height * cVolumeExtent_array.width, 
+		fpFile);
+	fclose(fpFile);
+	// ADD-BY-LEETEN 12/28/2009-END
+
 	#endif
 	FREE_MEMORY_ON_HOST(pfEntropyVolume_host);
 	// ADD-BY-LEETEN 12/19/2009-END
@@ -461,6 +477,21 @@ _GetJointEntropyVolume
 				fprintf(fpFile, "E(%d, %d, %d) = %.4f\n", x, y, z, pfEntropyVolume_host[v]);
 
 	fclose(fpFile);
+
+	// ADD-BY-LEETEN 12/28/2009-BEGIN
+	fpFile = fopen( __FUNCTION__ "_" ENTROPY_VOLUME_POSTFIX ".bin", "wb");
+	assert(fpFile);
+	fwrite(&cVolumeExtent_array.width,	sizeof(cVolumeExtent_array.width), 1, fpFile);
+	fwrite(&cVolumeExtent_array.height, sizeof(cVolumeExtent_array.height), 1, fpFile);
+	fwrite(&cVolumeExtent_array.depth,	sizeof(cVolumeExtent_array.depth), 1, fpFile);
+	fwrite(
+		pfEntropyVolume_host, 
+		sizeof(pfEntropyVolume_host[0]), 
+		cVolumeExtent_array.depth * cVolumeExtent_array.height * cVolumeExtent_array.width,
+		fpFile);
+	fclose(fpFile);
+	// ADD-BY-LEETEN 12/28/2009-END
+
 	#endif
 
 	FREE_MEMORY_ON_HOST(pfEntropyVolume_host);
@@ -1215,6 +1246,11 @@ _FlowDiffusion(
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.5  2009/12/27 19:19:21  leeten
+
+[12/27/2009]
+1. [DEL] Move the files for entropy computation into different files.
+
 Revision 1.4  2009/12/20 03:31:22  leeten
 
 [12/19/2009]
