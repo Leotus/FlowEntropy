@@ -169,6 +169,9 @@ CStreamline::_Read(float fScaleX, float fScaleY, float fScaleZ, char *szStreamli
 	}
 
 	pfCoords.alloc(3 * uNrOfVertices);
+	// ADD-BY-LEETEN 12/31/2009-BEGIN
+	pfTangent.alloc(3 * uNrOfVertices);
+	// ADD-BY-LEETEN 12/31/2009-END
 	puLineIndices.alloc(2 * uNrOfLines);
 
 	puSortedLineIndices.alloc(2 * uNrOfLines);
@@ -194,7 +197,88 @@ CStreamline::_Read(float fScaleX, float fScaleY, float fScaleZ, char *szStreamli
 		{
 			puLineIndices[uLineIndex*2] = uCoordIndex + uV;
 			puLineIndices[uLineIndex*2+1] = uCoordIndex + uV + 1;
+
+			// ADD-BY-LEETEN 12/31/2009-BEGIN
+			// compute tangents
+			if( uV > 0 )
+			{
+				int iVertexIndex = uCoordIndex + uV;
+
+				float fLength = 0.0f;
+				for(int i = 0; i < 3; i++)
+				{
+					float fDiff = pfCoords[3 * (iVertexIndex + 1) + i] - pfCoords[3 * (iVertexIndex - 1) + i];
+					fLength += fDiff * fDiff;
+					pfTangent[iVertexIndex*3 + i] = fDiff;
+				}
+
+				if( 0.0f < fLength )
+				{
+					fLength = sqrtf(fLength);
+					for(int i = 0; i < 3; i++)
+						pfTangent[iVertexIndex*3 + i] /= fLength;
+				}
+			}
+			// ADD-BY-LEETEN 12/31/2009-END
 		}
+
+		// ADD-BY-LEETEN 12/31/2009-BEGIN
+		// assign tangents to the first and last vertices
+		for(int i = 0; i < 3; i++)
+		{
+			pfTangent[(uCoordIndex ) * 3 + i] = 0.0f;
+			pfTangent[(uCoordIndex + uNrOfVertices - 1) * 3 + i] = 0.0f;
+		}
+
+		// assign tangents to the first and last vertices
+		// forward
+		for(int iV = 0, iNonZeroLengthV = -1; iV < int(uNrOfVertices); iV++)
+		{
+			int iVertexIndex = int(uCoordIndex) + iV;
+
+			float fLength = 0.0f;
+			for(int i = 0; i < 3; i++)
+			{
+				float f = pfTangent[iVertexIndex*3 + i];
+				fLength += f * f;
+			}
+
+			if( 0.0f < fLength )
+			{
+				iNonZeroLengthV = iVertexIndex;
+			}
+			else
+			if( iNonZeroLengthV >= 0 )
+				for(int i = 0; i < 3; i++)
+				{
+					pfTangent[iVertexIndex*3 + i] = pfTangent[iNonZeroLengthV*3 + i];
+				}
+		}
+
+		// backward
+		for(int iV = int(uNrOfVertices) - 1, iNonZeroLengthV = -1; iV >= 0 ; iV--)
+		{
+			int iVertexIndex = int(uCoordIndex) + iV;
+
+			float fLength = 0.0f;
+			for(int i = 0; i < 3; i++)
+			{
+				float f = pfTangent[iVertexIndex*3 + i];
+				fLength += f * f;
+			}
+
+			if( 0.0f < fLength )
+			{
+				iNonZeroLengthV = iVertexIndex;
+			}
+			else
+			if( iNonZeroLengthV >= 0 )
+				for(int i = 0; i < 3; i++)
+				{
+					pfTangent[iVertexIndex*3 + i] = pfTangent[iNonZeroLengthV*3 + i];
+				}
+		}
+		// ADD-BY-LEETEN 12/31/2009-END
 
 		uCoordIndex += uNrOfVertices;
 
@@ -213,6 +297,9 @@ CStreamline::_Read(float fScaleX, float fScaleY, float fScaleZ, char *szStreamli
 
 	#if	RENDER_STREAMLINE_AS_LINES
 	glVertexPointer(3, GL_FLOAT, 0, &pfCoords[0]);
+	// ADD-BY-LEETEN 12/31/2009-BEGIN
+	glNormalPointer(GL_FLOAT, 0,	&pfTangent[0]);
+	// ADD-BY-LEETEN 12/31/2009-END
 	#endif
 
 	#if	RENDER_STREAMLINE_AS_TUBES
@@ -518,7 +605,7 @@ CStreamline::_RenderLinesInSlab
 	bool bDrawHalo 
 )
 {
-	if( iSlab >= pi2BaseLengths.USize() )
+	if( iSlab >= int(pi2BaseLengths.USize()) )
 	{
 		LOG(printf("Warning!"));
 		return;
@@ -531,10 +618,15 @@ CStreamline::_RenderLinesInSlab
 	glPushAttrib(GL_LINE_BIT);
 	glPushAttrib(GL_DEPTH_BUFFER_BIT);
 	glEnableClientState(GL_VERTEX_ARRAY);
+	// ADD-BY-LEETEN 12/31/2009-BEGIN
+	glEnableClientState(GL_NORMAL_ARRAY);
+	// ADD-BY-LEETEN 12/31/2009-END
 
 	if( bDrawHalo )
 	{
-		glDepthFunc(GL_LEQUAL);
+		// DEL-BY-LEETEN 01/01/2010-BEGIN
+			// glDepthFunc(GL_LEQUAL);
+		// DEL-BY-LEETEN 01/01/2010-END
 
 		glLineWidth(fOuterWidth);
 		glColor4f(
@@ -548,6 +640,11 @@ CStreamline::_RenderLinesInSlab
 			GL_UNSIGNED_INT, 
 			&puSortedLineIndices[2*pi2BaseLengths[iSlab].x]); // &puLineIndices[0]);
 	}
+	// ADD-BY-LEETEN 01/01/2010-BEGIN
+	else
+	{
+	// ADD-BY-LEETEN 01/01/2010-END
+	
 	glLineWidth(fInnerWidth);
 	glColor4f(
 		f4Color.x, 
@@ -560,7 +657,14 @@ CStreamline::_RenderLinesInSlab
 		GL_UNSIGNED_INT, 
 		&puSortedLineIndices[2*pi2BaseLengths[iSlab].x]); // &puLineIndices[0]);
 
+	// ADD-BY-LEETEN 01/01/2010-BEGIN
+	}
+	// ADD-BY-LEETEN 01/01/2010-END
+
 	glDisableClientState(GL_VERTEX_ARRAY);
+	// ADD-BY-LEETEN 12/31/2009-BEGIN
+	glDisableClientState(GL_NORMAL_ARRAY);
+	// ADD-BY-LEETEN 12/31/2009-END
 
 	glPopAttrib();	// glPushAttrib(GL_DEPTH_BUFFER_BIT);
 	glPopAttrib();	// glPushAttrib(GL_LINE_BIT);
@@ -659,6 +763,11 @@ CStreamline::_RenderTubes()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.1  2009/12/31 01:53:59  leeten
+
+[12/30/2009]
+1. [1ST] First time checkin.
+
 Revision 1.3  2009/05/18 23:28:29  leeten
 
 [2009/05/18]
