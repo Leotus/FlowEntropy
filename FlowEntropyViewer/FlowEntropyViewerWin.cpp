@@ -84,7 +84,7 @@ CFlowEntropyViewerWin::_ReadStreamlines(char *szStreamlineFilename)
 void 
 CFlowEntropyViewerWin::_BeginDisplay()
 {
-	glClearColor(0.0, 0.0, 0.0, 0.0);
+	glClearColor(1.0, 1.0, 1.0, 0.0);
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
 	glPushMatrix();
@@ -131,6 +131,9 @@ CFlowEntropyViewerWin::_BeginDisplay()
 
 		SET_1I_VALUE_BY_NAME(	pidImportanceFilling, "t2dPrevLayer",		0);
 		SET_1I_VALUE_BY_NAME(	pidImportanceFilling, "t3dVolume",			1);
+		// ADD-BY-LEETEN 01/01/2010-BEGIN
+		SET_1I_VALUE_BY_NAME(	pidImportanceFilling, "t2dLineFlag",		3);
+		// ADD-BY-LEETEN 01/01/2010-END
 
 		glUseProgramObjectARB(	pidImportanceCulling);
 		SET_1F_VALUE_BY_NAME(	pidImportanceCulling, "fWindowWidth",		(float)piViewport[2]);
@@ -146,6 +149,26 @@ CFlowEntropyViewerWin::_BeginDisplay()
 		SET_1F_VALUE_BY_NAME(	pidImportanceCulling, "fTfDomainMax",		fTfDomainMax);
 		SET_1F_VALUE_BY_NAME(	pidImportanceCulling, "fDataValueMin",		0);
 		SET_1F_VALUE_BY_NAME(	pidImportanceCulling, "fDataValueMax",		fMaxEntropy);
+
+		// ADD-BY-LEETEN 01/01/2010-BEGIN
+		SET_1I_VALUE_BY_NAME(	pidImportanceCulling, "ibIsLightingEnabled",		(SHADING_LIGHTING == iShading)?1:0 );
+		SET_1I_VALUE_BY_NAME(	pidImportanceCulling, "ibIsHaloEnabled",			(SHADING_HALO == iShading)?1:0 );
+
+		float pfAmbient[4];
+		float pfDiffuse[4];
+		float pfSpecular[4];
+		for(int i = 0; i < 4; i++)
+		{
+			pfAmbient[i] = cMaterial.fAmbient;
+			pfDiffuse[i] = cMaterial.fDiffuse;
+			pfSpecular[i] = cMaterial.fSpecular;
+		}
+		glMaterialfv(GL_FRONT, GL_AMBIENT, pfAmbient);
+		glMaterialfv(GL_FRONT, GL_DIFFUSE, pfDiffuse);
+		glMaterialfv(GL_FRONT, GL_SPECULAR, pfSpecular);
+		glMaterialf(GL_FRONT, GL_SHININESS, cMaterial.fShininess);
+		// ADD-BY-LEETEN 01/01/2010-END
+		
 		break;
 	}
 
@@ -157,6 +180,12 @@ CFlowEntropyViewerWin::_BeginDisplay()
 
 	glActiveTexture(GL_TEXTURE0 + 2);
 	glBindTexture(GL_TEXTURE_1D, t1dTf);
+
+	// ADD-BY-LEETEN 01/01/2010-BEGIN
+	glActiveTexture(GL_TEXTURE0 + 3);
+	glBindTexture(CDvrWin2::cColor.eTarget, CDvrWin2::cColor.t2d);
+	// ADD-BY-LEETEN 01/01/2010-END
+	
 
 	glActiveTexture(GL_TEXTURE0);
 }
@@ -185,10 +214,44 @@ void CFlowEntropyViewerWin::_RenderSlab(
 		break;
 
 	case RENDER_MODE_STREAMLINES_IMPORTANCE_CULLING:
-		if( iMinSlab <= iSlab && iSlab < min(iNrOfSlabs, iMaxSlab) )
+		// MOD-BY-LEETEN 01/01/2010-FROM:
+			// if( iMinSlab <= iSlab && iSlab < min(iNrOfSlabs, iMaxSlab) )
+		// TO:
+		if( iMinSlab <= iSlab && iSlab < min(iNrOfSlabs, iMinSlab + iNrOfSlabsToRender) )
+		// MOD-BY-LEETEN 01/01/2010-END
 		{
-			glUseProgramObjectARB(pidImportanceCulling);
-			cStreamline._RenderLinesInSlab(iSlab);
+			#if	0	// MOD-BY-LEETEN 01/01/2010-FROM:
+				glUseProgramObjectARB(pidImportanceCulling);
+				cStreamline._RenderLinesInSlab(iSlab);
+			#else	// MOD-BY-LEETEN 01/01/2010-TO:
+			switch(iShading)
+			{
+			case SHADING_LIGHTING:
+			case SHADING_NO_LIGHTING:
+				glUseProgramObjectARB(pidImportanceCulling);
+				cStreamline._RenderLinesInSlab(iSlab, false);
+				break;
+
+			case SHADING_HALO:
+				glPushAttrib(GL_DEPTH_BUFFER_BIT);
+				glPushAttrib(GL_COLOR_BUFFER_BIT);
+
+				glDepthFunc(GL_LEQUAL);
+
+				glUseProgramObjectARB(pidImportanceCulling);
+				glColorMask(true, true, true, false);
+				cStreamline._RenderLinesInSlab(iSlab, true);
+				cStreamline._RenderLinesInSlab(iSlab, false);
+
+				glColorMask(false, false, false, true);
+				cStreamline._RenderLinesInSlab(iSlab, true);
+
+				glPopAttrib();	// glPushAttrib(GL_DEPTH_BUFFER_BIT);
+				glPopAttrib();	// glPushAttrib(GL_COLOR_BUFFER_BIT);
+				break;
+
+			}
+			#endif	// MOD-BY-LEETEN 01/01/2010-END
 		}
 
 		glUseProgramObjectARB(pidImportanceFilling);
@@ -201,10 +264,21 @@ void CFlowEntropyViewerWin::_RenderSlab(
 			dMinY, dMaxY, 
 			dMinZ, dMaxZ);
 		break;
-
+		
 	case RENDER_MODE_STREAMLINES_IN_SLABS:
-		if( iMinSlab <= iSlab && iSlab < min(iNrOfSlabs, iMaxSlab) )
+		#if	0	// MOD-BY-LEETEN 01/01/2010-FROM:
+			if( iMinSlab <= iSlab && iSlab < min(iNrOfSlabs, iMaxSlab) )
+				cStreamline._RenderLinesInSlab(iSlab, true);
+		#else	// MOD-BY-LEETEN 01/01/2010-TO:
+		if( iMinSlab <= iSlab && iSlab < min(iNrOfSlabs, iMinSlab + iNrOfSlabsToRender) )
+		{
+			glPushAttrib(GL_DEPTH_BUFFER_BIT);
+			glDepthFunc(GL_LEQUAL);
 			cStreamline._RenderLinesInSlab(iSlab, true);
+			cStreamline._RenderLinesInSlab(iSlab, false);
+			glPopAttrib();	// glPushAttrib(GL_DEPTH_BUFFER_BIT);
+		}
+		#endif	// MOD-BY-LEETEN 01/01/2010-END
 
 		break;
 	}
@@ -250,11 +324,19 @@ CFlowEntropyViewerWin::_InitFunc()
 	assert( pidRayIntegral );	
 
 	///////////////////////////////////////////////////////////////////
+	#if	0	// MOD-BY-LEETEN 12/31/2009-FROM:
+		pidImportanceCulling = CSetShadersByString(
+			NULL
+			,
+			#include "importance_culling.frag.h"	
+		);
+	#else	// MOD-BY-LEETEN 12/31/2009-TO:
 	pidImportanceCulling = CSetShadersByString(
-		NULL
+		#include "line_illumination.vert.h"	
 		,
 		#include "importance_culling.frag.h"	
 	);
+	#endif	// MOD-BY-LEETEN 12/31/2009-END
 	assert( pidImportanceCulling );	
 
 	///////////////////////////////////////////////////////////////////
@@ -283,20 +365,40 @@ CFlowEntropyViewerWin::_InitFunc()
 	PCGetGluiWin()->add_radiobutton_to_group(pcRadioGroup_RenderMode, "Streamlines w/ Importance Culling");
 	PCGetGluiWin()->add_radiobutton_to_group(pcRadioGroup_RenderMode, "Streamlines in Slabs");
 
+	// ADD-BY-LEETEN 01/01/2010-BEGIN
+	GLUI_Panel *pcPanel_Shading = PCGetGluiWin()->add_panel("Shading");
+	GLUI_RadioGroup *pcRadioGroup_Shading = PCGetGluiWin()->add_radiogroup_to_panel(pcPanel_Shading, &iShading);
+	PCGetGluiWin()->add_radiobutton_to_group(pcRadioGroup_Shading, "no lighting");
+	PCGetGluiWin()->add_radiobutton_to_group(pcRadioGroup_Shading, "lighting");
+	PCGetGluiWin()->add_radiobutton_to_group(pcRadioGroup_Shading, "halo");
+
+	cMaterial._AddGlui(PCGetGluiWin());
+	// ADD-BY-LEETEN 01/01/2010-END
+	
+
 	GLUI_Panel *pcPanel_Slabs = PCGetGluiWin()->add_panel("Slab");
 	PCGetGluiWin()->add_spinner_to_panel(pcPanel_Slabs, "Min Slab", GLUI_SPINNER_INT, &iMinSlab);	
-	PCGetGluiWin()->add_spinner_to_panel(pcPanel_Slabs, "Max Slab", GLUI_SPINNER_INT, &iMaxSlab);	
+	// MOD-BY-LEETEN 01/01/2010-FROM:
+		// PCGetGluiWin()->add_spinner_to_panel(pcPanel_Slabs, "Max Slab", GLUI_SPINNER_INT, &iMaxSlab);	
+	// TO:
+	PCGetGluiWin()->add_spinner_to_panel(pcPanel_Slabs, "#Slabs",	GLUI_SPINNER_INT, &iNrOfSlabsToRender);	
+	// MOD-BY-LEETEN 01/01/2010-END
 	GLUI_Spinner *pcSpinner_OcclusionSaturation = PCGetGluiWin()->add_spinner_to_panel(pcPanel_Slabs, "Occlusion Saturation ", GLUI_SPINNER_FLOAT, &fOcclusionSaturation );	
 	pcSpinner_OcclusionSaturation->set_float_limits(0.0f, 1.0f);
 
 	cStreamline._AddGlui(PCGetGluiWin());
+
 }
 
 /////////////////////////////////////////////////////////////////////
 CFlowEntropyViewerWin::CFlowEntropyViewerWin(void)
 {
 	iMinSlab = 0;
-	iMaxSlab = 1024;
+	// MOD-BY-LEETEN 01/01/2010-FROM:
+		// iMaxSlab = 1024;
+	// TO:
+	iNrOfSlabsToRender = 1024;
+	// MOD-BY-LEETEN 01/01/2010-END
 
 	fOcclusionSaturation = 0.0f;
 
@@ -306,6 +408,10 @@ CFlowEntropyViewerWin::CFlowEntropyViewerWin(void)
 	_SetInternalColorFormat(GL_RGBA32F_ARB);	// set the depths of each chanel of the FBO as 32 bits 
 
 	iNrOfSlices = 128;			// set up the default number of slices
+
+	// ADD-BY-LEETEN 01/01/2010-BEGIN
+	iShading = SHADING_NO_LIGHTING;
+	// ADD-BY-LEETEN 01/01/2010-END
 
 	iRenderMode = RENDER_MODE_STREAMLINES_IMPORTANCE_CULLING;
 	_AddGluiWin();
@@ -318,5 +424,10 @@ CFlowEntropyViewerWin::~CFlowEntropyViewerWin(void)
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.2  2009/12/31 01:59:54  leeten
+
+[12/30/2009]
+1. [ADD] Add the log section.
+
 
 */
