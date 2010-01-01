@@ -15,6 +15,15 @@ class CFlowEntropyViewerWin :
 	};
 	int iRenderMode;
 
+	// ADD-BY-LEETEN 01/01/2010-BEGIN
+	enum {
+		SHADING_NO_LIGHTING,
+		SHADING_LIGHTING,
+		SHADING_HALO,
+	};
+	int iShading;
+	// ADD-BY-LEETEN 01/01/2010-END
+
 	// streamline-related variables
 	CStreamline cStreamline;
 
@@ -36,7 +45,42 @@ class CFlowEntropyViewerWin :
 	GLuint pidImportanceFilling;	// Id of shader programs to do importance culling
 	GLuint pidImportanceCulling;	// Id of shader programs to do importance culling
 	GLint iMinSlab;
-	GLint iMaxSlab;
+	// MOD-BY-LEETEN 01/01/2010-FROM:
+		// GLint iMaxSlab;
+	// TO:
+	GLint iNrOfSlabsToRender;
+	// MOD-BY-LEETEN 01/01/2010-END
+
+	// ADD-BY-LEETEN 01/01/2010-BEGIN
+	// lighting
+	struct CMaterial {
+		float fAmbient;
+		float fDiffuse;
+		float fSpecular;
+		float fShininess;
+	
+		CMaterial()
+		{
+			fAmbient =		0.2f;
+			fDiffuse =		0.4f;
+			fSpecular =		0.4f;
+			fShininess =	4.0f;
+		}
+
+		void _AddGlui(GLUI* pcGlui)
+		{
+			GLUI_Panel	*pcPanel_Material = pcGlui->add_panel("Material");
+				GLUI_Spinner *pcSpinner_Ambient = pcGlui->add_spinner_to_panel(pcPanel_Material, "Ambinet", GLUI_SPINNER_FLOAT, &fAmbient);	
+				pcSpinner_Ambient->set_float_limits(0.0f, 1.0f);
+				GLUI_Spinner *pcSpinner_Diffuse = pcGlui->add_spinner_to_panel(pcPanel_Material, "Diffuse", GLUI_SPINNER_FLOAT, &fDiffuse);	
+				pcSpinner_Diffuse->set_float_limits(0.0f, 1.0f);
+				GLUI_Spinner *pcSpinner_Specular = pcGlui->add_spinner_to_panel(pcPanel_Material, "Specular", GLUI_SPINNER_FLOAT, &fSpecular);	
+				pcSpinner_Specular->set_float_limits(0.0f, 1.0f);
+				GLUI_Spinner *pcSpinner_Shininess = pcGlui->add_spinner_to_panel(pcPanel_Material, "Shininess", GLUI_SPINNER_FLOAT, &fShininess);	
+				pcSpinner_Shininess->set_float_limits(0.0f, 128.0f);
+		}
+	} cMaterial;
+	// ADD-BY-LEETEN 01/01/2010-END
 
 public:
 	// methods to read the input
@@ -72,5 +116,10 @@ public:
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.2  2009/12/31 01:59:54  leeten
+
+[12/30/2009]
+1. [ADD] Add the log section.
+
 
 */
