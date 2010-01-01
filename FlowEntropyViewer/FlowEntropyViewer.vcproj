@@ -40,7 +40,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;GLUT_BUILDING_LIB"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -116,7 +116,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;GLUT_BUILDING_LIB"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS"
 				RuntimeLibrary="2"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
@@ -134,7 +134,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libopt.lib libshader.lib libdvr2.lib libtfw.lib libgw.lib lib3ds-120sd.lib"
+				AdditionalDependencies="libopt.lib libshader.lib libdvr2.lib libtfw.lib libgw.lib lib3ds-120d.lib"
 				LinkIncremental="1"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -221,7 +221,7 @@
 				>
 				<Tool
 					Name="VCCustomBuildTool"
-					CommandLine="shader2string $(InputFileName) $(InputFileName).h"
+					CommandLine="shader2string $(InputFileName) $(InputFileName).h&#x0D;&#x0A;"
 					Outputs="$(InputFileName).h"
 				/>
 			</FileConfiguration>
@@ -230,7 +230,7 @@
 				>
 				<Tool
 					Name="VCCustomBuildTool"
-					CommandLine="shader2string $(InputFileName) $(InputFileName).h"
+					CommandLine="shader2string $(InputFileName) $(InputFileName).h&#x0D;&#x0A;"
 					Outputs="$(InputFileName).h"
 				/>
 			</FileConfiguration>
@@ -243,7 +243,7 @@
 				>
 				<Tool
 					Name="VCCustomBuildTool"
-					CommandLine="shader2string $(InputFileName) $(InputFileName).h"
+					CommandLine="shader2string $(InputFileName) $(InputFileName).h&#x0D;&#x0A;"
 					Outputs="$(InputFileName).h"
 				/>
 			</FileConfiguration>
@@ -252,8 +252,30 @@
 				>
 				<Tool
 					Name="VCCustomBuildTool"
-					CommandLine="shader2string $(InputFileName) $(InputFileName).h"
+					CommandLine="shader2string $(InputFileName) $(InputFileName).h&#x0D;&#x0A;"
 					Outputs="$(InputFileName).h"
+				/>
+			</FileConfiguration>
+		</File>
+		<File
+			RelativePath=".\line_illumination.vert"
+			>
+			<FileConfiguration
+				Name="Debug|Win32"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+					CommandLine="shader2string $(InputFileName) $(InputFileName).h&#x0D;&#x0A;"
+					Outputs="$(InputFileName) $(InputFileName).h"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Release|Win32"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+					CommandLine="shader2string $(InputFileName) $(InputFileName).h&#x0D;&#x0A;"
+					Outputs="$(InputFileName) $(InputFileName).h"
 				/>
 			</FileConfiguration>
 		</File>
@@ -287,7 +309,7 @@
 				>
 				<Tool
 					Name="VCCustomBuildTool"
-					CommandLine="&quot;$(CUDA_BIN_PATH)\nvcc.exe&quot; -keep -ccbin &quot;$(VCInstallDir)bin&quot; -c -arch sm_12 -D_DEBUG -DWIN32 -D_CONSOLE -D_MBCS -Xcompiler /EHsc,/W3,/nologo,/Wp64,/Od,/Zi,/RTC1,/MDd -o $(ConfigurationName)\$(InputName).obj $(InputPath)"
+					CommandLine="&quot;$(CUDA_BIN_PATH)\nvcc.exe&quot; -keep -ccbin &quot;$(VCInstallDir)bin&quot; -c -arch sm_12 -D_DEBUG -DWIN32 -D_CONSOLE -D_MBCS -Xcompiler /EHsc,/W3,/nologo,/Wp64,/Od,/Zi,/RTC1,/MDd -o $(ConfigurationName)\$(InputName).obj $(InputPath)&#x0D;&#x0A;"
 					Outputs="$(ConfigurationName)\$(InputName).obj"
 				/>
 			</FileConfiguration>
@@ -296,7 +318,7 @@
 				>
 				<Tool
 					Name="VCCustomBuildTool"
-					CommandLine="&quot;$(CUDA_BIN_PATH)\nvcc.exe&quot; -ccbin &quot;$(VCInstallDir)bin&quot; -c -arch sm_12 -D_DEBUG -DWIN32 -D_CONSOLE -D_MBCS -Xcompiler /EHsc,/W3,/nologo,/Wp64,/O2,/Zi,/MD -o $(ConfigurationName)\$(InputName).obj $(InputPath)"
+					CommandLine="&quot;$(CUDA_BIN_PATH)\nvcc.exe&quot; -ccbin &quot;$(VCInstallDir)bin&quot; -c -arch sm_12 -D_DEBUG -DWIN32 -D_CONSOLE -D_MBCS -Xcompiler /EHsc,/W3,/nologo,/Wp64,/O2,/Zi,/MD -o $(ConfigurationName)\$(InputName).obj $(InputPath)&#x0D;&#x0A;"
 					Outputs="$(ConfigurationName)\$(InputName).obj"
 				/>
 			</FileConfiguration>
