@@ -27,6 +27,10 @@ struct CStreamline
 	unsigned int uNrOfLines;
 	TBuffer<float> pfCoords;
 
+	// ADD-BY-LEETEN 12/31/2009-BEGIN
+	TBuffer<float> pfTangent;
+	// ADD-BY-LEETEN 12/31/2009-END
+
 	TBuffer<unsigned int> puLineIndices;
 
 	TBuffer<int2>	pi2Slabs;
@@ -88,6 +92,11 @@ public:
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.1  2009/12/31 01:53:59  leeten
+
+[12/30/2009]
+1. [1ST] First time checkin.
+
 Revision 1.2  2009/05/15 20:44:17  leeten
 
 [2009/05/15]
