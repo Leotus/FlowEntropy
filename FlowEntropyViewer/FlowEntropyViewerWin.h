@@ -16,14 +16,24 @@ class CFlowEntropyViewerWin :
 	int iRenderMode;
 
 	// ADD-BY-LEETEN 01/01/2010-BEGIN
-	enum {
-		SHADING_NO_LIGHTING,
-		SHADING_LIGHTING,
-		SHADING_HALO,
-	};
-	int iShading;
+
+	#if	0	// MOD-BY-LEETEN 01/03/2010-FROM:
+			enum {
+				SHADING_NO_LIGHTING,
+				SHADING_LIGHTING,
+				SHADING_HALO,
+			};
+			int iShading;
+	#else	// MOD-BY-LEETEN 01/03/2010-TO:
+	int ibIsLightingEnabled;
+	int ibIsColorMono;
+	int ibIsHaloEnabled;
+	#endif	// MOD-BY-LEETEN 01/03/2010-END
 	// ADD-BY-LEETEN 01/01/2010-END
 
+	// ADD-BY-LEETEN 01/03/2010-BEGIN
+	int iMaxDistanceToNeighbors_screen;	
+	// ADD-BY-LEETEN 01/03/2010-END
 	// streamline-related variables
 	CStreamline cStreamline;
 
@@ -116,6 +126,13 @@ public:
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.3  2010/01/01 18:23:12  leeten
+
+[01/01/2010]
+1. [ADD] Declare new constants SHADING_NO_LIGHTING, SHADING_LIGHTING, SHADING_HALO and a variable iShading to indicate the shading algorithm.
+2. [MOD] Change the variable iMaxSlab to INrOFSlabsToRender.
+3. [ADD] Add a new data structure CMaterial to define the material for lighting,
+
 Revision 1.2  2009/12/31 01:59:54  leeten
 
 [12/30/2009]
