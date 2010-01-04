@@ -248,24 +248,37 @@ _GetSrcEntropyVolume
 
 	#if	1	// TEST-DEBUG
 	FILE *fpFile;
-#if	0	// TEST-DEL
-	// MOD-BY-LEETEN 12/20/2009-FROM:
-		// fpFile = fopen( __FUNCTION__ "_" SRC_ENTROPY_VOLUME_POSTFIX ".txt", "wt");
-	// TO:
-	fpFile = fopen( __FUNCTION__ "_" ENTROPY_VOLUME_POSTFIX ".txt", "wt");
-	// MOD-BY-LEETEN 12/20/2009-END
-	assert(fpFile);
 
-	for(int	v = 0,		z = 0; z < int(cVolumeExtent_array.depth);	z++)
-		for(int			y = 0; y < int(cVolumeExtent_array.height);	y++)
-			for(int		x = 0; x < int(cVolumeExtent_array.width);	x++, v++)
-				fprintf(fpFile, "E(%d, %d, %d) = %.4f\n", x, y, z, pfEntropyVolume_host[v]);
+	#if	0		// DEL-BY-LEETEN 01/03/2010-BEGIN
+		// MOD-BY-LEETEN 12/20/2009-FROM:
+			// fpFile = fopen( __FUNCTION__ "_" SRC_ENTROPY_VOLUME_POSTFIX ".txt", "wt");
+		// TO:
+		fpFile = fopen( __FUNCTION__ "_" ENTROPY_VOLUME_POSTFIX ".txt", "wt");
+		// MOD-BY-LEETEN 12/20/2009-END
+		assert(fpFile);
 
-	fclose(fpFile);
-#endif
+		for(int	v = 0,		z = 0; z < int(cVolumeExtent_array.depth);	z++)
+			for(int			y = 0; y < int(cVolumeExtent_array.height);	y++)
+				for(int		x = 0; x < int(cVolumeExtent_array.width);	x++, v++)
+					fprintf(fpFile, "E(%d, %d, %d) = %.4f\n", x, y, z, pfEntropyVolume_host[v]);
+
+		fclose(fpFile);
+	#endif		// DEL-BY-LEETEN 01/03/2010-END
 
 	// ADD-BY-LEETEN 12/28/2009-BEGIN
-	fpFile = fopen( __FUNCTION__ "_" ENTROPY_VOLUME_POSTFIX ".bin", "wb");
+	// MOD-BY-LEETEN 01/03/2010-FROM:
+		// fpFile = fopen( __FUNCTION__ "_" ENTROPY_VOLUME_POSTFIX ".bin", "wb");
+	// TO:
+	extern char* g_filename;
+	static char szInputFilename[1024+1];
+	static char szOutputFilename[1024+1];
+	char *szInputFilenameDot;
+	strcpy(szInputFilename, g_filename);
+	if( NULL != (szInputFilenameDot = strrchr(szInputFilename, '.')) )
+		*szInputFilenameDot = '\0';
+	sprintf(szOutputFilename, "%s_entropy_" ENTROPY_VOLUME_POSTFIX ".bin", szInputFilename);
+	fpFile = fopen(szOutputFilename, "wb");
+	// MOD-BY-LEETEN 01/03/2010-END
 	assert(fpFile);
 	fwrite(&cVolumeExtent_array.width,	sizeof(cVolumeExtent_array.width), 1, fpFile);
 	fwrite(&cVolumeExtent_array.height, sizeof(cVolumeExtent_array.height), 1, fpFile);
@@ -1246,6 +1259,11 @@ _FlowDiffusion(
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.6  2009/12/31 02:37:02  leeten
+
+[12/30/2009]
+1. [ADD] Dump the entropy field into a binary file.
+
 Revision 1.5  2009/12/27 19:19:21  leeten
 
 [12/27/2009]
