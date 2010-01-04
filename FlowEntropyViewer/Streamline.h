@@ -27,15 +27,31 @@ struct CStreamline
 	unsigned int uNrOfLines;
 	TBuffer<float> pfCoords;
 
+	// ADD-BY-LEETEN 01/02/2010-BEGIN
+	unsigned int uSamplingRate;
+	// ADD-BY-LEETEN 01/02/2010-END
+
 	// ADD-BY-LEETEN 12/31/2009-BEGIN
 	TBuffer<float> pfTangent;
 	// ADD-BY-LEETEN 12/31/2009-END
 
-	TBuffer<unsigned int> puLineIndices;
+	// ADD-BY-LEETEN 01/02/2010-BEGIN
+	TBuffer<unsigned int> puLineSegmentIndicesToStreamlines;
+	// ADD-BY-LEETEN 01/02/2010-END
+
+	// MOD-BY-LEETEN 01/02/2010-FROM:	
+		// TBuffer<unsigned int> puLineIndices;
+	// TO:
+	TBuffer<unsigned int> pu2LineSegmentIndicesToVertices;
+	// MOD-BY-LEETEN 01/02/2010-END
 
 	TBuffer<int2>	pi2Slabs;
 	TBuffer<float>	pfLineCentroids;
-	TBuffer<unsigned int> puSortedLineIndices;
+	// MOD-BY-LEETEN 01/02/2010-FROM:
+		// TBuffer<unsigned int> puSortedLineIndices;
+	// TO:
+	TBuffer<unsigned int> pu2SortedLineSegmentIndicesToVertices;
+	// MOD-BY-LEETEN 01/02/2010-END
 	TBuffer<int2>	pi2BaseLengths;
 
 	GLuint uLid;
@@ -92,6 +108,11 @@ public:
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.2  2010/01/01 18:19:40  leeten
+
+[01/01/2010]
+1. [ADD] Declare a new field pfTangent as the tangent vector on each vertex.
+
 Revision 1.1  2009/12/31 01:53:59  leeten
 
 [12/30/2009]
