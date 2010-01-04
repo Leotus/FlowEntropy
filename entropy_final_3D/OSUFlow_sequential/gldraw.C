@@ -3372,6 +3372,17 @@ void compute_streamlines()
 	#endif	
 	// ADD-BY-LEETEN 12/14/2009-END
 
+	// ADD-BY-LEETEN 01/03/2010-BEGIN
+	void
+	_GetSrcEntropyVolume
+	(
+		int iNrOfBins,
+		int iKernelWidth, int iKernelHeight, int iKernelDepth
+	);
+
+	_GetSrcEntropyVolume(binnum, 8, 8, 8);
+	// ADD-BY-LEETEN 01/03/2010-END
+
 	#endif
 	// ADD-BY-LEETEN 2009/11/10-END
 
@@ -5286,6 +5297,11 @@ readPatches_region();
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.3  2009/12/15 20:12:36  leeten
+
+[12/15/2009]
+1. [MOD] When BIN_LOOKUP_ON_GPU is 1, the vector field are converted to bins by CUDA.
+
 Revision 1.2  2009/12/07 20:08:15  leeten
 
 [12/07/2009]
