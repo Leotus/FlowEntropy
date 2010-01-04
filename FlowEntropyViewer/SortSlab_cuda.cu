@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 #include <assert.h>
 
 #include "cudpp/cudpp.h"
@@ -206,5 +208,10 @@ _ComputeDeptpFree_cuda
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.2  2009/12/31 02:00:30  leeten
+
+[12/30/2009]
+1. [ADD] Add the log section.
+
 
 */
