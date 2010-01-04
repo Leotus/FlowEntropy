@@ -84,7 +84,11 @@ CFlowEntropyViewerWin::_ReadStreamlines(char *szStreamlineFilename)
 void 
 CFlowEntropyViewerWin::_BeginDisplay()
 {
-	glClearColor(1.0, 1.0, 1.0, 0.0);
+	// MOD-BY-LEETEN 01/02/2010-BEGIN
+		// glClearColor(1.0, 1.0, 1.0, 0.0);
+	// TO:
+	glClearColor(0.0, 0.0, 0.0, 0.0);
+	// MOD-BY-LEETEN 01/02/2010-END
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
 	glPushMatrix();
@@ -151,8 +155,19 @@ CFlowEntropyViewerWin::_BeginDisplay()
 		SET_1F_VALUE_BY_NAME(	pidImportanceCulling, "fDataValueMax",		fMaxEntropy);
 
 		// ADD-BY-LEETEN 01/01/2010-BEGIN
-		SET_1I_VALUE_BY_NAME(	pidImportanceCulling, "ibIsLightingEnabled",		(SHADING_LIGHTING == iShading)?1:0 );
-		SET_1I_VALUE_BY_NAME(	pidImportanceCulling, "ibIsHaloEnabled",			(SHADING_HALO == iShading)?1:0 );
+		#if	0	// DEL-BY-LEETEN 01/03/2010-BEGIN
+			SET_1I_VALUE_BY_NAME(	pidImportanceCulling, "ibIsLightingEnabled",		(SHADING_LIGHTING == iShading)?1:0 );
+			SET_1I_VALUE_BY_NAME(	pidImportanceCulling, "ibIsColorMono",			(SHADING_HALO == iShading)?1:0 );
+		#endif	// DEL-BY-LEETEN 01/03/2010-END
+
+		// ADD-BY-LEETEN 01/03/2010-BEGIN
+		SET_1I_VALUE_BY_NAME(	pidImportanceCulling, "ibIsLightingEnabled",		ibIsLightingEnabled );
+		// ADD-BY-LEETEN 01/03/2010-END
+
+		// ADD-BY-LEETEN 01/03/2010-BEGIN
+		SET_1I_VALUE_BY_NAME(	pidImportanceCulling, "iMaxDistanceToNeighbors_screen",	iMaxDistanceToNeighbors_screen);
+		// ADD-BY-LEETEN 01/03/2010-END
+
 
 		float pfAmbient[4];
 		float pfDiffuse[4];
@@ -208,7 +223,7 @@ void CFlowEntropyViewerWin::_RenderSlab(
 
 			pdModelviewMatrix, pdProjectionMatrix, piViewport,
 			
-			dMinX, dMaxX, 
+ 			dMinX, dMaxX, 
 			dMinY, dMaxY, 
 			dMinZ, dMaxZ);
 		break;
@@ -224,36 +239,63 @@ void CFlowEntropyViewerWin::_RenderSlab(
 				glUseProgramObjectARB(pidImportanceCulling);
 				cStreamline._RenderLinesInSlab(iSlab);
 			#else	// MOD-BY-LEETEN 01/01/2010-TO:
-			switch(iShading)
+
+			#if	0	// MOD-BY-LEETEN 01/03/2010-FROM:
+				switch(iShading)
+				{
+				case SHADING_LIGHTING:
+				case SHADING_NO_LIGHTING:
+					glUseProgramObjectARB(pidImportanceCulling);
+					cStreamline._RenderLinesInSlab(iSlab, false);
+					break;
+
+				case SHADING_HALO:
+					glPushAttrib(GL_DEPTH_BUFFER_BIT);
+					glPushAttrib(GL_COLOR_BUFFER_BIT);
+
+					glDepthFunc(GL_LEQUAL);
+
+					glUseProgramObjectARB(pidImportanceCulling);
+					glColorMask(true, true, true, false);
+					cStreamline._RenderLinesInSlab(iSlab, true);
+					cStreamline._RenderLinesInSlab(iSlab, false);
+
+					glColorMask(false, false, false, true);
+					cStreamline._RenderLinesInSlab(iSlab, true);
+
+					glPopAttrib();	// glPushAttrib(GL_DEPTH_BUFFER_BIT);
+					glPopAttrib();	// glPushAttrib(GL_COLOR_BUFFER_BIT);
+					break;
+				}
+			#else	// MOD-BY-LEETEN 01/03/2010-TO:
+			glPushAttrib(GL_DEPTH_BUFFER_BIT);
+			glPushAttrib(GL_COLOR_BUFFER_BIT);
+
+			glColorMask(true, true, true, false);
+			glDepthFunc(GL_LEQUAL);
+
+			glUseProgramObjectARB(pidImportanceCulling);
+
+			// render the streamlin to the color buffer
+			if( 0 != ibIsHaloEnabled )
 			{
-			case SHADING_LIGHTING:
-			case SHADING_NO_LIGHTING:
-				glUseProgramObjectARB(pidImportanceCulling);
-				cStreamline._RenderLinesInSlab(iSlab, false);
-				break;
-
-			case SHADING_HALO:
-				glPushAttrib(GL_DEPTH_BUFFER_BIT);
-				glPushAttrib(GL_COLOR_BUFFER_BIT);
-
-				glDepthFunc(GL_LEQUAL);
-
-				glUseProgramObjectARB(pidImportanceCulling);
-				glColorMask(true, true, true, false);
+				SET_1I_VALUE_BY_NAME(	pidImportanceCulling, "ibIsColorMono",			1 );
 				cStreamline._RenderLinesInSlab(iSlab, true);
-				cStreamline._RenderLinesInSlab(iSlab, false);
-
-				glColorMask(false, false, false, true);
-				cStreamline._RenderLinesInSlab(iSlab, true);
-
-				glPopAttrib();	// glPushAttrib(GL_DEPTH_BUFFER_BIT);
-				glPopAttrib();	// glPushAttrib(GL_COLOR_BUFFER_BIT);
-				break;
-
 			}
-			#endif	// MOD-BY-LEETEN 01/01/2010-END
-		}
 
+			SET_1I_VALUE_BY_NAME(	pidImportanceCulling, "ibIsColorMono",			ibIsColorMono );
+			cStreamline._RenderLinesInSlab(iSlab, false);
+
+			// update the alpha channel
+			glColorMask(false, false, false, true);
+			cStreamline._RenderLinesInSlab(iSlab, (0!=ibIsHaloEnabled)?true:false);
+
+			glPopAttrib();	// glPushAttrib(GL_DEPTH_BUFFER_BIT);
+			glPopAttrib();	// glPushAttrib(GL_COLOR_BUFFER_BIT);
+			#endif	// MOD-BY-LEETEN 01/03/2010-END
+			#endif	// MOD-BY-LEETEN 01/01/2010-END
+
+		}
 		glUseProgramObjectARB(pidImportanceFilling);
 		CDvrWin2::_RenderSlab(
 			iSlab, iNrOfSlabs, 
@@ -366,11 +408,23 @@ CFlowEntropyViewerWin::_InitFunc()
 	PCGetGluiWin()->add_radiobutton_to_group(pcRadioGroup_RenderMode, "Streamlines in Slabs");
 
 	// ADD-BY-LEETEN 01/01/2010-BEGIN
-	GLUI_Panel *pcPanel_Shading = PCGetGluiWin()->add_panel("Shading");
-	GLUI_RadioGroup *pcRadioGroup_Shading = PCGetGluiWin()->add_radiogroup_to_panel(pcPanel_Shading, &iShading);
-	PCGetGluiWin()->add_radiobutton_to_group(pcRadioGroup_Shading, "no lighting");
-	PCGetGluiWin()->add_radiobutton_to_group(pcRadioGroup_Shading, "lighting");
-	PCGetGluiWin()->add_radiobutton_to_group(pcRadioGroup_Shading, "halo");
+		GLUI_Panel *pcPanel_Shading = PCGetGluiWin()->add_panel("Shading");
+
+	#if	0	// MOD-BY-LEETEN 01/03/2010-FROM:
+		GLUI_RadioGroup *pcRadioGroup_Shading = PCGetGluiWin()->add_radiogroup_to_panel(pcPanel_Shading, &iShading);
+		PCGetGluiWin()->add_radiobutton_to_group(pcRadioGroup_Shading, "no lighting");
+		PCGetGluiWin()->add_radiobutton_to_group(pcRadioGroup_Shading, "lighting");
+		PCGetGluiWin()->add_radiobutton_to_group(pcRadioGroup_Shading, "halo");
+	#else	// MOD-BY-LEETEN 01/03/2010-TO:
+	PCGetGluiWin()->add_checkbox_to_panel(pcPanel_Shading, "mono?",		&ibIsColorMono);
+	PCGetGluiWin()->add_checkbox_to_panel(pcPanel_Shading, "lighting?", &ibIsLightingEnabled);
+	PCGetGluiWin()->add_checkbox_to_panel(pcPanel_Shading, "halo?",		&ibIsHaloEnabled);
+	#endif	// MOD-BY-LEETEN 01/03/2010-END
+
+	// ADD-BY-LEETEN 01/03/2010-BEGIN
+	GLUI_Spinner *pcSpinner_MaxLengthToNeighbors = PCGetGluiWin()->add_spinner("Max. Dist.",	GLUI_SPINNER_INT, &iMaxDistanceToNeighbors_screen);	
+		pcSpinner_MaxLengthToNeighbors->set_int_limits(0, 5);
+	// ADD-BY-LEETEN 01/03/2010-END
 
 	cMaterial._AddGlui(PCGetGluiWin());
 	// ADD-BY-LEETEN 01/01/2010-END
@@ -400,7 +454,11 @@ CFlowEntropyViewerWin::CFlowEntropyViewerWin(void)
 	iNrOfSlabsToRender = 1024;
 	// MOD-BY-LEETEN 01/01/2010-END
 
-	fOcclusionSaturation = 0.0f;
+	// MOD-BY-LEETEN 01/04/2010-FROM:
+		// fOcclusionSaturation = 0.0f;
+	// TO:
+	fOcclusionSaturation = 1.0f;
+	// MOD-BY-LEETEN 01/04/2010-END
 
 	fThicknessGain = 1.0f;
 
@@ -410,8 +468,19 @@ CFlowEntropyViewerWin::CFlowEntropyViewerWin(void)
 	iNrOfSlices = 128;			// set up the default number of slices
 
 	// ADD-BY-LEETEN 01/01/2010-BEGIN
-	iShading = SHADING_NO_LIGHTING;
+	// MOD-BY-LEETEN 01/03/2010-FROM:
+		// iShading = SHADING_NO_LIGHTING;	
+	// TO:
+	ibIsLightingEnabled = 0;
+	ibIsColorMono		= 1;
+	ibIsHaloEnabled		= 1;
+	// MOD-BY-LEETEN 01/03/2010-END
 	// ADD-BY-LEETEN 01/01/2010-END
+
+	// ADD-BY-LEETEN 01/03/2010-BEGIN
+	iMaxDistanceToNeighbors_screen = 0;
+	// ADD-BY-LEETEN 01/03/2010-END
+
 
 	iRenderMode = RENDER_MODE_STREAMLINES_IMPORTANCE_CULLING;
 	_AddGluiWin();
@@ -424,6 +493,14 @@ CFlowEntropyViewerWin::~CFlowEntropyViewerWin(void)
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.3  2010/01/01 18:36:32  leeten
+
+[01/01/2010]
+1. [ADD] Pass the material for lighting.
+2. [ADD] PAss the currnet color buffer for the fragment shader 'importance_filling' to decide whether the importance should be updated.
+3. [ADD] Support lighting and halo.
+4. [ADD] Add the vertex shader 'line_illuimation.vert' to the shader program pidImportanceCulling.
+
 Revision 1.2  2009/12/31 01:59:54  leeten
 
 [12/30/2009]
