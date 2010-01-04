@@ -411,7 +411,11 @@ CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_TIMING);
 	v3Grid = dim3(iNrOfXBlocksInMemory, iNrOfYBlocksInMemory, iNrOfZBlocksInMemory);
 	fprintf(stderr, "#BLOCKS = %d x %d x %d\n", v3Grid.x, v3Grid.y, v3Grid.z);
 
-	i3Step.x = iNrOfXBlocksInMemory * v3Blk.x;
+	// MOD-BY-LEETEN 01/03/2010-FROM:
+		// i3Step.x = iNrOfXBlocksInMemory * v3Blk.x;	
+	// TO:
+	i3Step.x = iNrOfXBlocksInMemory * iNrOfNeededThreadsPerBlock;
+	// MOD-BY-LEETEN 01/03/2010-END
 	i3Step.y = iNrOfYBlocksInMemory * v3Blk.y;
 	i3Step.z = iNrOfZBlocksInMemory * v3Blk.z;
 
@@ -621,6 +625,11 @@ CLOCK_PRINT(_ComputeEntropyVolume_PRINT_TIMING);
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.2  2009/12/31 02:33:01  leeten
+
+[12/30/2009]
+1. [ADD] Define a new kernel _ComputeEntropyAlongScanlineInParallel_kernel() s.t all threads only scan the neighbors along the YZ directions.
+
 Revision 1.1  2009/12/27 19:35:53  leeten
 
 [12/27/2009]
