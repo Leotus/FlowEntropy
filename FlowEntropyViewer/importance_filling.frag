@@ -44,7 +44,11 @@ main()
 	if( v4PrevColor.a > 0.0 )
 		v4Data.g = max(fPrevV_normalized, fV_normalized);
 	else
-		v4Data.g = 0;	
+		// MOD-BY-LEETEN 01/02/2010-FROM:
+			// v4Data.g = 0;	
+		// TO:
+		v4Data.g = 0.0;	
+		// MOD-BY-LEETEN 01/02/2010-END
 	#endif	// MOD-BY-LEETEN 01/01/2010-END
 
 	gl_FragData[0] = vec4(0.0);
@@ -54,6 +58,11 @@ main()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.2  2010/01/01 18:25:06  leeten
+
+[01/01/2010]
+1. [MOD] When update the data, set the importance as zero if no streamline has been drawn.
+
 Revision 1.1  2009/12/31 01:53:59  leeten
 
 [12/30/2009]
