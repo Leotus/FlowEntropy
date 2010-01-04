@@ -15,6 +15,9 @@
 
 	// the transfer function
 	int iNrOfTfEntries = 4096;
+	// ADD-BY-LEETEN 01/02/2010-BEGIN
+	float fMaxCount;
+	// ADD-BY-LEETEN 01/02/2010-END
 	CTransFunc cTransFunc;
 	TBuffer<float> pfTransFunc;
 	CTfWin	cTfWin;
@@ -63,7 +66,11 @@ _ReadEntropyField(char *szEntropyFieldFilename)
 			}
 
 	// normalize the histogram
-	float fMaxCount = -HUGE_VAL;
+	// MOD-BY-LEETEN 01/02/2010-BEGIN
+		// float fMaxCount = -HUGE_VAL;
+	// TO:
+	fMaxCount = -HUGE_VAL;
+	// MOD-BY-LEETEN 01/02/2010-END
 	for(int b = 0; b < iNrOfTfEntries; b++) 
 		fMaxCount = max(fMaxCount, pfHist[b]);
 
@@ -162,6 +169,9 @@ main(int argn, char* argv[])
 	cTfWin._SetNrOfEntries(iNrOfTfEntries);
 	cTfWin.ICreate("Transfer Function",		false, 100, 100, 256, 128);
 		// cTfWin._SetHistogram(&cGtcWin.pfHist[0], iNrOfHistBins, cGtcWin.fMaxCount, cGtcWin.fScalarMin, cGtcWin.fScalarMax);
+		// ADD-BY-LEETEN 01/02/2010-BEGIN
+		cTfWin._SetHistogram(&pfHist[0], iNrOfTfEntries, fMaxCount, fMinEntropy, fMaxEntropy);
+		// ADD-BY-LEETEN 01/02/2010-END
 		cTfWin._Reshape(512, 128);
 		cTfWin._KeepUpdateOn();
 		cTfWin._DisableVerticalSync();
@@ -178,5 +188,10 @@ main(int argn, char* argv[])
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.2  2009/12/31 01:59:53  leeten
+
+[12/30/2009]
+1. [ADD] Add the log section.
+
 
 */
