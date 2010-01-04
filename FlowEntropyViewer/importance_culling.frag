@@ -29,10 +29,36 @@ This is the shader program for direct volume rendering
 	// ADD-BY-LEETEN 12/31/2009-END
 
 	// ADD-BY-LEETEN 01/01/2010-BEGIN
-	uniform int ibIsHaloEnabled;
+	// MOD-BY-LEETEN 01/03/2010-FROM:
+		// uniform int ibIsHaloEnabled;
+	// TO:
+	uniform int ibIsColorMono;
+	// MOD-BY-LEETEN 01/03/2010-END
 
-	uniform sampler2D t2dLineFlag;
+	// DEL-BY-LEETEN 01/03/2010-BEGIN
+		// uniform sampler2D t2dLineFlag;
+	// DEL-BY-LEETEN 01/03/2010-END
 	// ADD-BY-LEETEN 01/01/2010-END
+
+	// ADD-BY-LEETEN 01/03/2010-BEGIN
+	uniform int iMaxDistanceToNeighbors_screen;
+	// ADD-BY-LEETEN 01/03/2010-END
+
+// ADD-BY-LEETEN 01/02/2010-BEGIN
+float FBias(float b, float t)
+{
+	if( 0.0 == b )
+		return 0.0;
+
+	if( 0.0 == t )
+		return 0.0;
+
+	if( 1.0 == t )
+		return 1.0;
+
+	return pow(t, log(b) / log(0.5));
+}
+// ADD-BY-LEETEN 01/02/2010-END
 
 void 
 main()
@@ -45,7 +71,23 @@ main()
 				// read the previous layer
 	vec4 v4PrevFragData = texture2D(t2dPrevLayer, v4FragCoord.xy);
 	float fPrevDepth		= v4PrevFragData.r;
-	float fPrevV_normalized = v4PrevFragData.g;
+	// MOD-BY-LEETEN 01/03/2010-FROM:
+		// float fPrevV_normalized = v4PrevFragData.g;
+	// TO:
+	float fPrevV_normalized;
+	fPrevV_normalized = 0.0;
+	for(int		dy = -iMaxDistanceToNeighbors_screen; dy <= +iMaxDistanceToNeighbors_screen; dy++)
+		for(int dx = -iMaxDistanceToNeighbors_screen; dx <= +iMaxDistanceToNeighbors_screen; dx++)
+		{
+			vec2 v2NeighboringFragCoord;
+			v2NeighboringFragCoord.x = gl_FragCoord.x + float(dx);
+			v2NeighboringFragCoord.y = gl_FragCoord.y + float(dy);
+			v2NeighboringFragCoord.x /= fWindowWidth;
+			v2NeighboringFragCoord.y /= fWindowHeight;
+			vec4 v4PrevNeighboringFragData = texture2D(t2dPrevLayer, v2NeighboringFragCoord);
+			fPrevV_normalized = max(fPrevV_normalized, v4PrevNeighboringFragData.g);
+		}
+	// MOD-BY-LEETEN 01/03/2010-END
 
 	float fThickness_obj;
 	fThickness_obj = fThicknessGain;
@@ -68,6 +110,13 @@ main()
 		v4Color.a = 0.0;
 	else if( 1.0 - 1.0 / 255.0 < v4Color.a )
 		v4Color.a = 1.0;
+
+	// ADD-BY-LEETEN 01/03/2010-BEGIN
+	if( 0 != ibIsColorMono )
+	{
+		v4Color = gl_Color;
+	}
+	// ADD-BY-LEETEN 01/03/2010-END
 
 	// ADD-BY-LEETEN 12/31/2009-BEGIN
 						// apply lighting
@@ -102,18 +151,24 @@ main()
 	}
 	// ADD-BY-LEETEN 12/31/2009-END
 
-	// ADD-BY-LEETEN 01/01/2010-BEGIN
-	if( 0 != ibIsHaloEnabled )
-	{
-		v4Color.rgb = gl_Color.rgb;
-	}
-	// ADD-BY-LEETEN 01/01/2010-END
+	#if	0	// DEL-BY-LEETEN 01/03/2010-BEGIN
+		// ADD-BY-LEETEN 01/01/2010-BEGIN
+		if( 0 != ibIsColorMono )
+		{
+			v4Color = gl_Color;
+		}
+		// ADD-BY-LEETEN 01/01/2010-END
+	#endif	// DEL-BY-LEETEN 01/03/2010-END
 
 	/////////////////////////////////////////////////////////////////
 	// reduce the opacity if the importance is smaller than the previous one
 	if( fV_normalized < fPrevV_normalized )
 	{
-		v4Color.a *= fOcclusionSaturation;
+		// MOD-BY-LEETEN 01/02/2010-FROM:
+			// v4Color.a *= fOcclusionSaturation;
+		// TO:
+		v4Color.a *= FBias(fOcclusionSaturation, 1.0 - (fPrevV_normalized - fV_normalized));
+		// MOD-BY-LEETEN 01/02/2010-END
 	}
 
 	gl_FragData[0] = v4Color;
@@ -123,6 +178,12 @@ main()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.2  2010/01/01 18:27:07  leeten
+
+[01/01/2010]
+1. [ADD] Support halo effect.
+2. [ADD] Add lighting.
+
 Revision 1.1  2009/12/31 01:53:59  leeten
 
 [12/30/2009]
