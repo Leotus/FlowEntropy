@@ -6,11 +6,11 @@
 #define BIN_LOOKUP			1
 
 // ADD-BY-LEETEN 12/14/2009-BEGIN
-#define BIN_LOOKUP_ON_GPU	0
+#define BIN_LOOKUP_ON_GPU	1
 #define KEEP_BOUNDARY		1
 // ADD-BY-LEETEN 12/14/2009-END
 
-#define NR_OF_STREAMLINES	30
+#define NR_OF_STREAMLINES	1
 
 #define SCALE_SIZE			3.0
 
@@ -52,6 +52,12 @@
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.2  2009/12/15 20:08:17  leeten
+
+[12/15/2009]
+1. [ADD] Define a new preprocessor BIN_LOOKUP_ON_GPU. If it is 1, the vector field is converted to the discrete bin via CUDA.
+2. [ADD] Define a new preprocessor KEEP_BOUNDARY. If it is 1, the vector field along the boundary will be preserved.
+
 Revision 1.1  2009/12/07 20:16:04  leeten
 
 [12/07/2009]
