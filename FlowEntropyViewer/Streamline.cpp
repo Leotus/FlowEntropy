@@ -130,13 +130,30 @@ CStreamline::_SortSlab(
 	#endif
 
 	// reorganize the vertices indices
-	for(int l = 0; l < int(uNrOfLines); l++)
+	// MOD-BY-LEETEN 01/02/2010-FROM:
+		// for(int l = 0; l < int(uNrOfLines); l++)
+	// TO:
+	for(int iActualNrOfLines = 0, l = 0; l < int(uNrOfLines); l++)
+	// MOD-BY-LEETEN 01/02/2010-END
 	{
 		int iS = pi2Slabs[l].x;	// slab index
 		int iL = pi2Slabs[l].y;	// line index
+		// ADD-BY-LEETEN 01/02/2010-BEGIN
+		int iStreamline = puLineSegmentIndicesToStreamlines[iL]; 
+
+		if( 0 != iStreamline % int(uSamplingRate) )
+			continue;
+		// ADD-BY-LEETEN 01/02/2010-END
+
 		pi2BaseLengths[iS].y++; // increment the counter for the corresponding slab
+		#if	0	// MOD-BY-LEETEN 01/02/2010-FROM:
+			for(int i = 0; i < 2; i++)
+				pu2SortedLineSegmentIndicesToVertices[2 * l + i] = pu2LineSegmentIndicesToVertices[2 * iL + i];
+		#else	// MOD-BY-LEETEN 01/02/2010-TO:
 		for(int i = 0; i < 2; i++)
-			puSortedLineIndices[2 * l + i] = puLineIndices[2 * iL + i];
+			pu2SortedLineSegmentIndicesToVertices[2 * iActualNrOfLines + i] = pu2LineSegmentIndicesToVertices[2 * iL + i];
+		iActualNrOfLines++;
+		#endif	// MOD-BY-LEETEN 01/02/2010-END
 	}
 	for(int s = 1; s < iNrOfSlabs; s++)
 		pi2BaseLengths[s].x += pi2BaseLengths[s-1].x + pi2BaseLengths[s-1].y;
@@ -172,18 +189,30 @@ CStreamline::_Read(float fScaleX, float fScaleY, float fScaleZ, char *szStreamli
 	// ADD-BY-LEETEN 12/31/2009-BEGIN
 	pfTangent.alloc(3 * uNrOfVertices);
 	// ADD-BY-LEETEN 12/31/2009-END
-	puLineIndices.alloc(2 * uNrOfLines);
+	pu2LineSegmentIndicesToVertices.alloc(2 * uNrOfLines);
 
-	puSortedLineIndices.alloc(2 * uNrOfLines);
+	// ADD-BY-LEETEN 01/02/2010-BEGIN
+	puLineSegmentIndicesToStreamlines.alloc(uNrOfLines);
+	// ADD-BY-LEETEN 01/02/2010-END
+
+	pu2SortedLineSegmentIndicesToVertices.alloc(2 * uNrOfLines);
 	pfLineCentroids.alloc(3 * uNrOfLines);
 	pi2Slabs.alloc(uNrOfLines);
 
 	unsigned int uCoordIndex = 0;
 	unsigned int uLineIndex = 0;
+	#if	0	// MOD-BY-LEETEN 01/02/2010-FROM:
+		for(vector<unsigned int>::iterator 
+				ivuNrOfVertices = vuNrOfVertices.begin();
+			ivuNrOfVertices != vuNrOfVertices.end();
+			ivuNrOfVertices ++)
+	#else	// MOD-BY-LEETEN 01/02/2010-TO:
+	unsigned int uStreamline = 0;
 	for(vector<unsigned int>::iterator 
 			ivuNrOfVertices = vuNrOfVertices.begin();
 		ivuNrOfVertices != vuNrOfVertices.end();
-		ivuNrOfVertices ++)
+		ivuNrOfVertices ++, uStreamline++)
+	#endif	// MOD-BY-LEETEN 01/02/2010-END
 	{
 		unsigned int uNrOfVertices = *ivuNrOfVertices;
 
@@ -195,8 +224,12 @@ CStreamline::_Read(float fScaleX, float fScaleY, float fScaleZ, char *szStreamli
 
 		for(unsigned int uV = 0; uV < uNrOfVertices-1; uV++, uLineIndex++)
 		{
-			puLineIndices[uLineIndex*2] = uCoordIndex + uV;
-			puLineIndices[uLineIndex*2+1] = uCoordIndex + uV + 1;
+			pu2LineSegmentIndicesToVertices[uLineIndex*2] = uCoordIndex + uV;
+			pu2LineSegmentIndicesToVertices[uLineIndex*2+1] = uCoordIndex + uV + 1;
+
+			// ADD-BY-LEETEN 01/02/2010-BEGIN
+			puLineSegmentIndicesToStreamlines[uLineIndex] = uStreamline;
+			// ADD-BY-LEETEN 01/02/2010-END
 
 			// ADD-BY-LEETEN 12/31/2009-BEGIN
 			// compute tangents
@@ -314,7 +347,7 @@ CStreamline::_Read(float fScaleX, float fScaleY, float fScaleZ, char *szStreamli
 
 		for(int v = 0; v < 2; v++)
 		{
-			int iP = puLineIndices[l * 2 + v];
+			int iP = pu2LineSegmentIndicesToVertices[l * 2 + v];
 			for(int p = 0; p < 3; p++)
 				pdCoord_obj[p] += pfCoords[3*iP + p];
 		}
@@ -355,6 +388,11 @@ CStreamline::_AddGlui(GLUI* pcGlui)
 {
 	GLUI_Panel	*pcPanel_Streamlines = pcGlui->add_panel("Streamlines");
 
+	// ADD-BY-LEETEN 01/02/2010-BEGIN
+	GLUI_Spinner *pcSpinner_SamplingRate = pcGlui->add_spinner_to_panel(pcPanel_Streamlines, "Sampling Rate", GLUI_SPINNER_INT, &uSamplingRate);	
+	pcSpinner_SamplingRate->set_int_limits(1, 256);
+	// ADD-BY-LEETEN 01/02/2010-END
+
 	#if	RENDER_STREAMLINE_AS_LINES
 	GLUI_Panel	*pcPanel_Lines = pcGlui->add_panel_to_panel(pcPanel_Streamlines, "Lines");
 		GLUI_Spinner *pcSpinner_InnerWidth = pcGlui->add_spinner_to_panel(pcPanel_Lines, "Inner Width", GLUI_SPINNER_FLOAT, &fInnerWidth);	
@@ -381,6 +419,10 @@ CStreamline::_AddGlui(GLUI* pcGlui)
 
 CStreamline::CStreamline(void)
 {
+	// ADD-BY-LEETEN 01/02/2010-BEGIN
+	uSamplingRate = 1;
+	// ADD-BY-LEETEN 01/02/2010-END
+
 	uNrOfLines = 0;
 	uNrOfVertices = 0;
 
@@ -389,9 +431,15 @@ CStreamline::CStreamline(void)
 	fOuterWidth = 4.0f;
 	fInnerWidth = 2.0f;
 
-	f4Color.x = 1.0f;
-	f4Color.y = 1.0f;
-	f4Color.z = 1.0f;
+	#if	0	// MOD-BY-LEETEN 01/04/2010-FROM:
+		f4Color.x = 1.0f;
+		f4Color.y = 1.0f;
+		f4Color.z = 1.0f;
+	#else	// MOD-BY-LEETEN 01/04/2010-TO:
+	f4Color.x = 0.1f;
+	f4Color.y = 0.1f;
+	f4Color.z = 0.1f;
+	#endif	// MOD-BY-LEETEN 01/04/2010-END
 	f4Color.w = 0.5f;
 }
 
@@ -636,9 +684,9 @@ CStreamline::_RenderLinesInSlab
 			1.0f);
 		glDrawElements(
 			GL_LINES, 
-			2*pi2BaseLengths[iSlab].y, // puLineIndices.USize(), 
+			2*pi2BaseLengths[iSlab].y, // pu2LineSegmentIndicesToVertices.USize(), 
 			GL_UNSIGNED_INT, 
-			&puSortedLineIndices[2*pi2BaseLengths[iSlab].x]); // &puLineIndices[0]);
+			&pu2SortedLineSegmentIndicesToVertices[2*pi2BaseLengths[iSlab].x]); // &pu2LineSegmentIndicesToVertices[0]);
 	}
 	// ADD-BY-LEETEN 01/01/2010-BEGIN
 	else
@@ -653,9 +701,9 @@ CStreamline::_RenderLinesInSlab
 		1.0f);
 	glDrawElements(
 		GL_LINES, 
-		2*pi2BaseLengths[iSlab].y, // puLineIndices.USize(), 
+		2*pi2BaseLengths[iSlab].y, // pu2LineSegmentIndicesToVertices.USize(), 
 		GL_UNSIGNED_INT, 
-		&puSortedLineIndices[2*pi2BaseLengths[iSlab].x]); // &puLineIndices[0]);
+		&pu2SortedLineSegmentIndicesToVertices[2*pi2BaseLengths[iSlab].x]); // &pu2LineSegmentIndicesToVertices[0]);
 
 	// ADD-BY-LEETEN 01/01/2010-BEGIN
 	}
@@ -689,9 +737,9 @@ CStreamline::_RenderLines()
 		1.0f);
 	glDrawElements(
 		GL_LINES, 
-		puLineIndices.USize()/128,
+		pu2LineSegmentIndicesToVertices.USize()/128,
 		GL_UNSIGNED_INT, 
-		&puLineIndices[0]);
+		&pu2LineSegmentIndicesToVertices[0]);
 
 	glLineWidth(fInnerWidth);
 	glColor4f(
@@ -701,9 +749,9 @@ CStreamline::_RenderLines()
 		1.0f);
 	glDrawElements(
 		GL_LINES, 
-		puLineIndices.USize()/128, // TEST puLineIndices.USize(), 
+		pu2LineSegmentIndicesToVertices.USize()/128, // TEST pu2LineSegmentIndicesToVertices.USize(), 
 		GL_UNSIGNED_INT, 
-		&puLineIndices[0]);
+		&pu2LineSegmentIndicesToVertices[0]);
 
 	glDisableClientState(GL_VERTEX_ARRAY);
 
@@ -763,6 +811,12 @@ CStreamline::_RenderTubes()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.2  2010/01/01 18:31:11  leeten
+
+[01/01/2010]
+1. [ADD] Calculate the tangent vectors when loading the streamlines.
+2. [MOD] Change the function _RenderLinesInSlab so every time only either the outter or inter line will be rendered.
+
 Revision 1.1  2009/12/31 01:53:59  leeten
 
 [12/30/2009]
