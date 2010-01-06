@@ -3330,7 +3330,9 @@ void compute_streamlines()
 	#endif	// MOD-BY-LEETEN 2009/11/25-END
 
 	// ADD-BY-LEETEN 2009/11/10-BEGIN
-	#if	USE_CUDA	
+	// DEL-BY-LEETEN 01/06/2010-BEGIN
+		// #if	USE_CUDA	
+	// DEL-BY-LEETEN 01/06/2010-END
 	// MOD-BY-LEETEN 12/07/2009-FROM:
 		// _FlowFusionInit(grid_res[0], grid_res[1], grid_res[2]);
 	// TO:
@@ -3383,7 +3385,9 @@ void compute_streamlines()
 	_GetSrcEntropyVolume(binnum, 8, 8, 8);
 	// ADD-BY-LEETEN 01/03/2010-END
 
-	#endif
+	// DEL-BY-LEETEN 01/06/2010-BEGIN
+		// #endif
+	// DEL-BY-LEETEN 01/06/2010-END
 	// ADD-BY-LEETEN 2009/11/10-END
 
 	#if	0	// DEL-BY-LEETEN 12/01/2009-BEGIN
@@ -3619,6 +3623,18 @@ CLOCK_PRINT(SHOW_COMPUTE_STREAMLINE_TIMING);
 	printf("\n Elapsed time to place seeds is %.3f milli-seconds.\n",dCompElapsed); 	
 	// ADD-BY-LEETEN 2009/11/25-END
 
+#if	1		// TEST-ADD
+	void
+	_GetJointEntropyVolume
+	(
+		int iNrOfSrcBins,
+		int iNrOfDstBins,
+		int iKernelWidth, int iKernelHeight, int iKernelDepth
+	);
+
+	_GetJointEntropyVolume(binnum, binnum, 8, 8, 8);
+#endif
+
 	#if	0	// DEL-BY-LEETEN 12/07/2009-BEGIN
 		// ADD-BY-LEETEN 2009/11/10-BEGIN
 		#if	USE_CUDA	
@@ -3670,13 +3686,17 @@ CLOCK_PRINT(SHOW_COMPUTE_STREAMLINE_TIMING);
 	}
 	*/
 	// ADD-BY-LEETEN 2009/11/10-BEGIN
-	#if	USE_CUDA	
+	// DEL-BY-LEETEN 01/06/2010-BEGIN
+		// #if	USE_CUDA	
+	// DEL-BY-LEETEN 01/06/2010-END
 	// MOD-BY-LEETEN 12/07/2009-FROM:
 		// _FlowFusionFree();
 	// TO:
 	_FlowDiffusionFree();
 	// MOD-BY-LEETEN 12/07/2009-END
-	#endif
+	// DEL-BY-LEETEN 01/06/2010-BEGIN
+		// #endif
+	// DEL-BY-LEETEN 01/06/2010-END
 	// ADD-BY-LEETEN 2009/11/10-END
 }
 
@@ -5297,6 +5317,11 @@ readPatches_region();
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.4  2010/01/04 17:59:59  leeten
+
+[01/04/2010]
+1. [ADD] Call the function _GetSrcEntropyField() to compute the entropy.
+
 Revision 1.3  2009/12/15 20:12:36  leeten
 
 [12/15/2009]
