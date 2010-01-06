@@ -109,6 +109,10 @@ CFlowEntropyViewerWin::_BeginDisplay()
 
 	cStreamline._SortSlab(iNrOfSlices, pdModelViewMatrix, tProjectionMatrix, piViewport);
 
+	// ADD-BY-LEETEN 01/05/2010-BEGIN
+	CClipVolume::_Create();
+	// ADD-BY-LEETEN 01/05/2010-END
+
 	//////////////////////////////////////////
 	switch(iRenderMode)
 	{
@@ -121,6 +125,10 @@ CFlowEntropyViewerWin::_BeginDisplay()
 		SET_1I_VALUE_BY_NAME(	pidRayIntegral, "t2dPrevLayer",				0);
 		SET_1I_VALUE_BY_NAME(	pidRayIntegral, "t3dVolume",				1);
 		SET_1I_VALUE_BY_NAME(	pidRayIntegral, "t1dTf",					2);
+
+		// ADD-BY-LEETEN 01/05/2010-BEGIN
+		SET_1I_VALUE_BY_NAME(	pidRayIntegral, "t2dClipVolume",			4);
+		// ADD-BY-LEETEN 01/05/2010-END
 
 		SET_1F_VALUE_BY_NAME(	pidRayIntegral, "fTfDomainMin",				fTfDomainMin);
 		SET_1F_VALUE_BY_NAME(	pidRayIntegral, "fTfDomainMax",				fTfDomainMax);
@@ -139,6 +147,21 @@ CFlowEntropyViewerWin::_BeginDisplay()
 		SET_1I_VALUE_BY_NAME(	pidImportanceFilling, "t2dLineFlag",		3);
 		// ADD-BY-LEETEN 01/01/2010-END
 
+		// ADD-BY-LEETEN 01/05/2010-BEGIN
+		SET_1I_VALUE_BY_NAME(	pidImportanceFilling, "t2dClipVolume",		4);
+
+		SET_1I_VALUE_BY_NAME(	pidImportanceFilling, "t1dTf",				2);
+		SET_1F_VALUE_BY_NAME(	pidImportanceFilling, "fTfDomainMin",		fTfDomainMin);
+		SET_1F_VALUE_BY_NAME(	pidImportanceFilling, "fTfDomainMax",		fTfDomainMax);
+		SET_1F_VALUE_BY_NAME(	pidImportanceFilling, "fDataValueMin",		0);
+		SET_1F_VALUE_BY_NAME(	pidImportanceFilling, "fDataValueMax",		fMaxEntropy);
+
+		SET_4FV_VALUE_BY_NAME(	pidImportanceFilling, "v4ClippingPlaneFrontColor",		1, (float*)&cClippingPlaneFrontColor.v4Color);
+		SET_1I_VALUE_BY_NAME(	pidImportanceFilling, "ibIsClippingPlaneFrontColorMono",cClippingPlaneFrontColor.ibMonoColor);
+		SET_4FV_VALUE_BY_NAME(	pidImportanceFilling, "v4ClippingPlaneBackColor",		1, (float*)&cClippingPlaneBackColor.v4Color);
+		SET_1I_VALUE_BY_NAME(	pidImportanceFilling, "ibIsClippingPlaneBackColorMono",	cClippingPlaneBackColor.ibMonoColor);
+		// ADD-BY-LEETEN 01/05/2010-END
+
 		glUseProgramObjectARB(	pidImportanceCulling);
 		SET_1F_VALUE_BY_NAME(	pidImportanceCulling, "fWindowWidth",		(float)piViewport[2]);
 		SET_1F_VALUE_BY_NAME(	pidImportanceCulling, "fWindowHeight",		(float)piViewport[3]);
@@ -148,6 +171,10 @@ CFlowEntropyViewerWin::_BeginDisplay()
 		SET_1I_VALUE_BY_NAME(	pidImportanceCulling, "t2dPrevLayer",		0);
 		SET_1I_VALUE_BY_NAME(	pidImportanceCulling, "t3dVolume",			1);
 		SET_1I_VALUE_BY_NAME(	pidImportanceCulling, "t1dTf",				2);
+		// ADD-BY-LEETEN 01/05/2010-BEGIN
+		SET_1I_VALUE_BY_NAME(	pidImportanceCulling, "t2dClipVolume",		4);
+		SET_1F_VALUE_BY_NAME(	pidImportanceCulling, "fClippingThreshold", fClippingThreshold);
+		// ADD-BY-LEETEN 01/05/2010-END
 
 		SET_1F_VALUE_BY_NAME(	pidImportanceCulling, "fTfDomainMin",		fTfDomainMin);
 		SET_1F_VALUE_BY_NAME(	pidImportanceCulling, "fTfDomainMax",		fTfDomainMax);
@@ -167,7 +194,6 @@ CFlowEntropyViewerWin::_BeginDisplay()
 		// ADD-BY-LEETEN 01/03/2010-BEGIN
 		SET_1I_VALUE_BY_NAME(	pidImportanceCulling, "iMaxDistanceToNeighbors_screen",	iMaxDistanceToNeighbors_screen);
 		// ADD-BY-LEETEN 01/03/2010-END
-
 
 		float pfAmbient[4];
 		float pfDiffuse[4];
@@ -200,6 +226,11 @@ CFlowEntropyViewerWin::_BeginDisplay()
 	glActiveTexture(GL_TEXTURE0 + 3);
 	glBindTexture(CDvrWin2::cColor.eTarget, CDvrWin2::cColor.t2d);
 	// ADD-BY-LEETEN 01/01/2010-END
+
+	// ADD-BY-LEETEN 01/05/2010-BEGIN
+	glActiveTexture(GL_TEXTURE0 + 4);
+	glBindTexture(CClipVolume::cTexture.eTarget, CClipVolume::cTexture.t2d);
+	// ADD-BY-LEETEN 01/05/2010-END
 	
 
 	glActiveTexture(GL_TEXTURE0);
@@ -272,7 +303,11 @@ void CFlowEntropyViewerWin::_RenderSlab(
 			glPushAttrib(GL_COLOR_BUFFER_BIT);
 
 			glColorMask(true, true, true, false);
-			glDepthFunc(GL_LEQUAL);
+			// MOD-BY-LEETEN 01/05/2010-FROM:
+				// glDepthFunc(GL_LEQUAL);
+			// TO:
+			glDepthFunc(GL_ALWAYS);
+			// MOD-BY-LEETEN 01/05/2010-END
 
 			glUseProgramObjectARB(pidImportanceCulling);
 
@@ -296,6 +331,12 @@ void CFlowEntropyViewerWin::_RenderSlab(
 			#endif	// MOD-BY-LEETEN 01/01/2010-END
 
 		}
+
+		// ADD-BY-LEETEN 01/05/2010-BEGIN
+		glPushAttrib(GL_DEPTH_BUFFER_BIT);
+		glDepthFunc(GL_ALWAYS);
+		// ADD-BY-LEETEN 01/05/2010-END
+
 		glUseProgramObjectARB(pidImportanceFilling);
 		CDvrWin2::_RenderSlab(
 			iSlab, iNrOfSlabs, 
@@ -305,6 +346,11 @@ void CFlowEntropyViewerWin::_RenderSlab(
 			dMinX, dMaxX, 
 			dMinY, dMaxY, 
 			dMinZ, dMaxZ);
+
+		// ADD-BY-LEETEN 01/05/2010-BEGIN
+		glPopAttrib();	// glPushAttrib(GL_DEPTH_BUFFER_BIT);
+		// ADD-BY-LEETEN 01/05/2010-END
+
 		break;
 		
 	case RENDER_MODE_STREAMLINES_IN_SLABS:
@@ -345,6 +391,9 @@ CFlowEntropyViewerWin::_DisplayFunc()
 void 
 CFlowEntropyViewerWin::_ReshapeFunc(int w, int h)
 {
+	// ADD-BY-LEETEN 01/05/2010-BEGIN
+	CClipVolume::_ReshapeFunc(w, h);
+	// ADD-BY-LEETEN 01/05/2010-END
 	CDvrWin2::_ReshapeFunc(w, h);
 }
 
@@ -356,6 +405,10 @@ CFlowEntropyViewerWin::_InitFunc()
 	_DisableVerticalSync();
 	_KeepUpdateOn();
 	_DisplayFpsOn();
+
+	// ADD-BY-LEETEN 01/05/2010-BEGIN
+	CClipVolume::_InitFunc();
+	// ADD-BY-LEETEN 01/05/2010-END
 
 	///////////////////////////////////////////////////////////////////
 	pidRayIntegral = CSetShadersByString(
@@ -399,6 +452,35 @@ CFlowEntropyViewerWin::_InitFunc()
 						// create a spinner to control the brightness gain 
 	GLUI_Spinner *pcSpinner_ThicknessGain = PCGetGluiWin()->add_spinner("Thickness Gain", GLUI_SPINNER_FLOAT, &fThicknessGain);	
 	pcSpinner_ThicknessGain->set_float_limits(0.0f, 4096.0f);
+
+	// ADD-BY-LEETEN 01/05/2010-BEGIN
+	GLUI_Panel *pcPanel_ClippingPlane = PCGetGluiWin()->add_panel("Clipping Plane");
+	{
+		GLUI_Spinner *pcSpinner_Threshold = PCGetGluiWin()->add_spinner_to_panel(pcPanel_ClippingPlane, "Clipping Threshold", GLUI_SPINNER_FLOAT, &fClippingThreshold);	
+			pcSpinner_Threshold->set_float_limits(0.0f, 1.0f);
+
+		GLUI_Panel *pcPanel_Colors = PCGetGluiWin()->add_panel_to_panel(pcPanel_ClippingPlane, "Colors");	
+			GLUI_Panel *pcPanel_Front  = PCGetGluiWin()->add_panel_to_panel(pcPanel_Colors, "Front");	
+			{
+				PCGetGluiWin()->add_checkbox_to_panel(pcPanel_Front, "mono?", &cClippingPlaneFrontColor.ibMonoColor);
+				GLUI_Spinner *pcSpinner;
+				pcSpinner = PCGetGluiWin()->add_spinner_to_panel(pcPanel_Front, "R", GLUI_SPINNER_FLOAT, &cClippingPlaneFrontColor.v4Color.x);	pcSpinner->set_float_limits(0.0, 1.0);
+				pcSpinner = PCGetGluiWin()->add_spinner_to_panel(pcPanel_Front, "G", GLUI_SPINNER_FLOAT, &cClippingPlaneFrontColor.v4Color.y);	pcSpinner->set_float_limits(0.0, 1.0);
+				pcSpinner = PCGetGluiWin()->add_spinner_to_panel(pcPanel_Front, "B", GLUI_SPINNER_FLOAT, &cClippingPlaneFrontColor.v4Color.z);	pcSpinner->set_float_limits(0.0, 1.0);
+				pcSpinner = PCGetGluiWin()->add_spinner_to_panel(pcPanel_Front, "A", GLUI_SPINNER_FLOAT, &cClippingPlaneFrontColor.v4Color.w);	pcSpinner->set_float_limits(0.0, 1.0);
+			}
+			PCGetGluiWin()->add_column_to_panel(pcPanel_Colors);	
+			GLUI_Panel *pcPanel_Back = PCGetGluiWin()->add_panel_to_panel(pcPanel_Colors, "Back");	
+			{
+				PCGetGluiWin()->add_checkbox_to_panel(pcPanel_Back, "mono?", &cClippingPlaneBackColor.ibMonoColor);
+				GLUI_Spinner *pcSpinner;
+				pcSpinner = PCGetGluiWin()->add_spinner_to_panel(pcPanel_Back, "R", GLUI_SPINNER_FLOAT, &cClippingPlaneBackColor.v4Color.x);	pcSpinner->set_float_limits(0.0, 1.0);
+				pcSpinner = PCGetGluiWin()->add_spinner_to_panel(pcPanel_Back, "G", GLUI_SPINNER_FLOAT, &cClippingPlaneBackColor.v4Color.y);	pcSpinner->set_float_limits(0.0, 1.0);
+				pcSpinner = PCGetGluiWin()->add_spinner_to_panel(pcPanel_Back, "B", GLUI_SPINNER_FLOAT, &cClippingPlaneBackColor.v4Color.z);	pcSpinner->set_float_limits(0.0, 1.0);
+				pcSpinner = PCGetGluiWin()->add_spinner_to_panel(pcPanel_Back, "A", GLUI_SPINNER_FLOAT, &cClippingPlaneBackColor.v4Color.w);	pcSpinner->set_float_limits(0.0, 1.0);
+			}
+	}
+	// ADD-BY-LEETEN 01/05/2010-END
 
 						// create a spinner to control the brightness gain 
 	GLUI_Panel *pcPanel_RenderMode = PCGetGluiWin()->add_panel("Render Mode");
@@ -464,8 +546,15 @@ CFlowEntropyViewerWin::CFlowEntropyViewerWin(void)
 
 	ibIsFboEnabled = 1;			// enable the rendering to FBO
 	_SetInternalColorFormat(GL_RGBA32F_ARB);	// set the depths of each chanel of the FBO as 32 bits 
+	// ADD-BY-LEETEN 01/06/2010-BEGIN
+	_SetInternalDepthFormat(GL_DEPTH_COMPONENT);
+	// ADD-BY-LEETEN 01/06/2010-END
 
 	iNrOfSlices = 128;			// set up the default number of slices
+
+	// ADD-BY-LEETEN 01/05/2010-BEGIN
+	fClippingThreshold = 1.0;
+	// ADD-BY-LEETEN 01/05/2010-END
 
 	// ADD-BY-LEETEN 01/01/2010-BEGIN
 	// MOD-BY-LEETEN 01/03/2010-FROM:
@@ -481,7 +570,6 @@ CFlowEntropyViewerWin::CFlowEntropyViewerWin(void)
 	iMaxDistanceToNeighbors_screen = 0;
 	// ADD-BY-LEETEN 01/03/2010-END
 
-
 	iRenderMode = RENDER_MODE_STREAMLINES_IMPORTANCE_CULLING;
 	_AddGluiWin();
 }
@@ -493,6 +581,13 @@ CFlowEntropyViewerWin::~CFlowEntropyViewerWin(void)
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.4  2010/01/04 18:23:56  leeten
+
+[01/04/2010]
+1. [MOD] Change the background color to black.
+2. [MOD] Remove the variable 'ibIsHaloEnabled' in the fragment shader and add two new variables: ibIsColorMono, ibIsLightingEnabled and iMaxDistanceToNeighbors_screen.
+3. [ADD] Change the shading schemes: three binary options can control the shading style: mono (or via transfer function), lighting and halo.
+
 Revision 1.3  2010/01/01 18:36:32  leeten
 
 [01/01/2010]
