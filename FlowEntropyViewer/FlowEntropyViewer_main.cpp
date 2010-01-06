@@ -10,6 +10,10 @@
 	#include "libtfw/TfWin.h"
 	#include "libtfw/Tfui.h"
 
+	// ADD-BY-LEETEN 01/05/2010-BEGIN
+	#include "libclip/ClipWin.h"
+	// ADD-BY-LEETEN 01/05/2010-END
+
 	// the main display window
 	CFlowEntropyViewerWin cFlowEntropyViewerWin;
 
@@ -23,6 +27,9 @@
 	CTfWin	cTfWin;
 	CTfUi	cTfUi;
 
+	// ADD-BY-LEETEN 01/05/2010-BEGIN
+	CClipWin cClipWin;
+	// ADD-BY-LEETEN 01/05/2010-END
 	// the histogram
 	float fMinEntropy;
 	float fMaxEntropy;
@@ -107,6 +114,37 @@ _UpdateTf()
 	cFlowEntropyViewerWin._Redisplay();
 }
 
+// ADD-BY-LEETEN 01/05/2010-BEGIN
+void 
+_GlobalFunc(int iWid, unsigned int uiCbId, va_list vaArgs)
+{
+	// ADD-BY-LEETEN 2009/08/26-BEGIN
+	if( cClipWin.IGetId() == iWid )
+	{
+		switch(uiCbId)
+		{
+		case CGlutWin::CB_MANUAL:
+			{
+				unsigned int uEvent = va_arg(vaArgs, unsigned int);
+				switch(uEvent)
+				{
+				case CClipWin::EVENT_BUTTON_UPDATE:
+					{
+						int iNrOfEnabledClipPlane = va_arg(vaArgs, int);
+						double* pdEnabledClipPlanes = va_arg(vaArgs, double*);
+						cFlowEntropyViewerWin._SetClipPlanes(iNrOfEnabledClipPlane, pdEnabledClipPlanes);
+					} // case
+					break;
+
+				} // switch
+			}
+			break;
+		}
+	}
+	// ADD-BY-LEETEN 2009/08/26-END
+}
+// ADD-BY-LEETEN 01/05/2010-END
+
 int
 main(int argn, char* argv[])
 {
@@ -182,12 +220,39 @@ main(int argn, char* argv[])
 		cTfUi._SetUpdateFunc(_UpdateTf);
 		cTfUi._DisableVerticalSync();
 
+	// ADD-BY-LEETEN 01/05/2010-BEGIN
+	float fX0 = -pf3DEntropyField.iWidth;
+	float fX1 = +pf3DEntropyField.iWidth;
+	float fY0 = -pf3DEntropyField.iHeight;
+	float fY1 = +pf3DEntropyField.iHeight;
+	float fZ0 = -pf3DEntropyField.iDepth;
+	float fZ1 = +pf3DEntropyField.iDepth;
+	float fMaxDim = (float)max(max(pf3DEntropyField.iWidth, pf3DEntropyField.iHeight), pf3DEntropyField.iDepth);
+	fX0 /= fMaxDim;
+	fY0 /= fMaxDim;
+	fZ0 /= fMaxDim;
+	fX1 /= fMaxDim;
+	fY1 /= fMaxDim;
+	fZ1 /= fMaxDim;
+	cClipWin._SetBBox(
+		fX0, fY0, fZ0, 
+		fX1, fY1, fZ1);
+	cClipWin.ICreate("Clipping Planes Window",		false, 100, 100, 384, 256);
+
+	CGlutWin::_RegisterGlobalFunc(_GlobalFunc);
+	// ADD-BY-LEETEN 01/05/2010-END
+
 	glutMainLoop();		// enter the GLUT event loop
 }
 
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.3  2010/01/04 18:19:18  leeten
+
+[01/04/2010]
+1. [MOD] Move the variable fMaxCount as a global variable, and specify the histogram to the window cTfWin.
+
 Revision 1.2  2009/12/31 01:59:53  leeten
 
 [12/30/2009]
