@@ -257,13 +257,6 @@ CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_TIMING);
 			cActiveVoxelNeighbors_pitched.ysize)	);
 
 	#if	0	// DEL-BY-LEETEN 12/20/2009-BEGIN
-		cudaPitchedPtr cActiveVoxelSortedNeighbors_pitched = cActiveVoxelNeighbors_pitched;
-		CUDA_SAFE_CALL_NO_SYNC(
-			cudaMallocPitch(
-				(void**)&cActiveVoxelSortedNeighbors_pitched.ptr, 
-				&cActiveVoxelSortedNeighbors_pitched.pitch,
-				cActiveVoxelSortedNeighbors_pitched.xsize * sizeof(int), 
-				cActiveVoxelSortedNeighbors_pitched.ysize)	);
 	#endif	// DEL-BY-LEETEN 12/20/2009-END
 
 	// bind the input vin volume to the texture that represents the src. bin volume 
@@ -289,17 +282,8 @@ CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_TIMING);
 	t2dActiveVoxelSortedNeighbors.filterMode =	cudaFilterModePoint;
 	t2dActiveVoxelSortedNeighbors.normalized =	false;
 
-	#if	0	// DEL-BY-LEETEN 12/20/2009-BEGIN
-		CUDA_SAFE_CALL_NO_SYNC(
-			cudaBindTexture2D(
-				0, 
-				t2dActiveVoxelSortedNeighbors, 
-				cActiveVoxelSortedNeighbors_pitched.ptr, 
-				cudaCreateChannelDesc<unsigned int>(),
-				cActiveVoxelSortedNeighbors_pitched.xsize,
-				cActiveVoxelSortedNeighbors_pitched.ysize, 
-				cActiveVoxelSortedNeighbors_pitched.pitch) );
-	#else	// DEL-BY-LEETEN 12/20/2009-END
+	#if	0	// MOD-BY-LEETEN 12/20/2009-FROM:
+	#else	// MOD-BY-LEETEN 12/20/2009-TO:
 	CUDA_SAFE_CALL_NO_SYNC(
 		cudaBindTexture2D(
 			0, 
@@ -309,7 +293,7 @@ CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_TIMING);
 			cActiveVoxelNeighbors_pitched.xsize,
 			cActiveVoxelNeighbors_pitched.ysize, 
 			cActiveVoxelNeighbors_pitched.pitch) );
-#endif
+	#endif	// MOD-BY-LEETEN 12/20/2009-END
 	#endif	// MOD-BY-LEETEN 12/18/2009-END
 
 	CUDPPHandle hScanPlan = 0;
@@ -364,69 +348,15 @@ CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_TIMING);
 				);
 				CUT_CHECK_ERROR("_CollectNeighbors_kernel() failed");
 
-				#if	0	// TEST-DEBUG
-											unsigned int *puActiveVoxelNeighbors_host;
-											CUDA_SAFE_CALL_NO_SYNC(
-												cudaMallocHost(
-													(void**)&puActiveVoxelNeighbors_host,
-													cActiveVoxelNeighbors_pitched.pitch * cActiveVoxelSortedNeighbors_pitched.ysize) );
-
-											CUDA_SAFE_CALL_NO_SYNC(
-												cudaMemcpy(
-													puActiveVoxelNeighbors_host, 
-													cActiveVoxelNeighbors_pitched.ptr,
-													cActiveVoxelSortedNeighbors_pitched.pitch * cActiveVoxelSortedNeighbors_pitched.ysize,
-													cudaMemcpyDeviceToHost) );
-											for(unsigned int p = 0,	n = 0; n < cActiveVoxelSortedNeighbors_pitched.ysize; n++)
-												for(unsigned int	i = 0; i < cActiveVoxelNeighbors_pitched.pitch / sizeof(unsigned int); i++, p++)
-												{
-													unsigned int uTemp = puActiveVoxelNeighbors_host[p];
-													unsigned int uId = uTemp / unsigned int(iNrOfBins);
-													unsigned int uBin = uTemp % unsigned int(iNrOfBins);
-
-													fprintf(stderr, "%d, %d, %d\n", n, uId, uBin);
-												}
-											FREE_MEMORY_ON_HOST(puActiveVoxelNeighbors_host);
-				#endif
-
 CLOCK_END(_ComputeEntropyVolume_PRINT_LOOP_TIMING, false);
 
 #if	0	// DEL-BY-LEETEN 12/20/2009-BEGIN
-	CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_LOOP_TIMING);
-
-					// copy the memory from the buffer _CollectNeighbors_kernel to another buffer _CollectNeighborsToBeSorted_kernel
-					#if	0	// MOD-BY-LEETEN 12/18/2009-FROM:
-						CUDA_SAFE_CALL_NO_SYNC(
-							cudaMemcpy(
-								cActiveVoxelSortedNeighbors_pitched.ptr, 
-								cActiveVoxelNeighbors_pitched.ptr, 
-								cActiveVoxelSortedNeighbors_pitched.pitch * cActiveVoxelSortedNeighbors_pitched.ysize,
-								cudaMemcpyDeviceToDevice));
-					#else	// MOD-BY-LEETEN 12/18/2009-TO:
-					CUDA_SAFE_CALL_NO_SYNC(
-						cudaMemcpy2D(
-							cActiveVoxelSortedNeighbors_pitched.ptr, 
-							cActiveVoxelSortedNeighbors_pitched.pitch,
-							cActiveVoxelNeighbors_pitched.ptr, 
-							cActiveVoxelNeighbors_pitched.pitch,
-							cActiveVoxelSortedNeighbors_pitched.pitch,
-							cActiveVoxelSortedNeighbors_pitched.ysize,
-							cudaMemcpyDeviceToDevice) );
-					#endif	// MOD-BY-LEETEN 12/18/2009-END
-
-	CLOCK_END(_ComputeEntropyVolume_PRINT_LOOP_TIMING, false);
 #endif	// DEL-BY-LEETEN 12/20/2009-END
 
 CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_LOOP_TIMING);
 
 				// call cudpp to sort the buffer _CollectNeighborsToBeSorted_kernel
 				#if	0	// MOD-BY-LEETEN 12/20/2009-FROM:
-					cudppSort(
-						hScanPlan,
-						cActiveVoxelSortedNeighbors_pitched.ptr,
-						NULL,
-						RADIX_SORT_BITS,
-						cActiveVoxelSortedNeighbors_pitched.pitch * cActiveVoxelSortedNeighbors_pitched.ysize / sizeof(unsigned int)) ;
 				#else	// MOD-BY-LEETEN 12/20/2009-TO:
 				cudppSort(
 					hScanPlan,
@@ -441,15 +371,6 @@ CLOCK_END(_ComputeEntropyVolume_PRINT_LOOP_TIMING, false);
 CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_LOOP_TIMING);
 				// 
 				#if	0	// MOD-BY-LEETEN 12/20/2009-FROM:
-					_ComputeEntropyOnSortedNeighbors_kernel<<<v3Grid, v3Blk, 0>>>
-					(
-						i3BlockCorner,
-						iNrOfBins,
-						i3KernelSize,
-						(unsigned int *)cActiveVoxelSortedNeighbors_pitched.ptr,
-						i3VolumeSize,
-						cEntropyVolume_pitched
-					);
 				#else	// MOD-BY-LEETEN 12/20/2009-TO:
 				_ComputeEntropyOnSortedNeighbors_kernel<<<v3Grid, v3Blk, 0>>>
 				(
@@ -485,5 +406,10 @@ CLOCK_PRINT(_ComputeEntropyVolume_PRINT_TIMING);
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.1  2009/12/27 19:03:06  leeten
+
+[12/27/2009]
+1. [1ST] First time checkin. Ths file define the host and kernel functions to compute the netropy field by sorting all the neighbors of all threads via CUDPP.
+
 
 */
