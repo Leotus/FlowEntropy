@@ -3,10 +3,19 @@
 	#include "libdvr2/DvrWin2.h"
 	#include "libbuf3d.h"
 
+	// ADD-BY-LEETEN 01/05/2010-BEGIN
+	#include "libclip/ClipPlanes.h"
+	#include "libclip/ClipVolume.h"
+	// ADD-BY-LEETEN 01/05/2010-END
+
 	#include "Streamline.h"
 
 class CFlowEntropyViewerWin :
-	public CDvrWin2
+	// MOD-BY-LEETEN 01/05/2010-FROM:
+		// public CDvrWin2
+	// TO:
+	public CDvrWin2, public CClipVolume
+	// MOD-BY-LEETEN 01/05/2010-END
 {
 	enum {
 		RENDER_MODE_ENTROPY_FIELD,
@@ -30,6 +39,16 @@ class CFlowEntropyViewerWin :
 	int ibIsHaloEnabled;
 	#endif	// MOD-BY-LEETEN 01/03/2010-END
 	// ADD-BY-LEETEN 01/01/2010-END
+
+	// ADD-BY-LEETEN 01/05/2010-BEGIN
+	float fClippingThreshold;
+
+	struct CClippingPlaneColor {
+		int ibMonoColor;
+		float4 v4Color;
+	};
+	CClippingPlaneColor cClippingPlaneFrontColor, cClippingPlaneBackColor;
+	// ADD-BY-LEETEN 01/05/2010-END
 
 	// ADD-BY-LEETEN 01/03/2010-BEGIN
 	int iMaxDistanceToNeighbors_screen;	
@@ -93,6 +112,7 @@ class CFlowEntropyViewerWin :
 	// ADD-BY-LEETEN 01/01/2010-END
 
 public:
+
 	// methods to read the input
 	void _ReadStreamlines(char *szStreamlineFilename);
 	void _SetEntropyField(int iXDim, int iYDim, int iZDim, float *pfEntropyField);
@@ -126,6 +146,11 @@ public:
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.4  2010/01/04 18:25:56  leeten
+
+[01/04/2010]
+1. [ADD] Add new member variables: ibIsLightingEnabled, ibIsColorMono, ibIsHaloEnabled and iMaxDistanceToNeighbors_screen.
+
 Revision 1.3  2010/01/01 18:23:12  leeten
 
 [01/01/2010]
