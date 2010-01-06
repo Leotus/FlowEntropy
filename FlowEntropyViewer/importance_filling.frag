@@ -12,6 +12,20 @@ This is the shader program to fill the importance
 
 	uniform float fWindowWidth;
 	uniform float fWindowHeight;
+
+	// ADD-BY-LEETEN 01/05/2010-BEGIN
+	#include "clip_frag_func.frag.h"
+
+	uniform vec4	v4ClippingPlaneFrontColor;
+	uniform int		ibIsClippingPlaneFrontColorMono;
+	uniform vec4	v4ClippingPlaneBackColor;
+	uniform int		ibIsClippingPlaneBackColorMono;
+	// ADD-BY-LEETEN 01/05/2010-END
+
+	// ADD-BY-LEETEN 01/05/2010-BEGIN
+	#include "tf1d_frag_func.frag.h"
+	// ADD-BY-LEETEN 01/05/2010-END
+
 void 
 main()
 {
@@ -51,13 +65,78 @@ main()
 		// MOD-BY-LEETEN 01/02/2010-END
 	#endif	// MOD-BY-LEETEN 01/01/2010-END
 
-	gl_FragData[0] = vec4(0.0);
+	// MOD-BY-LEETEN 01/05/2010-FROM:
+		// gl_FragData[0] = vec4(0.0);
+	// TO:
+	float fDepth = v4FragCoord.z;
+
+	vec4 v4Color = vec4(0.0);
+
+	/*
+	float fThicknessRatio = FAdjustThickness(v4FragCoord.z, v4PrevFragData.r, v4FragCoord.xy);
+	if( 0.0 < fThicknessRatio && fThicknessRatio < 1.0 )
+	{
+		if( true == BIsInClipvolume(v4FragCoord.z, v4FragCoord.xy) && false == BIsInClipvolume(v4PrevFragData.r, v4FragCoord.xy))
+		{
+			fDepth = FGetZFar(v4FragCoord.xy);
+			if( 0 != ibIsClippingPlaneBackColorMono )
+				v4Color = v4ClippingPlaneBackColor;
+			else
+				v4Color = F4GetColorFrom1DTf(fV_normalized);
+			v4Color.a = v4ClippingPlaneBackColor.a;
+		}
+		else
+		{
+			fDepth = FGetZNear(v4FragCoord.xy);
+			if( 0 != ibIsClippingPlaneFrontColorMono )
+				v4Color = v4ClippingPlaneFrontColor;
+			else
+				v4Color = F4GetColorFrom1DTf(fV_normalized);
+			v4Color.a = v4ClippingPlaneFrontColor.a;
+		}
+	}
+	*/
+	float fThicknessRatio = FAdjustThickness(v4FragCoord.z, v4PrevFragData.r, v4FragCoord.xy);
+	if( 0.0 < fThicknessRatio && fThicknessRatio < 1.0 )
+	{
+		float fZNear	= FGetZNear(v4FragCoord.xy);
+		float fZFar		= FGetZFar(v4FragCoord.xy);
+		if( v4FragCoord.z < fZFar && fZFar < v4PrevFragData.r )
+		{
+			fDepth = fZFar;
+			if( 0 != ibIsClippingPlaneBackColorMono )
+				v4Color = v4ClippingPlaneBackColor;
+			else
+				v4Color = F4GetColorFrom1DTf(fV_normalized);
+			v4Color.a = v4ClippingPlaneBackColor.a;
+		}
+
+		if( v4FragCoord.z < fZNear && fZNear < v4PrevFragData.r )
+		{
+			fDepth = fZNear;
+			if( 0 != ibIsClippingPlaneFrontColorMono )
+				v4Color = v4ClippingPlaneFrontColor;
+			else
+				v4Color = F4GetColorFrom1DTf(fV_normalized);
+			v4Color.a = v4ClippingPlaneFrontColor.a;
+		}
+	}
+
+	gl_FragDepth = fDepth;
+	gl_FragData[0] = v4Color;
+	// MOD-BY-LEETEN 01/05/2010-END
+
 	gl_FragData[1] = v4Data;
 }
 
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.3  2010/01/04 18:33:49  leeten
+
+[01/04/2010]
+1. [MOD] Set v4Data.g to 0.0 to avoid the compilation warnings.
+
 Revision 1.2  2010/01/01 18:25:06  leeten
 
 [01/01/2010]
