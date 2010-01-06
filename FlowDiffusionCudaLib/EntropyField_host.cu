@@ -1,5 +1,11 @@
 #if	COMPUTE_ENTROPY_VOLUME_HOST
 
+// ADD-BY-LEETEN 01/06/2010-BEGIN
+int iNrOfMargins;
+int iNrOfMarginalBins;
+static 	TBuffer<int> piMarginalHistogram_host;
+// ADD-BY-LEETEN 01/06/2010-END
+
 __host__
 static 
 int 
@@ -51,6 +57,10 @@ _UpdateSliceToHistogram_host
 
 	// update the histogram
 	piHistorgram_host[iSrcBin] += iHisotgramOp; 
+
+	// ADD-BY-LEETEN 01/06/2010-BEGIN
+	piMarginalHistogram_host[iSrcBin / iNrOfMargins] += iHisotgramOp; 
+	// ADD-BY-LEETEN 01/06/2010-END
 }
 
 static 
@@ -216,6 +226,10 @@ _ComputeEntropy_host
 )
 {
 	float fEntropy = 0.0f;
+
+	// ADD-BY-LEETEN 01/06/2010-BEGIN
+	#if	SCANNING_METHOD == SCANNING_METHOD_SCAN_WHOLE_HISTOGRAM
+	// ADD-BY-LEETEN 01/06/2010-END
 	for(int b = 0; b < iNrOfBins; b++)
 	{
 		if( 0 == piHistogram_host[b] )
@@ -230,6 +244,34 @@ _ComputeEntropy_host
 		fEntropy += fProb * log2f(fProb);
 	}
 	fEntropy = -fEntropy;
+
+	// ADD-BY-LEETEN 01/06/2010-BEGIN
+	#endif
+	
+	#if	SCANNING_METHOD == SCANNING_METHOD_SKIP_WITH_MARGINAL_HISTOGRAM
+	for(int mb = 0; mb < iNrOfMarginalBins; mb++)
+	{
+		if( 0 == piMarginalHistogram_host[mb] )
+			continue;
+
+		for(int b = mb * iNrOfMargins, b0 = 0; b < iNrOfBins && b0 < iNrOfMargins; b0++, b++)
+		{
+			if( 0 == piHistogram_host[b] )
+				continue;
+
+			float fCount = float(piHistogram_host[b]);
+			fEntropy += fCount * log2f(fCount);
+		}
+	}
+	float fNrOfNeighbors = 	float(
+		(2 * i3KernelSize.x + 1) * 
+		(2 * i3KernelSize.y + 1) * 
+		(2 * i3KernelSize.z + 1) );
+
+	fEntropy = -fEntropy / fNrOfNeighbors + log2(fNrOfNeighbors);
+	#endif
+	// ADD-BY-LEETEN 01/06/2010-END
+
 	// ADD-BY-LEETEN 12/19/2009-BEGIN
 	fEntropy = max(fEntropy, 0.0f);
 	// ADD-BY-LEETEN 12/19/2009-END
@@ -284,6 +326,13 @@ CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_TIMING);
 	int *piHistogram_host;
 	piHistogram_host = (int*)calloc(sizeof(piHistogram_host[0]), iNrOfBins);
 	assert(piHistogram_host);
+
+	// ADD-BY-LEETEN 01/06/2010-BEGIN
+	iNrOfMargins = int(sqrtf(float(iNrOfBins)));
+	iNrOfMarginalBins = int(ceilf(float(iNrOfBins) / float(iNrOfMargins)));
+
+	piMarginalHistogram_host.alloc(iNrOfMarginalBins);
+	// ADD-BY-LEETEN 01/06/2010-END
 
 	int *piBinVolume_host;
 	piBinVolume_host = (int*)calloc(sizeof(piBinVolume_host[0]), i3VolumeSize.x * i3VolumeSize.y * i3VolumeSize.z);
@@ -431,6 +480,11 @@ CLOCK_PRINT(_ComputeEntropyVolume_PRINT_TIMING);
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.2  2009/12/31 02:43:30  leeten
+
+[12/30/2009]
+1. [DEL] Remvoe the debug statement.
+
 Revision 1.1  2009/12/27 19:05:04  leeten
 
 [12/27/2009]
