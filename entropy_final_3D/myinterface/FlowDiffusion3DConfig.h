@@ -1,13 +1,13 @@
 #ifndef __FLOW_DIFFUSION_CUDA_H__
 #define	__FLOW_DIFFUSION_CUDA_H__
 
-#define USE_CUDA			1
-#define ENTER_GLUT_LOOP		1
+#define USE_CUDA			0
+#define ENTER_GLUT_LOOP		0
 #define BIN_LOOKUP			1
 
 // ADD-BY-LEETEN 12/14/2009-BEGIN
 #define BIN_LOOKUP_ON_GPU	1
-#define KEEP_BOUNDARY		1
+#define KEEP_BOUNDARY		0
 // ADD-BY-LEETEN 12/14/2009-END
 
 #define NR_OF_STREAMLINES	1
@@ -52,6 +52,12 @@
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.3  2010/01/04 18:02:38  leeten
+
+[01/04/2010]
+1. [MOD] Enable the GPU-based comutation of bins.
+2. [MOD] Reduce #streamlines to 1.
+
 Revision 1.2  2009/12/15 20:08:17  leeten
 
 [12/15/2009]
