@@ -60,7 +60,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libopt.lib libshader.lib libdvr2.lib libtfw.lib libgw.lib lib3ds-120sd.lib"
+				AdditionalDependencies="libclip.lib libopt.lib libshader.lib libdvr2.lib libtfw.lib libgw.lib lib3ds-120d.lib"
 				LinkIncremental="2"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -134,7 +134,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libopt.lib libshader.lib libdvr2.lib libtfw.lib libgw.lib lib3ds-120d.lib"
+				AdditionalDependencies="libclip.lib libopt.lib libshader.lib libdvr2.lib libtfw.lib libgw.lib lib3ds-120d.lib"
 				LinkIncremental="1"
 				GenerateDebugInformation="true"
 				SubSystem="1"
