@@ -55,7 +55,12 @@ This is the shader program for direct volume rendering
 	// ADD-BY-LEETEN 01/03/2010-END
 
 	// ADD-BY-LEETEN 01/05/2010-BEGIN
-	uniform float fClippingThreshold;
+	// MOD-BY-LEETEN 01/07/2010-FROM:
+		// uniform float fClippingThreshold;
+	// TO:
+	uniform float fClipVolumeOutsideThreshold;
+	uniform float fClipVolumeInsideThreshold;
+	// MOD-BY-LEETEN 01/07/2010-END
 	// ADD-BY-LEETEN 01/05/2010-END
 
 // ADD-BY-LEETEN 01/02/2010-BEGIN
@@ -206,11 +211,22 @@ main()
 	bool bPassClipPlanes = BIsInClipvolume(v4FragCoord.z, v4FragCoord.xy);
 	if( false == bPassClipPlanes )
 	{
-		if( fV_normalized < fClippingThreshold )
+		// MOD-BY-LEETEN 01/07/2010-FROM:
+			// if( fV_normalized < fClippingThreshold )
+		// TO:
+		if( fV_normalized < fClipVolumeOutsideThreshold )
+		// MOD-BY-LEETEN 01/07/2010-END
 		{
 			v4Color = vec4(0.0);
 		}
 	}
+	// ADD-BY-LEETEN 01/07/2010-BEGIN
+	else
+	{
+		if( fV_normalized < fClipVolumeInsideThreshold )
+			v4Color = vec4(0.0);
+	}
+	// ADD-BY-LEETEN 01/07/2010-END
 	// ADD-BY-LEETEN 01/05/2010-END
 
 	gl_FragData[0] = v4Color;
@@ -220,6 +236,17 @@ main()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.4  2010/01/06 17:13:05  leeten
+
+[01/06/2010]
+1. [MOD] Dlelete the variables t1dTf. Instead incldue the header tf1d_frag_func.frag.h.
+2. [ADD] Incldue the header clip_frag_func.frag.h.
+3. [ADD] Add variable fClippingThreshold to specify the entropy threshold for fragments outside the clipping volume.
+4. [MOD] Change the computation of fPrevV_normalized s.t. it becomes the min. of the neighboring pixels.
+5. [MOD] Lookup the transfer function via a function F4GetColorFrom1DTf().
+6. [MOD] Change the color when do color lookup with halo effect: only the RGB channels will be changed.
+7. [ADD] Compare fragment against the clipping volume. If the fragment is outside the volume, the entropy will be compared against the threshold fClippingThreshold to decide whether the fragment is et to complete transparent.
+
 Revision 1.3  2010/01/04 18:39:28  leeten
 
 [01/04/2010]

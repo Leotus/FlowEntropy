@@ -156,10 +156,10 @@ CFlowEntropyViewerWin::_BeginDisplay()
 		SET_1F_VALUE_BY_NAME(	pidImportanceFilling, "fDataValueMin",		0);
 		SET_1F_VALUE_BY_NAME(	pidImportanceFilling, "fDataValueMax",		fMaxEntropy);
 
-		SET_4FV_VALUE_BY_NAME(	pidImportanceFilling, "v4ClippingPlaneFrontColor",		1, (float*)&cClippingPlaneFrontColor.v4Color);
-		SET_1I_VALUE_BY_NAME(	pidImportanceFilling, "ibIsClippingPlaneFrontColorMono",cClippingPlaneFrontColor.ibMonoColor);
-		SET_4FV_VALUE_BY_NAME(	pidImportanceFilling, "v4ClippingPlaneBackColor",		1, (float*)&cClippingPlaneBackColor.v4Color);
-		SET_1I_VALUE_BY_NAME(	pidImportanceFilling, "ibIsClippingPlaneBackColorMono",	cClippingPlaneBackColor.ibMonoColor);
+		SET_4FV_VALUE_BY_NAME(	pidImportanceFilling, "v4ClippingPlaneOutsideColor",		1, (float*)&cClippingPlaneOutsideProp.v4Color);
+		SET_1I_VALUE_BY_NAME(	pidImportanceFilling, "ibIsClippingPlaneOutsideColorMono",cClippingPlaneOutsideProp.ibMonoColor);
+		SET_4FV_VALUE_BY_NAME(	pidImportanceFilling, "v4ClippingPlaneInsideColor",		1, (float*)&cClippingPlaneInsideProp.v4Color);
+		SET_1I_VALUE_BY_NAME(	pidImportanceFilling, "ibIsClippingPlaneInsideColorMono",	cClippingPlaneInsideProp.ibMonoColor);
 		// ADD-BY-LEETEN 01/05/2010-END
 
 		glUseProgramObjectARB(	pidImportanceCulling);
@@ -173,7 +173,12 @@ CFlowEntropyViewerWin::_BeginDisplay()
 		SET_1I_VALUE_BY_NAME(	pidImportanceCulling, "t1dTf",				2);
 		// ADD-BY-LEETEN 01/05/2010-BEGIN
 		SET_1I_VALUE_BY_NAME(	pidImportanceCulling, "t2dClipVolume",		4);
-		SET_1F_VALUE_BY_NAME(	pidImportanceCulling, "fClippingThreshold", fClippingThreshold);
+		// MOD-BY-LEETEN 01/07/2010-FROM:
+			// SET_1F_VALUE_BY_NAME(	pidImportanceCulling, "fClippingThreshold", fClippingThreshold);
+		// TO:
+		SET_1F_VALUE_BY_NAME(	pidImportanceCulling, "fClipVolumeOutsideThreshold",	cClippingPlaneOutsideProp.fThreshold);
+		SET_1F_VALUE_BY_NAME(	pidImportanceCulling, "fClipVolumeInsideThreshold",		cClippingPlaneInsideProp.fThreshold);
+		// MOD-BY-LEETEN 01/07/2010-END
 		// ADD-BY-LEETEN 01/05/2010-END
 
 		SET_1F_VALUE_BY_NAME(	pidImportanceCulling, "fTfDomainMin",		fTfDomainMin);
@@ -456,28 +461,47 @@ CFlowEntropyViewerWin::_InitFunc()
 	// ADD-BY-LEETEN 01/05/2010-BEGIN
 	GLUI_Panel *pcPanel_ClippingPlane = PCGetGluiWin()->add_panel("Clipping Plane");
 	{
-		GLUI_Spinner *pcSpinner_Threshold = PCGetGluiWin()->add_spinner_to_panel(pcPanel_ClippingPlane, "Clipping Threshold", GLUI_SPINNER_FLOAT, &fClippingThreshold);	
-			pcSpinner_Threshold->set_float_limits(0.0f, 1.0f);
+		#if	0		// DEL-BY-LEETEN 01/07/2010-BEGIN
+			GLUI_Spinner *pcSpinner_Threshold = PCGetGluiWin()->add_spinner_to_panel(pcPanel_ClippingPlane, "Clipping Threshold", GLUI_SPINNER_FLOAT, &fClippingThreshold);	
+				pcSpinner_Threshold->set_float_limits(0.0f, 1.0f);
+		#endif		// DEL-BY-LEETEN 01/07/2010-END
 
-		GLUI_Panel *pcPanel_Colors = PCGetGluiWin()->add_panel_to_panel(pcPanel_ClippingPlane, "Colors");	
-			GLUI_Panel *pcPanel_Front  = PCGetGluiWin()->add_panel_to_panel(pcPanel_Colors, "Front");	
+		#if	0	// MOD-BY-LEETEN 01/07/2010-FROM:
+			GLUI_Panel *pcPanel_Colors = PCGetGluiWin()->add_panel_to_panel(pcPanel_ClippingPlane, "Colors");	
+				GLUI_Panel *pcPanel_Front = PCGetGluiWin()->add_panel_to_panel(pcPanel_Colors, "Front");	
+		#else	// MOD-BY-LEETEN 01/07/2010-TO:
+		GLUI_Panel *pcPanel_Outside = PCGetGluiWin()->add_panel_to_panel(pcPanel_ClippingPlane, "Outside");	
+		#endif	// MOD-BY-LEETEN 01/07/2010-END
 			{
-				PCGetGluiWin()->add_checkbox_to_panel(pcPanel_Front, "mono?", &cClippingPlaneFrontColor.ibMonoColor);
+				// ADD-BY-LEETEN 01/07/2010-BEGIN
+				GLUI_Spinner *pcSpinner_Threshold = PCGetGluiWin()->add_spinner_to_panel(pcPanel_Outside, "Threshold", GLUI_SPINNER_FLOAT, &cClippingPlaneOutsideProp.fThreshold);	
+					pcSpinner_Threshold->set_float_limits(0.0f, 1.0f);
+				// ADD-BY-LEETEN 01/07/2010-END
+				PCGetGluiWin()->add_checkbox_to_panel(pcPanel_Outside, "mono?", &cClippingPlaneOutsideProp.ibMonoColor);
 				GLUI_Spinner *pcSpinner;
-				pcSpinner = PCGetGluiWin()->add_spinner_to_panel(pcPanel_Front, "R", GLUI_SPINNER_FLOAT, &cClippingPlaneFrontColor.v4Color.x);	pcSpinner->set_float_limits(0.0, 1.0);
-				pcSpinner = PCGetGluiWin()->add_spinner_to_panel(pcPanel_Front, "G", GLUI_SPINNER_FLOAT, &cClippingPlaneFrontColor.v4Color.y);	pcSpinner->set_float_limits(0.0, 1.0);
-				pcSpinner = PCGetGluiWin()->add_spinner_to_panel(pcPanel_Front, "B", GLUI_SPINNER_FLOAT, &cClippingPlaneFrontColor.v4Color.z);	pcSpinner->set_float_limits(0.0, 1.0);
-				pcSpinner = PCGetGluiWin()->add_spinner_to_panel(pcPanel_Front, "A", GLUI_SPINNER_FLOAT, &cClippingPlaneFrontColor.v4Color.w);	pcSpinner->set_float_limits(0.0, 1.0);
+				pcSpinner = PCGetGluiWin()->add_spinner_to_panel(pcPanel_Outside, "R", GLUI_SPINNER_FLOAT, &cClippingPlaneOutsideProp.v4Color.x);	pcSpinner->set_float_limits(0.0, 1.0);
+				pcSpinner = PCGetGluiWin()->add_spinner_to_panel(pcPanel_Outside, "G", GLUI_SPINNER_FLOAT, &cClippingPlaneOutsideProp.v4Color.y);	pcSpinner->set_float_limits(0.0, 1.0);
+				pcSpinner = PCGetGluiWin()->add_spinner_to_panel(pcPanel_Outside, "B", GLUI_SPINNER_FLOAT, &cClippingPlaneOutsideProp.v4Color.z);	pcSpinner->set_float_limits(0.0, 1.0);
+				pcSpinner = PCGetGluiWin()->add_spinner_to_panel(pcPanel_Outside, "A", GLUI_SPINNER_FLOAT, &cClippingPlaneOutsideProp.v4Color.w);	pcSpinner->set_float_limits(0.0, 1.0);
 			}
+		#if	0	// MOD-BY-LEETEN 01/07/2010-FROM:
 			PCGetGluiWin()->add_column_to_panel(pcPanel_Colors);	
 			GLUI_Panel *pcPanel_Back = PCGetGluiWin()->add_panel_to_panel(pcPanel_Colors, "Back");	
+		#else	// MOD-BY-LEETEN 01/07/2010-TO:
+		PCGetGluiWin()->add_column_to_panel(pcPanel_ClippingPlane);	
+		GLUI_Panel *pcPanel_Inside = PCGetGluiWin()->add_panel_to_panel(pcPanel_ClippingPlane, "Inside");	
+		#endif	// MOD-BY-LEETEN 01/07/2010-END
 			{
-				PCGetGluiWin()->add_checkbox_to_panel(pcPanel_Back, "mono?", &cClippingPlaneBackColor.ibMonoColor);
+				// ADD-BY-LEETEN 01/07/2010-BEGIN
+				GLUI_Spinner *pcSpinner_Threshold = PCGetGluiWin()->add_spinner_to_panel(pcPanel_Inside, "Threshold", GLUI_SPINNER_FLOAT, &cClippingPlaneInsideProp.fThreshold);	
+					pcSpinner_Threshold->set_float_limits(0.0f, 1.0f);
+				// ADD-BY-LEETEN 01/07/2010-END
+				PCGetGluiWin()->add_checkbox_to_panel(pcPanel_Inside, "mono?", &cClippingPlaneInsideProp.ibMonoColor);
 				GLUI_Spinner *pcSpinner;
-				pcSpinner = PCGetGluiWin()->add_spinner_to_panel(pcPanel_Back, "R", GLUI_SPINNER_FLOAT, &cClippingPlaneBackColor.v4Color.x);	pcSpinner->set_float_limits(0.0, 1.0);
-				pcSpinner = PCGetGluiWin()->add_spinner_to_panel(pcPanel_Back, "G", GLUI_SPINNER_FLOAT, &cClippingPlaneBackColor.v4Color.y);	pcSpinner->set_float_limits(0.0, 1.0);
-				pcSpinner = PCGetGluiWin()->add_spinner_to_panel(pcPanel_Back, "B", GLUI_SPINNER_FLOAT, &cClippingPlaneBackColor.v4Color.z);	pcSpinner->set_float_limits(0.0, 1.0);
-				pcSpinner = PCGetGluiWin()->add_spinner_to_panel(pcPanel_Back, "A", GLUI_SPINNER_FLOAT, &cClippingPlaneBackColor.v4Color.w);	pcSpinner->set_float_limits(0.0, 1.0);
+				pcSpinner = PCGetGluiWin()->add_spinner_to_panel(pcPanel_Inside, "R", GLUI_SPINNER_FLOAT, &cClippingPlaneInsideProp.v4Color.x);	pcSpinner->set_float_limits(0.0, 1.0);
+				pcSpinner = PCGetGluiWin()->add_spinner_to_panel(pcPanel_Inside, "G", GLUI_SPINNER_FLOAT, &cClippingPlaneInsideProp.v4Color.y);	pcSpinner->set_float_limits(0.0, 1.0);
+				pcSpinner = PCGetGluiWin()->add_spinner_to_panel(pcPanel_Inside, "B", GLUI_SPINNER_FLOAT, &cClippingPlaneInsideProp.v4Color.z);	pcSpinner->set_float_limits(0.0, 1.0);
+				pcSpinner = PCGetGluiWin()->add_spinner_to_panel(pcPanel_Inside, "A", GLUI_SPINNER_FLOAT, &cClippingPlaneInsideProp.v4Color.w);	pcSpinner->set_float_limits(0.0, 1.0);
 			}
 	}
 	// ADD-BY-LEETEN 01/05/2010-END
@@ -553,7 +577,9 @@ CFlowEntropyViewerWin::CFlowEntropyViewerWin(void)
 	iNrOfSlices = 128;			// set up the default number of slices
 
 	// ADD-BY-LEETEN 01/05/2010-BEGIN
-	fClippingThreshold = 1.0;
+	// DEL-BY-LEETEN 01/07/2010-BEGIN
+		// fClippingThreshold = 1.0;
+	// DEL-BY-LEETEN 01/07/2010-END
 	// ADD-BY-LEETEN 01/05/2010-END
 
 	// ADD-BY-LEETEN 01/01/2010-BEGIN
@@ -581,6 +607,19 @@ CFlowEntropyViewerWin::~CFlowEntropyViewerWin(void)
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.5  2010/01/06 17:23:49  leeten
+
+[01/06/2010]
+1. [ADD] Support clipping against clipping planes.
+2. [ADD] Specify the variable t2dClipVolume to the shader program pidImportanceFilling.
+3. [ADD] Specify the variables t1dTf, fTfDomainMin, fTfDomainMax, fDataValueMin, and fDataValueMax to the shader program pidImportanceFilling.
+4. [ADD] Specify the variables v4ClippingPlaneOutsideColor, ibIsClippingPlaneFrontColorMon, v4ClippingPlaneInsideColor, and ibIsClippingPlaneInsideColorMono .
+5. [ADD] Specify the variable fClippingThreshold and t2dClipVolume to the shader program pidImportanceCulling.
+6. [ADD] Bind the 4th texture to the clipping volume.
+7. [MOD] Change the depth func for importance filling stage from GL_LEQUAL to GL_ALWAYS.
+8. [ADD] Add use controls to specify the color scheme for the clipping planes.
+9. [ADD] Explictly specify the internal format of the depth component.
+
 Revision 1.4  2010/01/04 18:23:56  leeten
 
 [01/04/2010]
