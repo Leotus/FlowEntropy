@@ -41,13 +41,36 @@ class CFlowEntropyViewerWin :
 	// ADD-BY-LEETEN 01/01/2010-END
 
 	// ADD-BY-LEETEN 01/05/2010-BEGIN
-	float fClippingThreshold;
+	// DEL-BY-LEETEN 01/07/2010-BEGIN
+		// float fClippingThreshold;
+	// DEL-BY-LEETEN 01/07/2010-END
 
-	struct CClippingPlaneColor {
+	// MOD-BY-LEETEN 01/07/2010-FROM:
+		// struct CClippingPlaneColor {
+	// TO:
+	struct CClippingPlaneProp {
+		float fThreshold;
+	// MOD-BY-LEETEN 01/07/2010-END
 		int ibMonoColor;
 		float4 v4Color;
+
+		// ADD-BY-LEETEN 01/07/2010-BEGIN
+		CClippingPlaneProp()
+		{
+			fThreshold = 0.0f;
+			ibMonoColor = 0.0f;
+			v4Color.x = 0.0;
+			v4Color.y = 0.0;
+			v4Color.z = 0.0;
+			v4Color.w = 0.0;
+		}
+		// ADD-BY-LEETEN 01/07/2010-END
 	};
-	CClippingPlaneColor cClippingPlaneFrontColor, cClippingPlaneBackColor;
+	// MOD-BY-LEETEN 01/07/2010-FROM:
+		// CClippingPlaneColor cClippingPlaneFrontColor, cClippingPlaneBackColor;
+	// TO:
+	CClippingPlaneProp cClippingPlaneOutsideProp, cClippingPlaneInsideProp;
+	// MOD-BY-LEETEN 01/07/2010-END
 	// ADD-BY-LEETEN 01/05/2010-END
 
 	// ADD-BY-LEETEN 01/03/2010-BEGIN
@@ -146,6 +169,13 @@ public:
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.5  2010/01/06 17:05:07  leeten
+
+[01/06/2010]
+1. [ADD] Add ClipVolume as one base class of CFlowEntropyVieweWin.
+2. [ADD] Add a variable fClippingThreshold to control the entropy threshold for streamlines outside the clipping volume.
+3. [ADD] Add a new dat structure CClippingPlaneColor to define the color scheme for the clipping planes. The colors for the front faces and back faces can be different.
+
 Revision 1.4  2010/01/04 18:25:56  leeten
 
 [01/04/2010]
