@@ -16,10 +16,17 @@ This is the shader program to fill the importance
 	// ADD-BY-LEETEN 01/05/2010-BEGIN
 	#include "clip_frag_func.frag.h"
 
-	uniform vec4	v4ClippingPlaneFrontColor;
-	uniform int		ibIsClippingPlaneFrontColorMono;
-	uniform vec4	v4ClippingPlaneBackColor;
-	uniform int		ibIsClippingPlaneBackColorMono;
+	#if	0	// MOD-BY-LEETEN 01/07/2010-FROM:
+		uniform vec4	v4ClippingPlaneOutsideColor;
+		uniform int		ibIsClippingPlaneOutsideColorMono;
+		uniform vec4	v4ClippingPlaneInsideColor;
+		uniform int		ibIsClippingPlaneInsideColorMono;
+	#else	// MOD-BY-LEETEN 01/07/2010-TO:
+	uniform vec4	v4ClippingPlaneOutsideColor;
+	uniform int		ibIsClippingPlaneOutsideColorMono;
+	uniform vec4	v4ClippingPlaneInsideColor;
+	uniform int		ibIsClippingPlaneInsideColorMono;
+	#endif	// MOD-BY-LEETEN 01/07/2010-END
 	// ADD-BY-LEETEN 01/05/2010-END
 
 	// ADD-BY-LEETEN 01/05/2010-BEGIN
@@ -72,53 +79,49 @@ main()
 
 	vec4 v4Color = vec4(0.0);
 
-	/*
-	float fThicknessRatio = FAdjustThickness(v4FragCoord.z, v4PrevFragData.r, v4FragCoord.xy);
-	if( 0.0 < fThicknessRatio && fThicknessRatio < 1.0 )
-	{
-		if( true == BIsInClipvolume(v4FragCoord.z, v4FragCoord.xy) && false == BIsInClipvolume(v4PrevFragData.r, v4FragCoord.xy))
+	#if	0	// MOD-BY-LEETEN 01/07/2010-FROM:
+		float fThicknessRatio = FAdjustThickness(v4FragCoord.z, v4PrevFragData.r, v4FragCoord.xy);
+		if( 0.0 < fThicknessRatio && fThicknessRatio < 1.0 )
 		{
-			fDepth = FGetZFar(v4FragCoord.xy);
-			if( 0 != ibIsClippingPlaneBackColorMono )
-				v4Color = v4ClippingPlaneBackColor;
-			else
-				v4Color = F4GetColorFrom1DTf(fV_normalized);
-			v4Color.a = v4ClippingPlaneBackColor.a;
-		}
-		else
-		{
-			fDepth = FGetZNear(v4FragCoord.xy);
-			if( 0 != ibIsClippingPlaneFrontColorMono )
-				v4Color = v4ClippingPlaneFrontColor;
-			else
-				v4Color = F4GetColorFrom1DTf(fV_normalized);
-			v4Color.a = v4ClippingPlaneFrontColor.a;
-		}
-	}
-	*/
-	float fThicknessRatio = FAdjustThickness(v4FragCoord.z, v4PrevFragData.r, v4FragCoord.xy);
+			float fZNear	= FGetZNear(v4FragCoord.xy);
+			float fZFar		= FGetZFar(v4FragCoord.xy);
+	#else	// MOD-BY-LEETEN 01/07/2010-TO:
+	float fTolerance = v4PrevFragData.r - v4FragCoord.z; 
+	float fDepthWithTolerance = v4FragCoord.z - fTolerance;
+	float fPrevDepthWithTolerance = v4PrevFragData.r + fTolerance;
+	float fThicknessRatio = FAdjustThickness(fDepthWithTolerance, fPrevDepthWithTolerance, v4FragCoord.xy);
 	if( 0.0 < fThicknessRatio && fThicknessRatio < 1.0 )
 	{
 		float fZNear	= FGetZNear(v4FragCoord.xy);
 		float fZFar		= FGetZFar(v4FragCoord.xy);
-		if( v4FragCoord.z < fZFar && fZFar < v4PrevFragData.r )
+	#endif	// MOD-BY-LEETEN 01/07/2010-END
+
+		// MOD-BY-LEETEN 01/07/2010-FROM:
+			// if( v4FragCoord.z < fZFar && fZFar < v4PrevFragData.r )
+		// TO:
+		if( fDepthWithTolerance < fZFar && fZFar < fPrevDepthWithTolerance )
+		// MOD-BY-LEETEN 01/07/2010-END
 		{
 			fDepth = fZFar;
-			if( 0 != ibIsClippingPlaneBackColorMono )
-				v4Color = v4ClippingPlaneBackColor;
+			if( 0 != ibIsClippingPlaneInsideColorMono )
+				v4Color = v4ClippingPlaneInsideColor;
 			else
 				v4Color = F4GetColorFrom1DTf(fV_normalized);
-			v4Color.a = v4ClippingPlaneBackColor.a;
+			v4Color.a = v4ClippingPlaneInsideColor.a;
 		}
 
-		if( v4FragCoord.z < fZNear && fZNear < v4PrevFragData.r )
+		// MOD-BY-LEETEN 01/07/2010-FROM:
+			// if( v4FragCoord.z < fZNear && fZNear < v4PrevFragData.r )
+		// TO:
+		if( fDepthWithTolerance < fZNear && fZNear < fPrevDepthWithTolerance )
+		// MOD-BY-LEETEN 01/07/2010-END
 		{
 			fDepth = fZNear;
-			if( 0 != ibIsClippingPlaneFrontColorMono )
-				v4Color = v4ClippingPlaneFrontColor;
+			if( 0 != ibIsClippingPlaneOutsideColorMono )
+				v4Color = v4ClippingPlaneOutsideColor;
 			else
 				v4Color = F4GetColorFrom1DTf(fV_normalized);
-			v4Color.a = v4ClippingPlaneFrontColor.a;
+			v4Color.a = v4ClippingPlaneOutsideColor.a;
 		}
 	}
 
@@ -132,6 +135,16 @@ main()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.4  2010/01/06 17:18:42  leeten
+
+[01/06/2010]
+1. [ADD] Include the file clip_frag_func.frag.h.
+2. [ADD] Add the variable v4ClippingPlaneOutsideColor to specify the color for the front face of the clipping volume and a flag ibIsClippingPlaneOutsideColorMono to decide whether the color is set according to the transfer function when ibIsClippingPlaneOutsideColorMono is 0.
+3. [ADD] Add the variable v4ClippingPlaneInsideColor to specify the color for the back face of the clipping volume and a flag ibIsClippingPlaneInsideColorMono to decide whether the color is set according to the transfer function when ibIsClippingPlaneInsideColorMono is 0.
+4. [ADD] Include the file tf1d_frag_func.frag.h to look up the transfer function.
+5. [ADD] Plot the clipping planes.
+6. [ADD] Output the framgent depth. If the fragment is on the boundary of the clipping volume, the depth is adjust to the boundary.
+
 Revision 1.3  2010/01/04 18:33:49  leeten
 
 [01/04/2010]
