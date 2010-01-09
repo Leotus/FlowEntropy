@@ -141,6 +141,12 @@ CStreamline::_SortSlab(
 		// ADD-BY-LEETEN 01/02/2010-BEGIN
 		int iStreamline = puLineSegmentIndicesToStreamlines[iL]; 
 
+		// ADD-BY-LEETEN 01/08/2010-BEGIN
+		// only consider the first uMaxNrOfStreamlines streamlines
+		if( iStreamline >= int(uMaxNrOfStreamlines) )
+			continue;
+		// ADD-BY-LEETEN 01/08/2010-END
+
 		if( 0 != iStreamline % int(uSamplingRate) )
 			continue;
 		// ADD-BY-LEETEN 01/02/2010-END
@@ -184,6 +190,10 @@ CStreamline::_Read(float fScaleX, float fScaleY, float fScaleZ, char *szStreamli
 		uNrOfLines += uV - 1;
 		vuNrOfVertices.push_back(uV);
 	}
+
+	// ADD-BY-LEETEN 01/08/2010-BEGIN
+	uMaxNrOfStreamlines = uNrOfStreamlines;
+	// ADD-BY-LEETEN 01/08/2010-END
 
 	pfCoords.alloc(3 * uNrOfVertices);
 	// ADD-BY-LEETEN 12/31/2009-BEGIN
@@ -392,6 +402,11 @@ CStreamline::_AddGlui(GLUI* pcGlui)
 	GLUI_Spinner *pcSpinner_SamplingRate = pcGlui->add_spinner_to_panel(pcPanel_Streamlines, "Sampling Rate", GLUI_SPINNER_INT, &uSamplingRate);	
 	pcSpinner_SamplingRate->set_int_limits(1, 256);
 	// ADD-BY-LEETEN 01/02/2010-END
+
+	// ADD-BY-LEETEN 01/08/2010-BEGIN
+	GLUI_Spinner *pcSpinner_MaxNrOfStreamlines = pcGlui->add_spinner_to_panel(pcPanel_Streamlines, "Max #Streamlines", GLUI_SPINNER_INT, &uMaxNrOfStreamlines);	
+		pcSpinner_MaxNrOfStreamlines->set_int_limits(0, uMaxNrOfStreamlines);
+	// ADD-BY-LEETEN 01/08/2010-END
 
 	#if	RENDER_STREAMLINE_AS_LINES
 	GLUI_Panel	*pcPanel_Lines = pcGlui->add_panel_to_panel(pcPanel_Streamlines, "Lines");
@@ -811,6 +826,12 @@ CStreamline::_RenderTubes()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.3  2010/01/04 18:32:59  leeten
+
+[01/04/2010]
+1. [ADD] Allow the change of the sampling rate of streamlines when rendering. In order to do this, an array puLineSegmentIndicesToStreamlines is added to recorded the streamline indices of all streamline segments.
+2. [MOD] Change the initial value of the line color to (0.1, 0.1, 0.1).
+
 Revision 1.2  2010/01/01 18:31:11  leeten
 
 [01/01/2010]

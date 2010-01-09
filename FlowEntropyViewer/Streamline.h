@@ -31,6 +31,10 @@ struct CStreamline
 	unsigned int uSamplingRate;
 	// ADD-BY-LEETEN 01/02/2010-END
 
+	// ADD-BY-LEETEN 01/08/2010-BEGIN
+	unsigned int uMaxNrOfStreamlines;
+	// ADD-BY-LEETEN 01/08/2010-END
+
 	// ADD-BY-LEETEN 12/31/2009-BEGIN
 	TBuffer<float> pfTangent;
 	// ADD-BY-LEETEN 12/31/2009-END
@@ -108,6 +112,12 @@ public:
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.3  2010/01/04 18:30:07  leeten
+
+[01/04/2010]
+1. [MOD] Change names of variables: puLineIndices --> pu2LineSegmentIndicesToVertices; puSortedLineIndices --> pu2SortedLineSegmentIndicesToVertices.
+2. [ADD] Add a new variable uSamplingRate and add one new array puLineSegmentIndicesToStreamlines.
+
 Revision 1.2  2010/01/01 18:19:40  leeten
 
 [01/01/2010]
