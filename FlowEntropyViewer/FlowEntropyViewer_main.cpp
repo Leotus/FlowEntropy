@@ -18,7 +18,12 @@
 	CFlowEntropyViewerWin cFlowEntropyViewerWin;
 
 	// the transfer function
-	int iNrOfTfEntries = 4096;
+	// MOD-BY-LEETEN 01/08/2010-FROM:
+		// int iNrOfTfEntries = 4096;
+	// TO:
+	int iNrOfTfEntries = 256;
+	// MOD-BY-LEETEN 01/08/2010-END
+
 	// ADD-BY-LEETEN 01/02/2010-BEGIN
 	float fMaxCount;
 	// ADD-BY-LEETEN 01/02/2010-END
@@ -248,6 +253,12 @@ main(int argn, char* argv[])
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.4  2010/01/06 17:07:20  leeten
+
+[01/06/2010]
+1. [ADD] Add a window cClipWin to specify the clipping planes.
+2. [ADD] Add a function _GlobalFunc to bypass the message among the windows.
+
 Revision 1.3  2010/01/04 18:19:18  leeten
 
 [01/04/2010]
