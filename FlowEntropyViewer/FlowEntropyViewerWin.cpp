@@ -79,6 +79,11 @@ void
 CFlowEntropyViewerWin::_ReadStreamlines(char *szStreamlineFilename)
 {
 	cStreamline._Read(float(pf3DEntropyField.iWidth), float(pf3DEntropyField.iHeight), float(pf3DEntropyField.iDepth), szStreamlineFilename);
+
+	// ADD-BY-LEETEN 01/08/2010-BEGIN
+				// create the user control after the streamlines have been read so #streamlines can be knewn
+	cStreamline._AddGlui(PCGetGluiWin());
+	// ADD-BY-LEETEN 01/08/2010-END
 }
 
 void 
@@ -87,7 +92,11 @@ CFlowEntropyViewerWin::_BeginDisplay()
 	// MOD-BY-LEETEN 01/02/2010-BEGIN
 		// glClearColor(1.0, 1.0, 1.0, 0.0);
 	// TO:
-	glClearColor(0.0, 0.0, 0.0, 0.0);
+	// MOD-BY-LEETEN 01/08/2010-FROM:
+		// glClearColor(0.0, 0.0, 0.0, 0.0);
+	// TO:
+	glClearColor(1.0, 1.0, 1.0, 0.0);
+	// MOD-BY-LEETEN 01/08/2010-END
 	// MOD-BY-LEETEN 01/02/2010-END
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
@@ -407,9 +416,11 @@ CFlowEntropyViewerWin::_InitFunc()
 {
 	CDvrWin2::_InitFunc();
 
-	_DisableVerticalSync();
-	_KeepUpdateOn();
-	_DisplayFpsOn();
+	#if	0	// DEL-BY-LEETEN 01/08/2010-BEGIN
+		_DisableVerticalSync();
+		_KeepUpdateOn();
+		_DisplayFpsOn();
+	#endif	// DEL-BY-LEETEN 01/08/2010-END
 
 	// ADD-BY-LEETEN 01/05/2010-BEGIN
 	CClipVolume::_InitFunc();
@@ -546,7 +557,9 @@ CFlowEntropyViewerWin::_InitFunc()
 	GLUI_Spinner *pcSpinner_OcclusionSaturation = PCGetGluiWin()->add_spinner_to_panel(pcPanel_Slabs, "Occlusion Saturation ", GLUI_SPINNER_FLOAT, &fOcclusionSaturation );	
 	pcSpinner_OcclusionSaturation->set_float_limits(0.0f, 1.0f);
 
-	cStreamline._AddGlui(PCGetGluiWin());
+	// DEL-BY-LEETEN 01/08/2010-BEGIN
+		// cStreamline._AddGlui(PCGetGluiWin());
+	// DEL-BY-LEETEN 01/08/2010-END
 
 }
 
@@ -607,6 +620,12 @@ CFlowEntropyViewerWin::~CFlowEntropyViewerWin(void)
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.6  2010/01/07 14:58:33  leeten
+
+[01/07/2010]
+1. [MOD] Change the variable names such that the front/back sides of the clipping volume become the outside/inside of the clipping volume.
+2. [ADD] Add thresholds for both sides of the clipping volume.
+
 Revision 1.5  2010/01/06 17:23:49  leeten
 
 [01/06/2010]
