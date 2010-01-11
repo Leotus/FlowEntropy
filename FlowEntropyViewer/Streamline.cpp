@@ -1,5 +1,9 @@
 #include "liblog.h"
 
+// ADD-BY-LEETEN 01/10/2010-BEGIN
+#include <GL/glew.h>
+// ADD-BY-LEETEN 01/10/2010-END
+
 #include <GL/glut.h>
 
 #define _USE_MATH_DEFINES
@@ -198,6 +202,11 @@ CStreamline::_Read(float fScaleX, float fScaleY, float fScaleZ, char *szStreamli
 	pfCoords.alloc(3 * uNrOfVertices);
 	// ADD-BY-LEETEN 12/31/2009-BEGIN
 	pfTangent.alloc(3 * uNrOfVertices);
+
+	// ADD-BY-LEETEN 01/10/2010-BEGIN
+	piVertexIndicesInStreamline.alloc(uNrOfVertices);
+	// ADD-BY-LEETEN 01/10/2010-END
+
 	// ADD-BY-LEETEN 12/31/2009-END
 	pu2LineSegmentIndicesToVertices.alloc(2 * uNrOfLines);
 
@@ -231,6 +240,13 @@ CStreamline::_Read(float fScaleX, float fScaleY, float fScaleZ, char *szStreamli
 			sizeof(pfCoords[0]), 
 			uNrOfVertices * 3, 
 			fpStreamline);
+
+		// ADD-BY-LEETEN 01/10/2010-BEGIN
+		for(unsigned int uV = 0; uV < uNrOfVertices; uV++)
+		{
+			piVertexIndicesInStreamline[uCoordIndex + uV] = int(uV);
+		}
+		// ADD-BY-LEETEN 01/10/2010-END
 
 		for(unsigned int uV = 0; uV < uNrOfVertices-1; uV++, uLineIndex++)
 		{
@@ -343,6 +359,16 @@ CStreamline::_Read(float fScaleX, float fScaleY, float fScaleZ, char *szStreamli
 	// ADD-BY-LEETEN 12/31/2009-BEGIN
 	glNormalPointer(GL_FLOAT, 0,	&pfTangent[0]);
 	// ADD-BY-LEETEN 12/31/2009-END
+
+	// ADD-BY-LEETEN 01/10/2010-BEGIN
+						// bind the vertex indices to GL_TEXTURE0
+	glClientActiveTexture(GL_TEXTURE0 + 1);
+	glTexCoordPointer(1, GL_INT, 0, &piVertexIndicesInStreamline[0]);
+
+						// reset the default texture unit
+	glClientActiveTexture(GL_TEXTURE0);
+	// ADD-BY-LEETEN 01/10/2010-END
+
 	#endif
 
 	#if	RENDER_STREAMLINE_AS_TUBES
@@ -396,7 +422,11 @@ CStreamline::_Render()
 void 
 CStreamline::_AddGlui(GLUI* pcGlui)
 {
-	GLUI_Panel	*pcPanel_Streamlines = pcGlui->add_panel("Streamlines");
+	// MOD-BY-LEETEN 01/10/2010-FROM:
+		// GLUI_Panel	*pcPanel_Streamlines = pcGlui->add_panel("Streamlines");
+	// TO:
+	GLUI_Panel	*pcPanel_Streamlines = pcGlui->add_rollout("Streamlines");
+	// MOD-BY-LEETEN 01/10/2010-END
 
 	// ADD-BY-LEETEN 01/02/2010-BEGIN
 	GLUI_Spinner *pcSpinner_SamplingRate = pcGlui->add_spinner_to_panel(pcPanel_Streamlines, "Sampling Rate", GLUI_SPINNER_INT, &uSamplingRate);	
@@ -412,6 +442,18 @@ CStreamline::_AddGlui(GLUI* pcGlui)
 	GLUI_Panel	*pcPanel_Lines = pcGlui->add_panel_to_panel(pcPanel_Streamlines, "Lines");
 		GLUI_Spinner *pcSpinner_InnerWidth = pcGlui->add_spinner_to_panel(pcPanel_Lines, "Inner Width", GLUI_SPINNER_FLOAT, &fInnerWidth);	
 		GLUI_Spinner *pcSpinner_OuterWidth = pcGlui->add_spinner_to_panel(pcPanel_Lines, "Outer Width", GLUI_SPINNER_FLOAT, &fOuterWidth);	
+		// ADD-BY-LEETEN 01/10/2010-BEGIN
+		GLUI_Panel	*pcPanel_Dash = pcGlui->add_panel_to_panel(pcPanel_Lines, "Dash");
+		GLUI_Spinner *pcSpinner_DashPeriod = pcGlui->add_spinner_to_panel(pcPanel_Dash, "Period", GLUI_SPINNER_INT, &cDash.iPeriod);	
+			pcSpinner_DashPeriod->set_int_limits(0, 32);
+		GLUI_Spinner *pcSpinner_DashOffset = pcGlui->add_spinner_to_panel(pcPanel_Dash, "Offset", GLUI_SPINNER_FLOAT, &cDash.fOffset);
+			pcSpinner_DashOffset->set_float_limits(-M_PI, +M_PI);
+		/*
+		GLUI_Spinner *pcSpinner_DashThreshold = pcGlui->add_spinner_to_panel(pcPanel_Dash, "Threshold", GLUI_SPINNER_FLOAT, &cDash.fThreshold);
+			pcSpinner_DashThreshold->set_float_limits(-1.0f, +1.0f);
+		pcGlui->add_checkbox_to_panel(pcPanel_Dash, "Is Higher Entropy w/ Longer Line?", &cDash.ibIsHigherEntropyWithLongerLine);	
+		*/
+		// ADD-BY-LEETEN 01/10/2010-END
 	#endif
 
 	#if	RENDER_STREAMLINE_AS_TUBES
@@ -680,9 +722,18 @@ CStreamline::_RenderLinesInSlab
 	glPushAttrib(GL_CURRENT_BIT);
 	glPushAttrib(GL_LINE_BIT);
 	glPushAttrib(GL_DEPTH_BUFFER_BIT);
+	// ADD-BY-LEETEN 01/10/2010-BEGIN
+	glPushClientAttrib(GL_CLIENT_VERTEX_ARRAY_BIT);
+	// ADD-BY-LEETEN 01/10/2010-END
 	glEnableClientState(GL_VERTEX_ARRAY);
 	// ADD-BY-LEETEN 12/31/2009-BEGIN
 	glEnableClientState(GL_NORMAL_ARRAY);
+
+	// ADD-BY-LEETEN 01/10/2010-BEGIN
+						// bind the vertex indices to GL_TEXTURE0
+	glClientActiveTexture(GL_TEXTURE0 + 1);
+	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	// ADD-BY-LEETEN 01/10/2010-END
 	// ADD-BY-LEETEN 12/31/2009-END
 
 	if( bDrawHalo )
@@ -724,10 +775,14 @@ CStreamline::_RenderLinesInSlab
 	}
 	// ADD-BY-LEETEN 01/01/2010-END
 
-	glDisableClientState(GL_VERTEX_ARRAY);
-	// ADD-BY-LEETEN 12/31/2009-BEGIN
-	glDisableClientState(GL_NORMAL_ARRAY);
-	// ADD-BY-LEETEN 12/31/2009-END
+	#if	0	// MOD-BY-LEETEN 01/10/2010-FROM:
+		glDisableClientState(GL_VERTEX_ARRAY);
+		// ADD-BY-LEETEN 12/31/2009-BEGIN
+		glDisableClientState(GL_NORMAL_ARRAY);
+		// ADD-BY-LEETEN 12/31/2009-END
+	#else	// MOD-BY-LEETEN 01/10/2010-TO:
+	glPopClientAttrib();	// glPushClientAttrib(GL_CLIENT_VERTEX_ARRAY_BIT);
+	#endif	// MOD-BY-LEETEN 01/10/2010-END
 
 	glPopAttrib();	// glPushAttrib(GL_DEPTH_BUFFER_BIT);
 	glPopAttrib();	// glPushAttrib(GL_LINE_BIT);
@@ -826,6 +881,11 @@ CStreamline::_RenderTubes()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.4  2010/01/09 22:19:12  leeten
+
+[01/09/2010]
+1. [ADD] Define a new field uMaxNrOfStreamlines as max. #streamlines to be rendered.
+
 Revision 1.3  2010/01/04 18:32:59  leeten
 
 [01/04/2010]
