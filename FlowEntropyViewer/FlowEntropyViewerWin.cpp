@@ -111,6 +111,68 @@ CFlowEntropyViewerWin::_BeginDisplay()
 	glColor4f(0.70f, 0.70f, 0.70f, 1.0f);
 	glutWireCube(2.0);
 
+	// ADD-BY-LEETEN 01/10/2010-BEGIN
+					// plot the basis vectors
+	glPushMatrix();
+
+		glTranslatef(-1.0f, -1.0f, -1.0f);
+
+		// plot the origin
+		glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+		_DrawString3D("0");
+
+		double pdScales[3];
+		pdScales[0] = 1.0/(double)this->pf3DEntropyField.iWidth;
+		pdScales[1] = 1.0/(double)this->pf3DEntropyField.iHeight;
+		pdScales[2] = 1.0/(double)this->pf3DEntropyField.iDepth;
+
+		double dLength = 33.0;
+		// calculate the vector
+		for(int k =0; k < 3; k++) // direction
+		{
+			double pdColor[4];
+			memset(pdColor, 0, sizeof(pdColor));
+			pdColor[k] = 1.0;
+			pdColor[3] = 1.0;
+			glColor4dv(pdColor);
+
+			double pdDir[3];
+			memset(pdDir, 0, sizeof(pdDir));
+			pdDir[k] = dLength * pdScales[k];
+
+			glBegin(GL_LINES);
+				glVertex3d(0.0, 0.0, 0.0);
+				glVertex3dv(pdDir);
+
+				double dOffsetLength = dLength * 0.25;
+				double pdDirOffset[3];
+
+				for(int j = 0; j < 2; j++)
+				{
+					for(int i = 0; i< 3; i++)
+						pdDirOffset[i] = dOffsetLength * pdScales[i];
+
+					pdDirOffset[k] *= -1.0;
+					pdDirOffset[(k + j + 1)%3] = 0.0;
+					for(int i = 0; i< 3; i++)
+						pdDirOffset[i] = pdDir[i] + pdDirOffset[i];
+
+					glVertex3dv(pdDir);
+					glVertex3dv(pdDirOffset);
+				}
+			glEnd();
+
+			static char* pszDir[3] = {
+				"X",
+				"Y",
+				"Z",
+			};
+//			glColor4f(0.0f, 0.0f, 0.0f, 1.0f); 
+			_DrawString3D(pszDir[k], pdDir[0], pdDir[1], pdDir[2]);
+		}
+	glPopMatrix();
+	// ADD-BY-LEETEN 01/10/2010-END
+
 	//////////////////////////////////////////
 	// sort the line centroids
 	static double pdModelViewMatrix[16];
@@ -194,6 +256,13 @@ CFlowEntropyViewerWin::_BeginDisplay()
 		SET_1F_VALUE_BY_NAME(	pidImportanceCulling, "fTfDomainMax",		fTfDomainMax);
 		SET_1F_VALUE_BY_NAME(	pidImportanceCulling, "fDataValueMin",		0);
 		SET_1F_VALUE_BY_NAME(	pidImportanceCulling, "fDataValueMax",		fMaxEntropy);
+
+		// ADD-BY-LEETEN 01/10/2010-BEGIN
+		SET_1F_VALUE_BY_NAME(	pidImportanceCulling, "fDashPeriod",						float(cStreamline.cDash.iPeriod) );
+		SET_1F_VALUE_BY_NAME(	pidImportanceCulling, "fDashOffset",						cStreamline.cDash.fOffset);
+		// SET_1F_VALUE_BY_NAME(	pidImportanceCulling, "fDashThreshold",						cStreamline.cDash.fThreshold);
+		// SET_1I_VALUE_BY_NAME(	pidImportanceCulling, "ibIsHigherEntropyWithLongerLine",	cStreamline.cDash.ibIsHigherEntropyWithLongerLine);
+		// ADD-BY-LEETEN 01/10/2010-END
 
 		// ADD-BY-LEETEN 01/01/2010-BEGIN
 		#if	0	// DEL-BY-LEETEN 01/03/2010-BEGIN
@@ -422,6 +491,10 @@ CFlowEntropyViewerWin::_InitFunc()
 		_DisplayFpsOn();
 	#endif	// DEL-BY-LEETEN 01/08/2010-END
 
+	// ADD-BY-LEETEN 01/10/2010-BEGIN
+	_KeepUpdateOn();
+	// ADD-BY-LEETEN 01/10/2010-END
+
 	// ADD-BY-LEETEN 01/05/2010-BEGIN
 	CClipVolume::_InitFunc();
 	// ADD-BY-LEETEN 01/05/2010-END
@@ -470,7 +543,11 @@ CFlowEntropyViewerWin::_InitFunc()
 	pcSpinner_ThicknessGain->set_float_limits(0.0f, 4096.0f);
 
 	// ADD-BY-LEETEN 01/05/2010-BEGIN
-	GLUI_Panel *pcPanel_ClippingPlane = PCGetGluiWin()->add_panel("Clipping Plane");
+	// MOD-BY-LEETEN 01/10/2010-FROM:
+		// GLUI_Panel *pcPanel_ClippingPlane = PCGetGluiWin()->add_panel("Clipping Plane");
+	// TO:
+	GLUI_Panel *pcPanel_ClippingPlane = PCGetGluiWin()->add_rollout("Clipping Plane");
+	// MOD-BY-LEETEN 01/10/2010-END
 	{
 		#if	0		// DEL-BY-LEETEN 01/07/2010-BEGIN
 			GLUI_Spinner *pcSpinner_Threshold = PCGetGluiWin()->add_spinner_to_panel(pcPanel_ClippingPlane, "Clipping Threshold", GLUI_SPINNER_FLOAT, &fClippingThreshold);	
@@ -518,14 +595,22 @@ CFlowEntropyViewerWin::_InitFunc()
 	// ADD-BY-LEETEN 01/05/2010-END
 
 						// create a spinner to control the brightness gain 
-	GLUI_Panel *pcPanel_RenderMode = PCGetGluiWin()->add_panel("Render Mode");
+	// MOD-BY-LEETEN 01/10/2010-FROM:
+		// GLUI_Panel *pcPanel_RenderMode = PCGetGluiWin()->add_panel("Render Mode");
+	// TO:
+	GLUI_Panel *pcPanel_RenderMode = PCGetGluiWin()->add_rollout("Render Mode");
+	// MOD-BY-LEETEN 01/10/2010-END
 	GLUI_RadioGroup *pcRadioGroup_RenderMode = PCGetGluiWin()->add_radiogroup_to_panel(pcPanel_RenderMode, &iRenderMode);
 	PCGetGluiWin()->add_radiobutton_to_group(pcRadioGroup_RenderMode, "Entropy Field");
 	PCGetGluiWin()->add_radiobutton_to_group(pcRadioGroup_RenderMode, "Streamlines w/ Importance Culling");
 	PCGetGluiWin()->add_radiobutton_to_group(pcRadioGroup_RenderMode, "Streamlines in Slabs");
 
 	// ADD-BY-LEETEN 01/01/2010-BEGIN
-		GLUI_Panel *pcPanel_Shading = PCGetGluiWin()->add_panel("Shading");
+		// MOD-BY-LEETEN 01/10/2010-FROM:
+			// GLUI_Panel *pcPanel_Shading = PCGetGluiWin()->add_panel("Shading");
+		// TO:
+		GLUI_Panel *pcPanel_Shading = PCGetGluiWin()->add_rollout("Shading");
+		// MOD-BY-LEETEN 01/10/2010-END
 
 	#if	0	// MOD-BY-LEETEN 01/03/2010-FROM:
 		GLUI_RadioGroup *pcRadioGroup_Shading = PCGetGluiWin()->add_radiogroup_to_panel(pcPanel_Shading, &iShading);
@@ -539,15 +624,25 @@ CFlowEntropyViewerWin::_InitFunc()
 	#endif	// MOD-BY-LEETEN 01/03/2010-END
 
 	// ADD-BY-LEETEN 01/03/2010-BEGIN
-	GLUI_Spinner *pcSpinner_MaxLengthToNeighbors = PCGetGluiWin()->add_spinner("Max. Dist.",	GLUI_SPINNER_INT, &iMaxDistanceToNeighbors_screen);	
-		pcSpinner_MaxLengthToNeighbors->set_int_limits(0, 5);
+	#if	0	// DEL-BY-LEETEN 01/10/2010-BEGIN
+		GLUI_Spinner *pcSpinner_MaxLengthToNeighbors = PCGetGluiWin()->add_spinner("Max. Dist.",	GLUI_SPINNER_INT, &iMaxDistanceToNeighbors_screen);	
+			pcSpinner_MaxLengthToNeighbors->set_int_limits(0, 5);
+	#endif	// DEL-BY-LEETEN 01/10/2010-END
 	// ADD-BY-LEETEN 01/03/2010-END
 
-	cMaterial._AddGlui(PCGetGluiWin());
+	// MOD-BY-LEETEN 01/10/2010-FROM:
+		// cMaterial._AddGlui(PCGetGluiWin());
+	// TO:
+	cMaterial._AddGlui(PCGetGluiWin(), pcPanel_Shading);
+	// MOD-BY-LEETEN 01/10/2010-END
 	// ADD-BY-LEETEN 01/01/2010-END
 	
 
-	GLUI_Panel *pcPanel_Slabs = PCGetGluiWin()->add_panel("Slab");
+	// MOD-BY-LEETEN 01/10/2010-FROM:
+		// GLUI_Panel *pcPanel_Slabs = PCGetGluiWin()->add_panel("Slab");
+	// TO:
+	GLUI_Panel *pcPanel_Slabs = PCGetGluiWin()->add_rollout("Slab");
+	// MOD-BY-LEETEN 01/10/2010-END
 	PCGetGluiWin()->add_spinner_to_panel(pcPanel_Slabs, "Min Slab", GLUI_SPINNER_INT, &iMinSlab);	
 	// MOD-BY-LEETEN 01/01/2010-FROM:
 		// PCGetGluiWin()->add_spinner_to_panel(pcPanel_Slabs, "Max Slab", GLUI_SPINNER_INT, &iMaxSlab);	
@@ -556,6 +651,11 @@ CFlowEntropyViewerWin::_InitFunc()
 	// MOD-BY-LEETEN 01/01/2010-END
 	GLUI_Spinner *pcSpinner_OcclusionSaturation = PCGetGluiWin()->add_spinner_to_panel(pcPanel_Slabs, "Occlusion Saturation ", GLUI_SPINNER_FLOAT, &fOcclusionSaturation );	
 	pcSpinner_OcclusionSaturation->set_float_limits(0.0f, 1.0f);
+
+	// ADD-BY-LEETEN 01/10/2010-BEGIN
+	GLUI_Spinner *pcSpinner_MaxLengthToNeighbors = PCGetGluiWin()->add_spinner_to_panel(pcPanel_Slabs, "Max. Dist.",	GLUI_SPINNER_INT, &iMaxDistanceToNeighbors_screen);	
+		pcSpinner_MaxLengthToNeighbors->set_int_limits(0, 5);
+	// ADD-BY-LEETEN 01/10/2010-END
 
 	// DEL-BY-LEETEN 01/08/2010-BEGIN
 		// cStreamline._AddGlui(PCGetGluiWin());
@@ -620,6 +720,13 @@ CFlowEntropyViewerWin::~CFlowEntropyViewerWin(void)
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.7  2010/01/09 22:22:42  leeten
+
+[01/09/2010]
+1. [MOD] Create the GLUI user control after the streamlins have been loaded in order to get #streamlines.
+2. [MOD] chnage the background color from black to white.
+3. [MOD] Disable the auto update of the frame and displaying of FPS.
+
 Revision 1.6  2010/01/07 14:58:33  leeten
 
 [01/07/2010]
