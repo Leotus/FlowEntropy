@@ -4,10 +4,11 @@ This is the shader program for direct volume rendering
 
 */
 
+// ADD-BY-LEETEN 01/10/2010-BEGIN
+#extension GL_EXT_gpu_shader4 : enable
+// ADD-BY-LEETEN 01/10/2010-END
+
 	uniform sampler3D t3dVolume;	// the texture hold the depths of each knots
-	// DEL-BY-LEETEN 01/05/2010-BEGIN
-		// uniform sampler1D t1dTf;		// the texture hold the depths of each knots
-	// DEL-BY-LEETEN 01/05/2010-END
 	uniform sampler2D t2dPrevLayer;	// the texture hold the depths of each knots
 
 	// ADD-BY-LEETEN 01/05/2010-BEGIN
@@ -39,15 +40,7 @@ This is the shader program for direct volume rendering
 	// ADD-BY-LEETEN 12/31/2009-END
 
 	// ADD-BY-LEETEN 01/01/2010-BEGIN
-	// MOD-BY-LEETEN 01/03/2010-FROM:
-		// uniform int ibIsHaloEnabled;
-	// TO:
 	uniform int ibIsColorMono;
-	// MOD-BY-LEETEN 01/03/2010-END
-
-	// DEL-BY-LEETEN 01/03/2010-BEGIN
-		// uniform sampler2D t2dLineFlag;
-	// DEL-BY-LEETEN 01/03/2010-END
 	// ADD-BY-LEETEN 01/01/2010-END
 
 	// ADD-BY-LEETEN 01/03/2010-BEGIN
@@ -55,13 +48,16 @@ This is the shader program for direct volume rendering
 	// ADD-BY-LEETEN 01/03/2010-END
 
 	// ADD-BY-LEETEN 01/05/2010-BEGIN
-	// MOD-BY-LEETEN 01/07/2010-FROM:
-		// uniform float fClippingThreshold;
-	// TO:
 	uniform float fClipVolumeOutsideThreshold;
 	uniform float fClipVolumeInsideThreshold;
-	// MOD-BY-LEETEN 01/07/2010-END
 	// ADD-BY-LEETEN 01/05/2010-END
+
+	// ADD-BY-LEETEN 01/10/2010-BEGIN
+	uniform float	fDashPeriod;
+	uniform float	fDashOffset;
+	uniform float	fDashThreshold;
+	uniform int		ibIsHigherEntropyWithLongerLine;
+	// ADD-BY-LEETEN 01/10/2010-END
 
 // ADD-BY-LEETEN 01/02/2010-BEGIN
 float FBias(float b, float t)
@@ -229,6 +225,19 @@ main()
 	// ADD-BY-LEETEN 01/07/2010-END
 	// ADD-BY-LEETEN 01/05/2010-END
 
+	// ADD-BY-LEETEN 01/10/2010-BEGIN
+	if( fDashPeriod > 0.0 )
+	{
+		float fIndexInStreamline = gl_TexCoord[1].r;
+		float fFrequency = 3.14159f / fDashPeriod;
+		fFrequency /= (0.01 + fV_normalized);
+		float fPeriod = sin( fDashOffset + fIndexInStreamline * fFrequency );
+		fPeriod = (fPeriod + 1.0) / 2.0;
+		if( fPeriod  > fV_normalized )
+			v4Color.a = 0.0;
+	}
+	// ADD-BY-LEETEN 01/10/2010-END
+
 	gl_FragData[0] = v4Color;
 	gl_FragData[1] = vec4(0.0);
 }
@@ -236,6 +245,12 @@ main()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.5  2010/01/07 15:03:22  leeten
+
+[01/07/2010]
+1. [MOD] Change the variable names such that the front/back sides of the clipping volume become the outside/inside of the clipping volume.
+2. [ADD] Add thresholds for both sides of the clipping volume.
+
 Revision 1.4  2010/01/06 17:13:05  leeten
 
 [01/06/2010]
