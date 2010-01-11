@@ -30,6 +30,17 @@ struct CStreamline
 	// ADD-BY-LEETEN 01/02/2010-BEGIN
 	unsigned int uSamplingRate;
 	// ADD-BY-LEETEN 01/02/2010-END
+	// ADD-BY-LEETEN 01/10/2010-BEGIN
+	struct CDash {
+		int iPeriod;
+		float fOffset;
+		/*
+		float fThreshold;
+		int ibIsHigherEntropyWithLongerLine;
+		*/
+	}; 
+	CDash cDash;
+	// ADD-BY-LEETEN 01/10/2010-END
 
 	// ADD-BY-LEETEN 01/08/2010-BEGIN
 	unsigned int uMaxNrOfStreamlines;
@@ -38,6 +49,11 @@ struct CStreamline
 	// ADD-BY-LEETEN 12/31/2009-BEGIN
 	TBuffer<float> pfTangent;
 	// ADD-BY-LEETEN 12/31/2009-END
+
+	// ADD-BY-LEETEN 01/10/2010-BEGIN
+						// record the index of each vertex in its streamline
+	TBuffer<int> piVertexIndicesInStreamline;
+	// ADD-BY-LEETEN 01/10/2010-END
 
 	// ADD-BY-LEETEN 01/02/2010-BEGIN
 	TBuffer<unsigned int> puLineSegmentIndicesToStreamlines;
@@ -112,6 +128,11 @@ public:
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.4  2010/01/09 22:16:07  leeten
+
+[01/09/2010]
+1. [ADD] Define a new field uMaxNrOfStreamlines as max. #streamlines to be rendered.
+
 Revision 1.3  2010/01/04 18:30:07  leeten
 
 [01/04/2010]
