@@ -119,9 +119,15 @@ class CFlowEntropyViewerWin :
 			fShininess =	4.0f;
 		}
 
-		void _AddGlui(GLUI* pcGlui)
+		#if	0	// MOD-BY-LEETEN 01/10/2010-FROM:
+			void _AddGlui(GLUI* pcGlui)
+			{
+				GLUI_Panel	*pcPanel_Material = pcGlui->add_panel("Material");
+		#else	// MOD-BY-LEETEN 01/10/2010-TO:
+		void _AddGlui(GLUI* pcGlui, GLUI_Panel	*pcPanel_Parent)
 		{
-			GLUI_Panel	*pcPanel_Material = pcGlui->add_panel("Material");
+			GLUI_Panel	*pcPanel_Material = pcGlui->add_panel_to_panel(pcPanel_Parent, "Material");
+		#endif	// MOD-BY-LEETEN 01/10/2010-END
 				GLUI_Spinner *pcSpinner_Ambient = pcGlui->add_spinner_to_panel(pcPanel_Material, "Ambinet", GLUI_SPINNER_FLOAT, &fAmbient);	
 				pcSpinner_Ambient->set_float_limits(0.0f, 1.0f);
 				GLUI_Spinner *pcSpinner_Diffuse = pcGlui->add_spinner_to_panel(pcPanel_Material, "Diffuse", GLUI_SPINNER_FLOAT, &fDiffuse);	
@@ -169,6 +175,13 @@ public:
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.6  2010/01/07 15:00:01  leeten
+
+[01/07/2010]
+1. [MOD] Change the variable names such that the front/back sides of the clipping volume become the outside/inside of the clipping volume.
+2. [MOD] Change the name of the structure CClippingPlaneColor  to CClippingPlaneProp.
+3. [ADD] Add thresholds for both sides of the clipping volume.
+
 Revision 1.5  2010/01/06 17:05:07  leeten
 
 [01/06/2010]
