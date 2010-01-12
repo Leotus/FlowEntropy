@@ -162,6 +162,15 @@ main(int argn, char* argv[])
 	// parse the arguments
 	_OPTInit();			// initialize the option parser 
 
+	// ADD-BY-LEETEN 01/12/2010-BEGIN
+	int iDataName;
+	_OPTAddEnum(
+		"--data-name", (int*)&iDataName, (int)CFlowEntropyViewerWin::DATA_NAME_NONE, 3, 
+		"none",			CFlowEntropyViewerWin::DATA_NAME_NONE, 
+		"isabel",		CFlowEntropyViewerWin::DATA_NAME_ISABEL,
+		"earthquake",	CFlowEntropyViewerWin::DATA_NAME_EARTHQUAKE);
+	// ADD-BY-LEETEN 01/12/2010-END
+
 						// specify the .gtc file
 	char *szEntropyFieldFilename;
 	_OPTAddStringVector(
@@ -186,6 +195,9 @@ main(int argn, char* argv[])
 	cFlowEntropyViewerWin.ICreate("Flow Entropy Viewer");
 		cFlowEntropyViewerWin._SetEntropyField(pf3DEntropyField.iWidth, pf3DEntropyField.iHeight, pf3DEntropyField.iDepth, &pf3DEntropyField[0]);
 		cFlowEntropyViewerWin._ReadStreamlines(szStreamlineFilename);
+		// ADD-BY-LEETEN 01/12/2010-BEGIN
+		cFlowEntropyViewerWin._LoadData(iDataName);
+		// ADD-BY-LEETEN 01/12/2010-END
 
 		////////////////////////////////////////////////////////
 		// initialize the transfer func.
@@ -253,6 +265,11 @@ main(int argn, char* argv[])
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.5  2010/01/09 22:24:33  leeten
+
+[01/09/2010]
+1. [MOD] Chnage #entries in transfe rfunction from 4096 to 256 in order to draw the histogram w/o aliasing.
+
 Revision 1.4  2010/01/06 17:07:20  leeten
 
 [01/06/2010]
