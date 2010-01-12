@@ -34,13 +34,39 @@ struct CStreamline
 	struct CDash {
 		int iPeriod;
 		float fOffset;
-		/*
-		float fThreshold;
-		int ibIsHigherEntropyWithLongerLine;
-		*/
+		// ADD-BY-LEETEN 01/12/2010-BEGIN
+		float	fThreshold;
+		int		ibIsEntropyDependent;
+
+		CDash()
+		{
+			iPeriod = 0;
+			fOffset = 0.0f;
+			fThreshold = 0.5f;
+			ibIsEntropyDependent = 0;
+		}
+		// ADD-BY-LEETEN 01/12/2010-END
 	}; 
 	CDash cDash;
 	// ADD-BY-LEETEN 01/10/2010-END
+
+	// ADD-BY-LEETEN 01/12/2010-BEGIN
+	struct CGlyph {
+		int		ibIsEnabled;
+		int		iStep;
+		float	fLength;
+		float	fWidth;
+
+		CGlyph()
+		{
+			iStep = 1;
+			ibIsEnabled = 0;
+			fLength = 1.0f;
+			fWidth = 1.0f;
+		}
+
+	} cGlyph;
+	// ADD-BY-LEETEN 01/12/2010-END
 
 	// ADD-BY-LEETEN 01/08/2010-BEGIN
 	unsigned int uMaxNrOfStreamlines;
@@ -128,6 +154,12 @@ public:
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.5  2010/01/11 19:26:04  leeten
+
+[01/10/2010]
+1. [ADD] Add an array piVertexIndicesInStreamline to record the index of each vertice along its streamline. These indices will be passed to the 1st textre unit.
+2. [ADD] Add a structure CDash to collect the variables to control the styles of the dashed lines.
+
 Revision 1.4  2010/01/09 22:16:07  leeten
 
 [01/09/2010]
