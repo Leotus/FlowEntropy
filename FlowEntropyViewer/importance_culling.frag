@@ -11,6 +11,10 @@ This is the shader program for direct volume rendering
 	uniform sampler3D t3dVolume;	// the texture hold the depths of each knots
 	uniform sampler2D t2dPrevLayer;	// the texture hold the depths of each knots
 
+	// ADD-BY-LEETEN 01/12/2010-BEGIN
+	uniform sampler2DShadow t2dsDepth;	// the texture hold the depths of each knots
+	// ADD-BY-LEETEN 01/12/2010-END
+
 	// ADD-BY-LEETEN 01/05/2010-BEGIN
 	#include "clip_frag_func.frag.h"
 	// ADD-BY-LEETEN 01/05/2010-END
@@ -35,7 +39,11 @@ This is the shader program for direct volume rendering
 	#endif	// MOD-BY-LEETEN 01/05/2010-END
 
 	// ADD-BY-LEETEN 12/31/2009-BEGIN
-	varying vec3 v3Tangent_eye;
+	// MOD-BY-LEETEN 01/12/2010-FROM:
+		// varying vec3 v3Tangent_eye;
+	// TO:
+	in		vec3 v3Tangent_eye;
+	// MOD-BY-LEETEN 01/12/2010-END
 	uniform int ibIsLightingEnabled;
 	// ADD-BY-LEETEN 12/31/2009-END
 
@@ -56,7 +64,11 @@ This is the shader program for direct volume rendering
 	uniform float	fDashPeriod;
 	uniform float	fDashOffset;
 	uniform float	fDashThreshold;
-	uniform int		ibIsHigherEntropyWithLongerLine;
+	// MOD-BY-LEETEN 01/12/2010-FROM:
+		// uniform int		ibIsHigherEntropyWithLongerLine;
+	// TO:
+	uniform int		ibIsEntropyDependentDashed;
+	// MOD-BY-LEETEN 01/12/2010-END
 	// ADD-BY-LEETEN 01/10/2010-END
 
 // ADD-BY-LEETEN 01/02/2010-BEGIN
@@ -229,14 +241,29 @@ main()
 	if( fDashPeriod > 0.0 )
 	{
 		float fIndexInStreamline = gl_TexCoord[1].r;
-		float fFrequency = 3.14159f / fDashPeriod;
+		float fFrequency = 2.0 * 3.14159 / fDashPeriod;
+		// ADD-BY-LEETEN 01/12/2010-BEGIN
+		if( 0 != ibIsEntropyDependentDashed )
+		// ADD-BY-LEETEN 01/12/2010-END
 		fFrequency /= (0.01 + fV_normalized);
+
 		float fPeriod = sin( fDashOffset + fIndexInStreamline * fFrequency );
 		fPeriod = (fPeriod + 1.0) / 2.0;
-		if( fPeriod  > fV_normalized )
+		// MOD-BY-LEETEN 01/12/2010-FROM:
+			// if( fPeriod  > fV_normalized )
+		// TO:
+		if( (0 == ibIsEntropyDependentDashed && fPeriod  > fDashThreshold) ||
+			(0 != ibIsEntropyDependentDashed && fPeriod  > fV_normalized) )
+		// MOD-BY-LEETEN 01/12/2010-END
 			v4Color.a = 0.0;
 	}
 	// ADD-BY-LEETEN 01/10/2010-END
+
+	// ADD-BY-LEETEN 01/12/2010-BEGIN
+	float fDepth = shadow2D(t2dsDepth, v4FragCoord.xyz).r;
+	if( v4FragCoord.z > fDepth )
+		v4Color.a = 0.0;
+	// ADD-BY-LEETEN 01/12/2010-END
 
 	gl_FragData[0] = v4Color;
 	gl_FragData[1] = vec4(0.0);
@@ -245,6 +272,12 @@ main()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.6  2010/01/11 19:19:03  leeten
+
+[01/10/2010]
+1. [DEL] Remove deleted codes.
+2. [ADD] Add variables fDashPeriod and fDashOffset to support the rendering of dashed lines.
+
 Revision 1.5  2010/01/07 15:03:22  leeten
 
 [01/07/2010]
