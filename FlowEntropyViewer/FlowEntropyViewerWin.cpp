@@ -5,7 +5,145 @@
 
 	#include "shader.h"
 
+	// ADD-BY-LEETEN 01/12/2010-BEGIN
+	#include "liblog.h"
+	// ADD-BY-LEETEN 01/12/2010-END
+
 	#include "FlowEntropyViewerWin.h"
+
+// ADD-BY-LEETEN 01/12/2010-BEGIN
+
+static
+GLuint 
+UReadIsosurface
+(
+	char *szIsosurfaceFilename, 
+	unsigned int uXDim, 
+	unsigned int uYDim, 
+	unsigned int uZDim,
+	float fIsosurfaceSpacingX,
+	float fIsosurfaceSpacingY,
+	float fIsosurfaceSpacingZ,
+	int ibBothFacesIsosurface
+)
+{
+	size_t uNrOfVertices;
+	size_t uNrOfFaces;
+	size_t uNrOfFaceIndices;
+	float *pfVertices = NULL;
+	float *pfNormals = NULL;
+	size_t *puFaceIndices = NULL;
+
+	FILE *fpIsosurface;
+	fopen_s(&fpIsosurface, szIsosurfaceFilename, "rt");
+	assert(fpIsosurface);
+
+	#define SZ_TEMP_LENGTH 1024
+
+	static char szTemp[SZ_TEMP_LENGTH+1];
+
+	fgets(szTemp, SZ_TEMP_LENGTH, fpIsosurface);	// # vtk DataFile Version 3.0
+	fgets(szTemp, SZ_TEMP_LENGTH, fpIsosurface);	// vtk output
+	fgets(szTemp, SZ_TEMP_LENGTH, fpIsosurface);	// ASCII
+	fgets(szTemp, SZ_TEMP_LENGTH, fpIsosurface);	// DATASET POLYDATA
+	fscanf(fpIsosurface, "%s", szTemp);	// POINTS
+	fscanf(fpIsosurface, "%d", &uNrOfVertices);
+	fscanf(fpIsosurface, "%s", szTemp);	// float
+	pfVertices = (float*)calloc(uNrOfVertices * 3, sizeof(pfVertices[0]));
+	assert( pfVertices );
+	for(size_t v = 0; v < uNrOfVertices; v++)
+		fscanf(fpIsosurface, "%f %f %f", &pfVertices[3 * v], &pfVertices[3 * v + 1], &pfVertices[3 * v + 2]);
+
+	fscanf(fpIsosurface, "%s", szTemp);	// POLYGONS 29314 117256
+	fscanf(fpIsosurface, "%d %d", &uNrOfFaces, &uNrOfFaceIndices);
+	puFaceIndices = (size_t*)calloc(uNrOfFaceIndices, sizeof(puFaceIndices[0]));
+	assert( puFaceIndices );
+	for(size_t f = 0, p = 0; f < uNrOfFaces; f++)
+	{
+		size_t uNrOfIndices;
+		fscanf(fpIsosurface, "%d", &uNrOfIndices);
+		puFaceIndices[p] = uNrOfIndices;
+		p++;
+
+		for(size_t i = 0; i < uNrOfIndices; i++, p++)
+			fscanf(fpIsosurface, "%d", &puFaceIndices[p]);
+	}
+
+	fgets(szTemp, SZ_TEMP_LENGTH, fpIsosurface);	// NORMALS normals float
+	fgets(szTemp, SZ_TEMP_LENGTH, fpIsosurface);	// NORMALS normals float
+	pfNormals = (float*)calloc(uNrOfVertices * 3, sizeof(pfNormals[0]));
+	assert( pfNormals );
+	for(size_t v = 0; v < uNrOfVertices; v++)
+		fscanf(fpIsosurface, "%f %f %f", &pfNormals[3 * v], &pfNormals[3 * v + 1], &pfNormals[3 * v + 2]);
+	fclose(fpIsosurface);
+
+	GLuint lid = glGenLists(1);
+	glNewList(lid, GL_COMPILE);
+
+	glPushMatrix();
+	glTranslatef(-1.0f, -1.0f, -1.0f);
+	glScalef(2.0f, 2.0f, 2.0f);
+	glScaled(1.0/(double)uXDim, 1.0/(double)uYDim, 1.0/(double)uZDim);
+	glScalef(1.0f/fIsosurfaceSpacingX, 1.0f/fIsosurfaceSpacingY, 1.0f/fIsosurfaceSpacingZ);
+
+	for(size_t i = 0, f = 0, uNrOfIndices = 0; f < uNrOfFaces; f++, i += uNrOfIndices)
+	{
+		uNrOfIndices = puFaceIndices[i++];
+		glBegin(GL_POLYGON);
+
+		for(size_t v = 0; v < uNrOfIndices; v++)
+		{
+			glNormal3fv(&pfNormals[3*puFaceIndices[i+v]]);
+			glVertex3fv(&pfVertices[3*puFaceIndices[i+v]]);
+		}
+
+		glEnd();
+
+		if( ibBothFacesIsosurface )
+		{
+			glBegin(GL_POLYGON);
+
+			for(size_t v = 0; v < uNrOfIndices; v++)
+			{
+				size_t rv = uNrOfIndices - 1 - v;
+				glNormal3f(-pfNormals[3*puFaceIndices[i+rv]], -pfNormals[3*puFaceIndices[i+rv] + 1], -pfNormals[3*puFaceIndices[i+rv] + 2]);
+				glVertex3fv(&pfVertices[3*puFaceIndices[i+rv]]);
+			}
+			glEnd();
+		}
+	}
+	glPopMatrix();
+	glEndList();
+
+	free(pfVertices);
+	free(pfNormals);
+	free(puFaceIndices);
+	return lid;
+}
+
+
+void
+CFlowEntropyViewerWin::_LoadData(int iDataName)
+{
+	this->iDataName = iDataName;
+	switch(iDataName)
+	{
+	case DATA_NAME_ISABEL:
+		{
+		IplImage *pcMap = cvLoadImage("fusion_color.png");
+		CREATE_2D_TEXTURE(GL_TEXTURE_2D, cData.cFusion.t2dMap, GL_LINEAR, GL_RGBA, pcMap->width, pcMap->height, GL_BGR, GL_UNSIGNED_BYTE, pcMap->imageData);
+		}
+		break;
+
+	case DATA_NAME_EARTHQUAKE:
+		{
+			cData.cEarthquake.lid = UReadIsosurface("basin.vtk", pf3DEntropyField.iWidth, pf3DEntropyField.iHeight, pf3DEntropyField.iDepth, 1.0, 1.0, 1.0, 1);
+		}
+		break;
+	}
+}
+
+// ADD-BY-LEETEN 01/12/2010-END
 
 void 
 CFlowEntropyViewerWin::_GetScalarRange(float *pfMin, float *pfMax)
@@ -108,11 +246,76 @@ CFlowEntropyViewerWin::_BeginDisplay()
 		pf3DEntropyField.iHeight / fMaxDim,
 		pf3DEntropyField.iDepth / fMaxDim);
 
+	// ADD-BY-LEETEN 01/12/2010-BEGIN
+						// flip the Z axis
+	glScalef(1.0f, 1.0f, -1.0f);
+	// ADD-BY-LEETEN 01/12/2010-END
+
 	glColor4f(0.70f, 0.70f, 0.70f, 1.0f);
 	glutWireCube(2.0);
 
+	// ADD-BY-LEETEN 01/12/2010-BEGIN
+	switch(iDataName)
+	{
+	case DATA_NAME_ISABEL:
+		glPushAttrib(GL_TEXTURE_BIT);
+		glBindTexture(GL_TEXTURE_2D, cData.cFusion.t2dMap);
+		glEnable(GL_TEXTURE_2D);
+
+		glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+		glBegin(GL_QUADS);
+			glTexCoord2i(0, 0);	glVertex3i(-1,-1,-1);
+			glTexCoord2i(1, 0);	glVertex3i( 1,-1,-1);
+			glTexCoord2i(1, 1);	glVertex3i( 1, 1,-1);
+			glTexCoord2i(0, 1);	glVertex3i(-1, 1,-1);
+		glEnd();
+		glPopAttrib();	// glPushAttrib(GL_TEXTURE_BIT);
+		break;
+
+	case DATA_NAME_EARTHQUAKE:
+		{
+		glPushAttrib(GL_CURRENT_BIT);
+		glPushAttrib(GL_COLOR_BUFFER_BIT);
+		glPushAttrib(GL_ENABLE_BIT);
+
+		// ADD-By-LEETEN 03/12/2008-BEGIN
+		glEnable(GL_DEPTH_TEST);
+		glEnable(GL_CULL_FACE);
+
+		static float pfColor[] = {0.4f, 0.4f, 0.4f, 1.0f};
+		glColor4fv(pfColor);
+        glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, pfColor);
+		glEnable(GL_LIGHTING);
+		glEnable(GL_LIGHT0);
+		glEnable(GL_NORMALIZE);
+		// ADD-BY-LEETEN 03/07/2008-BEGIN
+		glShadeModel(GL_SMOOTH);
+		// ADD-BY-LEETEN 03/07/2008-END
+
+		glPushMatrix();
+		glLoadIdentity();
+
+		static float pfLight0Pos[4] = {0.0, 0.0, -1.0, 0.0};
+		glLightfv(GL_LIGHT0, GL_POSITION, pfLight0Pos);
+
+		glPopMatrix();
+
+		glCallList(cData.cEarthquake.lid);
+
+		glPopAttrib();
+		glPopAttrib();
+		glPopAttrib();
+		}
+		break;
+	}
+	// ADD-BY-LEETEN 01/12/2010-END
+
 	// ADD-BY-LEETEN 01/10/2010-BEGIN
 					// plot the basis vectors
+	// ADD-BY-LEETEN 01/12/2010-BEGIN
+	glPushAttrib(GL_ENABLE_BIT);
+	glEnable(GL_DEPTH_TEST);
+	// ADD-BY-LEETEN 01/12/2010-END
 	glPushMatrix();
 
 		glTranslatef(-1.0f, -1.0f, -1.0f);
@@ -167,10 +370,13 @@ CFlowEntropyViewerWin::_BeginDisplay()
 				"Y",
 				"Z",
 			};
-//			glColor4f(0.0f, 0.0f, 0.0f, 1.0f); 
 			_DrawString3D(pszDir[k], pdDir[0], pdDir[1], pdDir[2]);
 		}
 	glPopMatrix();
+	// ADD-BY-LEETEN 01/12/2010-BEGIN
+	glPopAttrib();	// glPushAttrib(GL_ENABLE_BIT);
+	// ADD-BY-LEETEN 01/12/2010-END
+
 	// ADD-BY-LEETEN 01/10/2010-END
 
 	//////////////////////////////////////////
@@ -220,6 +426,9 @@ CFlowEntropyViewerWin::_BeginDisplay()
 
 		// ADD-BY-LEETEN 01/05/2010-BEGIN
 		SET_1I_VALUE_BY_NAME(	pidImportanceFilling, "t2dClipVolume",		4);
+		// ADD-BY-LEETEN 01/12/2010-BEGIN
+		SET_1I_VALUE_BY_NAME(	pidImportanceFilling, "t2dsDepth",			5);
+		// ADD-BY-LEETEN 01/12/2010-END
 
 		SET_1I_VALUE_BY_NAME(	pidImportanceFilling, "t1dTf",				2);
 		SET_1F_VALUE_BY_NAME(	pidImportanceFilling, "fTfDomainMin",		fTfDomainMin);
@@ -244,6 +453,11 @@ CFlowEntropyViewerWin::_BeginDisplay()
 		SET_1I_VALUE_BY_NAME(	pidImportanceCulling, "t1dTf",				2);
 		// ADD-BY-LEETEN 01/05/2010-BEGIN
 		SET_1I_VALUE_BY_NAME(	pidImportanceCulling, "t2dClipVolume",		4);
+
+		// ADD-BY-LEETEN 01/12/2010-BEGIN
+		SET_1I_VALUE_BY_NAME(	pidImportanceCulling, "t2dsDepth",			5);
+		// ADD-BY-LEETEN 01/12/2010-END
+
 		// MOD-BY-LEETEN 01/07/2010-FROM:
 			// SET_1F_VALUE_BY_NAME(	pidImportanceCulling, "fClippingThreshold", fClippingThreshold);
 		// TO:
@@ -260,6 +474,10 @@ CFlowEntropyViewerWin::_BeginDisplay()
 		// ADD-BY-LEETEN 01/10/2010-BEGIN
 		SET_1F_VALUE_BY_NAME(	pidImportanceCulling, "fDashPeriod",						float(cStreamline.cDash.iPeriod) );
 		SET_1F_VALUE_BY_NAME(	pidImportanceCulling, "fDashOffset",						cStreamline.cDash.fOffset);
+		// ADD-BY-LEETEN 01/12/2010-BEGIN
+		SET_1F_VALUE_BY_NAME(	pidImportanceCulling, "fDashThreshold",						cStreamline.cDash.fThreshold);
+		SET_1I_VALUE_BY_NAME(	pidImportanceCulling, "ibIsEntropyDependentDashed",	cStreamline.cDash.ibIsEntropyDependent);
+		// ADD-BY-LEETEN 01/12/2010-END
 		// SET_1F_VALUE_BY_NAME(	pidImportanceCulling, "fDashThreshold",						cStreamline.cDash.fThreshold);
 		// SET_1I_VALUE_BY_NAME(	pidImportanceCulling, "ibIsHigherEntropyWithLongerLine",	cStreamline.cDash.ibIsHigherEntropyWithLongerLine);
 		// ADD-BY-LEETEN 01/10/2010-END
@@ -277,6 +495,13 @@ CFlowEntropyViewerWin::_BeginDisplay()
 		// ADD-BY-LEETEN 01/03/2010-BEGIN
 		SET_1I_VALUE_BY_NAME(	pidImportanceCulling, "iMaxDistanceToNeighbors_screen",	iMaxDistanceToNeighbors_screen);
 		// ADD-BY-LEETEN 01/03/2010-END
+
+		// ADD-BY-LEETEN 01/12/2010-BEGIN
+		SET_1I_VALUE_BY_NAME(	pidImportanceCulling, "ibIsGlyphEnabled",	cStreamline.cGlyph.ibIsEnabled);
+		SET_1I_VALUE_BY_NAME(	pidImportanceCulling, "iGlyphStep",			cStreamline.cGlyph.iStep);
+		SET_1F_VALUE_BY_NAME(	pidImportanceCulling, "fGlyphLength",		cStreamline.cGlyph.fLength);
+		SET_1F_VALUE_BY_NAME(	pidImportanceCulling, "fGlyphWidth",		cStreamline.cGlyph.fWidth);
+		// ADD-BY-LEETEN 01/12/2010-END
 
 		float pfAmbient[4];
 		float pfDiffuse[4];
@@ -297,6 +522,7 @@ CFlowEntropyViewerWin::_BeginDisplay()
 	}
 
 	glUseProgramObjectARB(0);
+
 	//////////////////////////////////////////
 						// bind the volume, range, and the lookup table as textures
 	glActiveTexture(GL_TEXTURE0 + 1);
@@ -315,6 +541,10 @@ CFlowEntropyViewerWin::_BeginDisplay()
 	glBindTexture(CClipVolume::cTexture.eTarget, CClipVolume::cTexture.t2d);
 	// ADD-BY-LEETEN 01/05/2010-END
 	
+	// ADD-BY-LEETEN 01/12/2010-BEGIN
+	glActiveTexture(GL_TEXTURE0 + 5);
+	glBindTexture(CDvrWin2::cDepth.eTarget, CDvrWin2::cDepth.t2d);
+	// ADD-BY-LEETEN 01/12/2010-END
 
 	glActiveTexture(GL_TEXTURE0);
 }
@@ -328,6 +558,11 @@ void CFlowEntropyViewerWin::_RenderSlab(
 {
 	/*
 	*/
+	// ADD-BY-LEETEN 01/12/2010-BEGIN
+	glPushAttrib(GL_DEPTH_BUFFER_BIT);
+	glDepthMask(GL_FALSE);
+	// ADD-BY-LEETEN 01/12/2010-END
+
 	switch(iRenderMode)
 	{
 	case RENDER_MODE_ENTROPY_FIELD:
@@ -453,6 +688,9 @@ void CFlowEntropyViewerWin::_RenderSlab(
 
 		break;
 	}
+	// ADD-BY-LEETEN 01/12/2010-BEGIN
+	glPopAttrib();	// glPushAttrib(GL_DEPTH_BUFFER_BIT);
+	// ADD-BY-LEETEN 01/12/2010-END
 }
 
 
@@ -515,11 +753,35 @@ CFlowEntropyViewerWin::_InitFunc()
 			#include "importance_culling.frag.h"	
 		);
 	#else	// MOD-BY-LEETEN 12/31/2009-TO:
-	pidImportanceCulling = CSetShadersByString(
-		#include "line_illumination.vert.h"	
-		,
-		#include "importance_culling.frag.h"	
+	#if	0	// MOD-BY-LEETEN 01/12/2010-FROM:
+		pidImportanceCulling = CSetShadersByString(
+			#include "line_illumination.vert.h"	
+			,
+			#include "importance_culling.frag.h"	
+		);
+	#else	// MOD-BY-LEETEN 01/12/2010-TO:
+	pidImportanceCulling = HCreateProgramHandle();
+	_AddShaderProgram(
+		pidImportanceCulling, GL_VERTEX_SHADER_ARB,		
+		#include "line_illumination.vert.h"
 	);
+
+	_AddShaderProgram(
+		pidImportanceCulling, GL_FRAGMENT_SHADER_ARB,		
+		#include "importance_culling.frag.h"
+	);
+
+	_AddShaderProgram(
+		pidImportanceCulling, GL_GEOMETRY_SHADER_EXT,		
+		#include "line_drawing.geom.h"
+	);
+	glProgramParameteriEXT(pidImportanceCulling, GL_GEOMETRY_INPUT_TYPE_EXT,	GL_LINES);
+	glProgramParameteriEXT(pidImportanceCulling, GL_GEOMETRY_OUTPUT_TYPE_EXT,	GL_LINE_STRIP);
+	glProgramParameteriEXT(pidImportanceCulling, GL_GEOMETRY_VERTICES_OUT_EXT,	2 * 9);	
+
+	_LinkPrograms(pidImportanceCulling);
+	#endif	// MOD-BY-LEETEN 01/12/2010-END
+
 	#endif	// MOD-BY-LEETEN 12/31/2009-END
 	assert( pidImportanceCulling );	
 
@@ -720,6 +982,14 @@ CFlowEntropyViewerWin::~CFlowEntropyViewerWin(void)
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.8  2010/01/11 19:16:39  leeten
+
+[01/10/2010]
+1. [ADD] Plot the XYZ axes.
+2. [ADD] Support the rendering of the streamlines with dashed lines.
+3. [ADD] Add back the code to automatically update the frame.
+4. [MOD] Change the panels into rollouts.
+
 Revision 1.7  2010/01/09 22:22:42  leeten
 
 [01/09/2010]
