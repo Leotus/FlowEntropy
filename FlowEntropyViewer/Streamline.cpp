@@ -439,15 +439,33 @@ CStreamline::_AddGlui(GLUI* pcGlui)
 	// ADD-BY-LEETEN 01/08/2010-END
 
 	#if	RENDER_STREAMLINE_AS_LINES
+
 	GLUI_Panel	*pcPanel_Lines = pcGlui->add_panel_to_panel(pcPanel_Streamlines, "Lines");
 		GLUI_Spinner *pcSpinner_InnerWidth = pcGlui->add_spinner_to_panel(pcPanel_Lines, "Inner Width", GLUI_SPINNER_FLOAT, &fInnerWidth);	
 		GLUI_Spinner *pcSpinner_OuterWidth = pcGlui->add_spinner_to_panel(pcPanel_Lines, "Outer Width", GLUI_SPINNER_FLOAT, &fOuterWidth);	
+
+		// ADD-BY-LEETEN 01/12/2010-BEGIN
+		GLUI_Panel	*pcPanel_Glyph = pcGlui->add_panel_to_panel(pcPanel_Lines, "Glyph");
+		pcGlui->add_checkbox_to_panel(pcPanel_Glyph, "Enabled?", &cGlyph.ibIsEnabled);	
+		GLUI_Spinner *pcSpinner_GlyphStep = pcGlui->add_spinner_to_panel(pcPanel_Glyph, "Step", GLUI_SPINNER_INT, &cGlyph.iStep);	
+			pcSpinner_GlyphStep->set_int_limits(1, 128);
+		GLUI_Spinner *pcSpinner_GlyphLength = pcGlui->add_spinner_to_panel(pcPanel_Glyph, "Length", GLUI_SPINNER_FLOAT, &cGlyph.fLength);	
+			pcSpinner_GlyphLength->set_float_limits(0.0f, 16.0f);
+		GLUI_Spinner *pcSpinner_GlyphWidth= pcGlui->add_spinner_to_panel(pcPanel_Glyph, "Width", GLUI_SPINNER_FLOAT, &cGlyph.fWidth);	
+			pcSpinner_GlyphWidth->set_float_limits(0.0f, 16.0f);
+		// ADD-BY-LEETEN 01/12/2010-END
+
 		// ADD-BY-LEETEN 01/10/2010-BEGIN
 		GLUI_Panel	*pcPanel_Dash = pcGlui->add_panel_to_panel(pcPanel_Lines, "Dash");
 		GLUI_Spinner *pcSpinner_DashPeriod = pcGlui->add_spinner_to_panel(pcPanel_Dash, "Period", GLUI_SPINNER_INT, &cDash.iPeriod);	
 			pcSpinner_DashPeriod->set_int_limits(0, 32);
 		GLUI_Spinner *pcSpinner_DashOffset = pcGlui->add_spinner_to_panel(pcPanel_Dash, "Offset", GLUI_SPINNER_FLOAT, &cDash.fOffset);
 			pcSpinner_DashOffset->set_float_limits(-M_PI, +M_PI);
+		// ADD-BY-LEETEN 01/12/2010-BEGIN
+		GLUI_Spinner *pcSpinner_DashThreshold = pcGlui->add_spinner_to_panel(pcPanel_Dash, "Threshold", GLUI_SPINNER_FLOAT, &cDash.fThreshold);
+			pcSpinner_DashThreshold->set_float_limits(-1.0f, +1.0f);
+		pcGlui->add_checkbox_to_panel(pcPanel_Dash, "Is Entropy Dependent?", &cDash.ibIsEntropyDependent);	
+		// ADD-BY-LEETEN 01/12/2010-END
 		/*
 		GLUI_Spinner *pcSpinner_DashThreshold = pcGlui->add_spinner_to_panel(pcPanel_Dash, "Threshold", GLUI_SPINNER_FLOAT, &cDash.fThreshold);
 			pcSpinner_DashThreshold->set_float_limits(-1.0f, +1.0f);
@@ -881,6 +899,14 @@ CStreamline::_RenderTubes()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.5  2010/01/11 19:22:30  leeten
+
+[01/10/2010]
+1. [ADD] Include the header glew.h.
+2. [ADD] Add an array piVertexIndicesInStreamline to record the index of each vertice along its streamline. These indices will be passed to the 1st textre unit.
+3. [ADD] Add a panel to control the styles of the dashed lines.
+4. [ADD] Use glPushClientAttrib()/glPopClientAttrib to disable the enabled vertex arrays.
+
 Revision 1.4  2010/01/09 22:19:12  leeten
 
 [01/09/2010]
