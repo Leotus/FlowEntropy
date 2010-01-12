@@ -10,7 +10,11 @@
 
 	#include "Streamline.h"
 
-class CFlowEntropyViewerWin :
+// MOD-BY-LEETEN 01/12/2010-FROM:
+	// class CFlowEntropyViewerWin :
+// TO:
+struct CFlowEntropyViewerWin :
+// MOD-BY-LEETEN 01/12/2010-END
 	// MOD-BY-LEETEN 01/05/2010-FROM:
 		// public CDvrWin2
 	// TO:
@@ -23,6 +27,32 @@ class CFlowEntropyViewerWin :
 		RENDER_MODE_STREAMLINES_IN_SLABS,
 	};
 	int iRenderMode;
+
+	// ADD-BY-LEETEN 01/12/2010-BEGIN
+	enum {
+		DATA_NAME_NONE,
+		DATA_NAME_ISABEL,
+		DATA_NAME_EARTHQUAKE,
+	};
+	int iDataName;
+
+	union CData 
+	{
+		struct CFusion{
+			GLuint t2dMap;
+		} cFusion;
+
+		struct CEarthquake{
+			GLuint lid;
+		} cEarthquake;
+
+		CData()
+		{
+			cFusion.t2dMap = 0;
+			cEarthquake.lid = 0;
+		}
+	} cData;
+	// ADD-BY-LEETEN 01/12/2010-END
 
 	// ADD-BY-LEETEN 01/01/2010-BEGIN
 
@@ -141,6 +171,9 @@ class CFlowEntropyViewerWin :
 	// ADD-BY-LEETEN 01/01/2010-END
 
 public:
+	// ADD-BY-LEETEN 01/12/2010-BEGIN
+	void _LoadData(int iDataName);
+	// ADD-BY-LEETEN 01/12/2010-END
 
 	// methods to read the input
 	void _ReadStreamlines(char *szStreamlineFilename);
@@ -175,6 +208,11 @@ public:
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.7  2010/01/11 19:18:00  leeten
+
+[01/10/2010]
+1. [MOD] Change the function CMaterial::_AddGlui() so the panel can be added to the parent panel.
+
 Revision 1.6  2010/01/07 15:00:01  leeten
 
 [01/07/2010]
