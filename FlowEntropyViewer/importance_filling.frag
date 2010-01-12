@@ -10,6 +10,10 @@ This is the shader program to fill the importance
 	uniform sampler2D t2dLineFlag;
 	// ADD-BY-LEETEN 01/01/2010-END
 
+	// ADD-BY-LEETEN 01/12/2010-BEGIN
+	uniform sampler2DShadow t2dsDepth;	// the texture hold the depths of each knots
+	// ADD-BY-LEETEN 01/12/2010-END
+
 	uniform float fWindowWidth;
 	uniform float fWindowHeight;
 
@@ -125,6 +129,12 @@ main()
 		}
 	}
 
+	// ADD-BY-LEETEN 01/12/2010-BEGIN
+	float fBackgroundDepth = shadow2D(t2dsDepth, v4FragCoord.xyz).r;
+	if( v4FragCoord.z > fBackgroundDepth )
+		v4Color.a = 0.0;
+	// ADD-BY-LEETEN 01/12/2010-END
+
 	gl_FragDepth = fDepth;
 	gl_FragData[0] = v4Color;
 	// MOD-BY-LEETEN 01/05/2010-END
@@ -135,6 +145,13 @@ main()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.5  2010/01/07 15:04:36  leeten
+
+[01/07/2010]
+1. [MOD] Change the variable names such that the front/back sides of the clipping volume become the outside/inside of the clipping volume.
+2. [ADD] Add thresholds for both sides of the clipping volume.
+3. [ADD] Add a threshold when comparing with the clipping volume in order to eliminate the jagging artifact along the intersection between the sclicing planes and the clipping planes.
+
 Revision 1.4  2010/01/06 17:18:42  leeten
 
 [01/06/2010]

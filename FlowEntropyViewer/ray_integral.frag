@@ -13,6 +13,9 @@ This is the shader program for direct volume rendering
 		// uniform sampler1D t1dTf;		// the texture hold the depths of each knots
 	// DEL-BY-LEETEN 01/05/2010-END
 	uniform sampler2D t2dPrevLayer;	// the texture hold the depths of each knots
+	// ADD-BY-LEETEN 01/12/2010-BEGIN
+	uniform sampler2DShadow t2dsDepth;	// the texture hold the depths of each knots
+	// ADD-BY-LEETEN 01/12/2010-END
 
 	uniform float fThicknessGain;
 
@@ -89,6 +92,12 @@ main()
 
 	v4Color.a = 1.0 - pow(1.0 - v4Color.a, fThickness_obj);
 
+	// ADD-BY-LEETEN 01/12/2010-BEGIN
+	float fBackgroundDepth = shadow2D(t2dsDepth, v4FragCoord.xyz).r;
+	if( v4FragCoord.z > fBackgroundDepth )
+		v4Color.a = 0.0;
+	// ADD-BY-LEETEN 01/12/2010-END
+
 	/////////////////////////////////////////////////////////////////
 	vec4 v4Data = vec4(
 		v4FragCoord.z, 
@@ -103,6 +112,13 @@ main()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.2  2010/01/06 17:15:24  leeten
+
+[01/06/2010]
+1. [ADD] Adjust the slab thickness according to the clipping volume.
+2. [ADD] Include the file clip_frag_func.frag.h.
+3. [MOD] nclude the file tf1d_frag_func.frag.h and lookup the transfer function via a function F4GetColorFrom1DTf().
+
 Revision 1.1  2009/12/31 01:53:59  leeten
 
 [12/30/2009]
