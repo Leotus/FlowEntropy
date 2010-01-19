@@ -78,7 +78,11 @@ struct CStreamline
 
 	// ADD-BY-LEETEN 01/10/2010-BEGIN
 						// record the index of each vertex in its streamline
-	TBuffer<int> piVertexIndicesInStreamline;
+	// MOD-BY-LEETEN 01/19/2010-FROM:
+		// TBuffer<int> piVertexIndicesInStreamline;
+	// TO:
+	TBuffer<int4> pi4VertexIndicesInStreamline;
+	// MOD-BY-LEETEN 01/19/2010-END
 	// ADD-BY-LEETEN 01/10/2010-END
 
 	// ADD-BY-LEETEN 01/02/2010-BEGIN
@@ -154,6 +158,12 @@ public:
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.6  2010/01/12 23:42:59  leeten
+
+[01/12/2010]
+1. [ADD] Add a member field ibIsEntropyDependent to specify whether the space between dashed lines are dependent to the local entropy.
+2. [ADD] Add a new structure CGlyph to define the variables forthe glyph drawing.
+
 Revision 1.5  2010/01/11 19:26:04  leeten
 
 [01/10/2010]
