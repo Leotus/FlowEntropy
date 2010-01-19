@@ -204,7 +204,11 @@ CStreamline::_Read(float fScaleX, float fScaleY, float fScaleZ, char *szStreamli
 	pfTangent.alloc(3 * uNrOfVertices);
 
 	// ADD-BY-LEETEN 01/10/2010-BEGIN
-	piVertexIndicesInStreamline.alloc(uNrOfVertices);
+	// MOD-BY-LEETEN 01/19/2010-FROM:
+		// piVertexIndicesInStreamline.alloc(uNrOfVertices);
+	// TO:
+	pi4VertexIndicesInStreamline.alloc(uNrOfVertices);
+	// MOD-BY-LEETEN 01/19/2010-END
 	// ADD-BY-LEETEN 01/10/2010-END
 
 	// ADD-BY-LEETEN 12/31/2009-END
@@ -244,7 +248,14 @@ CStreamline::_Read(float fScaleX, float fScaleY, float fScaleZ, char *szStreamli
 		// ADD-BY-LEETEN 01/10/2010-BEGIN
 		for(unsigned int uV = 0; uV < uNrOfVertices; uV++)
 		{
-			piVertexIndicesInStreamline[uCoordIndex + uV] = int(uV);
+			// MOD-BY-LEETEN 01/19/2010-FROM:
+				// piVertexIndicesInStreamline[uCoordIndex + uV] = int(uV);
+			// TO:
+			pi4VertexIndicesInStreamline[uCoordIndex + uV].x = int(uV);
+			pi4VertexIndicesInStreamline[uCoordIndex + uV].y = int(uStreamline);
+			pi4VertexIndicesInStreamline[uCoordIndex + uV].z = 0;
+			pi4VertexIndicesInStreamline[uCoordIndex + uV].w = 0;
+			// MOD-BY-LEETEN 01/19/2010-END
 		}
 		// ADD-BY-LEETEN 01/10/2010-END
 
@@ -363,7 +374,11 @@ CStreamline::_Read(float fScaleX, float fScaleY, float fScaleZ, char *szStreamli
 	// ADD-BY-LEETEN 01/10/2010-BEGIN
 						// bind the vertex indices to GL_TEXTURE0
 	glClientActiveTexture(GL_TEXTURE0 + 1);
-	glTexCoordPointer(1, GL_INT, 0, &piVertexIndicesInStreamline[0]);
+	// MOD-BY-LEETEN 01/19/2010-FROM:
+		// glTexCoordPointer(1, GL_INT, 0, &piVertexIndicesInStreamline[0]);
+	// TO:
+	glTexCoordPointer(4, GL_INT, 0, &pi4VertexIndicesInStreamline[0]);
+	// MOD-BY-LEETEN 01/19/2010-END
 
 						// reset the default texture unit
 	glClientActiveTexture(GL_TEXTURE0);
@@ -899,6 +914,11 @@ CStreamline::_RenderTubes()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.6  2010/01/12 23:51:12  leeten
+
+[01/12/2010]
+1. [ADD] Add the user control to control the paramters for flyph drawing.
+
 Revision 1.5  2010/01/11 19:22:30  leeten
 
 [01/10/2010]
