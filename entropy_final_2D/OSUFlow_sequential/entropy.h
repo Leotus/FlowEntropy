@@ -183,21 +183,62 @@ bool getnewseed(VECTOR3* newseed,float* new_vectors,float* vectors,int* grid_res
 void createFootstep(list<vtListSeedTrace*> line, int* footsteps, int* grid_res );
 void combinehalflines(list<vtListSeedTrace*> lines, list<vtListSeedTrace*>& long_lines,int* grid_res);
 void Trimhalflines(list<vtListSeedTrace*> lines, int* occupied,int* grid_res);
-void UpdateOccupied(list<vtListSeedTrace*> lines, int* occupied,int* grid_res);
+// MOD-BY-XUL 01/22/2010-FROM:
+	// void UpdateOccupied(list<vtListSeedTrace*> lines, int* occupied,int* grid_res);
+// TO:
+void UpdateOccupied(list<vtListSeedTrace*> lines, int* occupied,int* grid_res, int radius=0);
+// MOD-BY-XUL 01/22/2010-END
 
 //void createAdjacencyGraph(std::vector<VECTOR3>& triangles, AdjacencyGraph& graph, int * streamline_foot_print, int* grid_res,list<vtListSeedTrace*> sl_list);
 void marktriangles(list<vtListSeedTrace*> line, int* footsteps, int* grid_res , int& next_id);
 
 //void reconstruct_field(float* new_vectors,float* vectors, int* grid_res,list<vtListSeedTrace*> l_list,int* footsteps, int curid);
+// ADD-BY-XUL 01/22/2010-BEGIN
+void reconstruct_field_GVF_2D_tmp(float* new_vectors,float* vectors, int* grid_res,
+								  std::vector<VECTOR3*> selected_line_verts,std::vector<int> vernum,int* donotchange);
+// ADD-BY-XUL 01/22/2010-END
 void reconstruct_field_GVF_2D(float* new_vectors,float* vectors, int* grid_res,list<vtListSeedTrace*> l_list,int* donotchange);
 void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,list<vtListSeedTrace*> l_list);
 void reconstruct_field_GVF_2D_gaussian(float* new_vectors,float* vectors, int* grid_res,list<vtListSeedTrace*> l_list,int* donotchange);
 float log2(float ang);
+
+// ADD-BY-XUL 01/22/2010-BEGIN
+float calcRelativeEntropy6_load_bins(int* bin_vector, int* bin_newvectors,int* grid_res, VECTOR3 startpt,VECTOR3 endpt);
+void save2file(char* filename, unsigned char* data, int xdim, int ydim);
+float calcRelativeEntropy6_load_histograms(int* bin_vector, int* bin_newvectors,int* grid_res, VECTOR3 startpt,VECTOR3 endpt,
+										   int* histo_pxy,int *histo_py);
+typedef struct GridPoint
+{
+	VECTOR3 posObj;				// position in object space
+	VECTOR3 posImage;			// position in image space
+	int streamlineId;			// in current run, the streamlineId that is valid (include valid points)
+	int streamlineIndex;		// index into m_listTraces
+	int pntIndex;				// index into its streamline
+	bool validFlag;				// whether this point is still valid
+
+	GridPoint(VECTOR3 p, VECTOR3 pImg, int id, int index, int pntIdx, bool flag)
+	{ posObj = p; posImage = pImg; streamlineId = id; streamlineIndex = index; pntIndex = pntIdx; validFlag = flag; }
+};
+
+typedef vector<GridPoint> PointRef;
+void PutPointInGrid(VECTOR3 p, int streamlineId, int index, int pntIdx,int* grid_res,PointRef* m_grid);
+bool CheckValidness(VECTOR3 p, VECTOR3 pObj,PointRef* m_grid, float m_sepDist,float m_sepMinDist,int* grid_res);
+void combinehalflines_check_stop(list<vtListSeedTrace*> lines, list<vtListSeedTrace*>& long_lines,int* grid_res,PointRef* m_grid,int streamlineId);
+void combinehalflines_check_stop_entropy(list<vtListSeedTrace*> lines, list<vtListSeedTrace*>& long_lines,int* grid_res,
+										 float* entropies);
+bool discardredundantstreamlines(float& cur_entropy,float eplison,list<vtListSeedTrace*> new_lines,
+								 float* vectors, float* new_vectors,int* grid_res);
+// ADD-BY-XUL 01/22/2010-END
 
 #endif
 
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.1.1.1  2009/12/07 20:01:41  leeten
+
+[12/07/2009]
+1. [1ST] First time checkin.
+
 
 */

@@ -86,7 +86,11 @@ public:
 	float CalcEntropy_InnerNode();
 	void get_nodes_bounds(std::vector<VECTOR3>& lower_bound,std::vector<VECTOR3>& higher_bound);
 
-	void calcEntropy( float* result, float* vectors,int* grid_res, float* theta,float* phi);
+	// MOD-BY-XUL 01/22/2010-FROM:
+		// void calcEntropy( float* result, float* vectors,int* grid_res, float* theta,float* phi);
+	// TO:
+	void calcEntropy( float* result, float* vectors,int* grid_res, float* theta,float* phi,int binnum);
+	// MOD-BY-XUL 01/22/2010-END
 	void getLeaves(std::vector<VECTOR3>& leaves);
 
 	float m_entropy;
@@ -170,12 +174,22 @@ public:
 			theta, phi,oldbin, newbin,occupied);
 	}
 
-	void calcEntropy( float* result, float* vectors,int* grid_res,float* theta,float* phi)
+	#if	0	// MOD-BY-XUL 01/22/2010-FROM:
+		void calcEntropy( float* result, float* vectors,int* grid_res,float* theta,float* phi)
+		{
+			Root->calcEntropy(result,vectors, grid_res,
+				theta,phi);
+
+		}
+	#else	// MOD-BY-XUL 01/22/2010-TO:
+	void calcEntropy( float* result, float* vectors,int* grid_res,float* theta,float* phi,int binnum)
 	{
 		Root->calcEntropy(result,vectors, grid_res,
-			theta,phi);
+			theta,phi,binnum);
 
 	}
+	#endif	// MOD-BY-XUL 01/22/2010-END
+
 	void getLeaves(std::vector<VECTOR3>& leaves)
 	{
 		Root->getLeaves(leaves);
@@ -209,10 +223,28 @@ void calcDistanceField(char* filename, list<vtListSeedTrace*> lines, int* grid_r
 /////////////////////////////////////////////////////////////////
 //critical points
 /////////////////////////////////////////////////////////////////
-float calcRelativeEntropy6( float* vectors,float* new_vectors, int* grid_res, VECTOR3 startpt,
-						   VECTOR3 endpt,float* theta, float* phi,int* oldbin, int* newbin,int* occupied);
+#if	0	// MOD-BY-XUL 01/22/2010-FROM:
+	float calcRelativeEntropy6( float* vectors,float* new_vectors, int* grid_res, VECTOR3 startpt,
+							   VECTOR3 endpt,float* theta, float* phi,int* oldbin, int* newbin,int* occupied);
 
-float calcPoint2PointError( float* vectors,float* new_vectors, int* grid_res, VECTOR3 startpt,VECTOR3 endpt);
+	float calcPoint2PointError( float* vectors,float* new_vectors, int* grid_res, VECTOR3 startpt,VECTOR3 endpt);
+#else	// MOD-BY-XUL 01/22/2010-TO:
+float calcRelativeEntropy6( float* vectors,float* new_vectors, int* grid_res, VECTOR3 startpt,
+						   VECTOR3 endpt,float* theta, float* phi,int* oldbin, int* newbin,int* occupied,int binnum,
+						   int * histo_puv=0,int * histo_pv=0,float* pv=0,float* entropy_tmp=0,
+						   int*g_histo=0,
+						   int* g_histo_uv=0);
+float calcRelativeEntropy6_new( float* vectors,float* new_vectors, int* grid_res, VECTOR3 startpt,
+						   VECTOR3 endpt,float* theta, float* phi,int* oldbin, int* newbin,int* occupied,int binnum,
+						   int * histo_puv=0,int * histo_pv=0,float* pv=0,float* entropy_tmp=0,
+						   int*g_histo=0,
+						   int* g_histo_uv=0);
+float calcRelativeEntropy6_by_known_histograms( float* vectors,float* new_vectors, int* grid_res, VECTOR3 startpt,
+						   VECTOR3 endpt,float* theta, float* phi,int* oldbin, int* newbin,int* occupied,int binnum,
+						   int * histo_puv=0,int * histo_pv=0,float* pv=0,float* entropy_tmp=0,
+						   int*g_histo=0,
+						   int* g_histo_uv=0);
+#endif	// MOD-BY-XUL 01/22/2010-END
 //void createFootstep(list<vtListSeedTrace*> line, int* footsteps, int* grid_res );
 void combinehalflines(list<vtListSeedTrace*> lines, list<vtListSeedTrace*>& long_lines);
 void marktriangles(list<vtListSeedTrace*> line, int* footsteps, int* grid_res , int& next_id);
@@ -224,18 +256,47 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 							  float* importance=NULL);
 void diffuse_importance_value(float* importance,int* grid_res,list<vtListSeedTrace*> new_lines);
 
-int get_bin_number_3D(VECTOR3 v, float* theta, float* phi);
+// MOD-BY-XUL 01/22/2010-FROM:
+	// int get_bin_number_3D(VECTOR3 v, float* theta, float* phi);
+// TO:
+int get_bin_number_3D(VECTOR3 v, float* theta, float* phi,int binnum);
+void combinehalflines_check_stop_entropy(list<vtListSeedTrace*> lines, list<vtListSeedTrace*>& long_lines,int* grid_res,
+						float* entropies);
+void combinehalflines_check_stop_entropy(list<vtListSeedTrace*> lines, list<vtListSeedTrace*>& long_lines,int* grid_res,
+										 float* entropies);
+// MOD-BY-XUL 01/22/2010-END
 
 //int get_bin_number_3D(float mytheta, float myphi, float* theta, float* phi);
-float calcEntropy1( float* vectors,int* grid_res, VECTOR3 startpt,VECTOR3 endpt,float* theta, float* phi);
+// MOD-BY-XUL 01/22/2010-BEGIN
+	// float calcEntropy1( float* vectors,int* grid_res, VECTOR3 startpt,VECTOR3 endpt,float* theta, float* phi);
+// TO: 
+float calcEntropy_known_bins( int* bins,int* grid_res, VECTOR3 startpt,VECTOR3 endpt,int binnum);
+float calcEntropy1( float* vectors,int* grid_res, VECTOR3 startpt,VECTOR3 endpt,float* theta, float* phi,int binnum);
+// MOD-BY-XUL 01/22/2010-END
 float log2(float v);
-void UpdateOccupied(list<vtListSeedTrace*> lines, int* occupied,int* grid_res);
-
+// MOD-BY-XUL 01/22/2010-FROM:
+	// void UpdateOccupied(list<vtListSeedTrace*> lines, int* occupied,int* grid_res);
+// TO:
+void UpdateOccupied(list<vtListSeedTrace*> lines, int* occupied,int* grid_res,float r);
+float getImportance(list<vtListSeedTrace*> lines,int* grid_res,float* entropies);
+void calc_entropy( int* bins,int* grid_res, int binnum,float* entropies);
+void dumpEntropyField(char*  filename,float* importance, int* grid_res);
+void adjustLengthByEntropies(char*  entropyfile,char* streamlinefile,char* outputstreamlinesfile);
+VECTOR3* get_line_vertices(VECTOR3* vecs,int* ver_num, int line_no,int& length);
+bool discardredundantstreamlines(float& cur_entropy,float eplison,list<vtListSeedTrace*> new_lines,
+								 float* vectors, float* new_vectors,int* grid_res,int* bin_my_vector,int* bin_new_vector,
+								 int binnum,float* theta, float* phi,int* histo_puv, int* histo_pv, float* pv,float*  entropy_tmp);
+// MOD-BY-XUL 01/22/2010-END
 
 #endif
 
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.1.1.1  2009/12/05 21:31:08  leeten
+
+[12/04/2009]
+1. [1ST] First time checkin.
+
 
 */

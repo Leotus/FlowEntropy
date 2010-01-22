@@ -549,6 +549,21 @@ void save2PPM_3(char* filename, unsigned char* data, int xdim, int ydim)
 	fclose(fp);
 }
 
+// ADD-BY-XUL 01/22/2010-BEGIN
+void save2file(char* filename, unsigned char* data, int xdim, int ydim)
+{
+	FILE* fp = fopen(filename, "wb");
+	if (fp == NULL)
+		return;
+	int crop=0;//135;
+
+	fwrite(&xdim,sizeof(int),1,fp);
+	fwrite(&ydim,sizeof(int),1,fp);
+	fwrite(data,sizeof(unsigned char),xdim*ydim,fp);
+	fclose(fp);
+}
+// ADD-BY-XUL 01/22/2010-END
+
 void save2PPM_3_channels(char* filename, unsigned char* data, int xdim, int ydim)
 {
 	FILE* fp = fopen(filename, "w");
@@ -926,7 +941,11 @@ void dumpReconstruedField(char*  filename,float* new_vector, int* grid_res)
 */
 }
 
-void UpdateOccupied(list<vtListSeedTrace*> lines, int* occupied,int* grid_res)
+// MOD-BY-XUL 01/22/2010-FROM:
+	// void UpdateOccupied(list<vtListSeedTrace*> lines, int* occupied,int* grid_res)
+// TO:
+void UpdateOccupied(list<vtListSeedTrace*> lines, int* occupied,int* grid_res, int radius)
+// MOD-BY-XUL 01/22/2010-END
 {
 	vtListSeedTrace* newlist;
 	list<vtListSeedTrace*>::iterator pIter;
@@ -944,8 +963,13 @@ void UpdateOccupied(list<vtListSeedTrace*> lines, int* occupied,int* grid_res)
 			VECTOR3 p = **pnIter; 
 			int idx=(int)(p.x())+((int)(p.y()))*grid_res[0];
 			{
-				for(int ny=0;ny<=0;ny++)
-					for(int nx=0; nx<=0; nx++)
+				#if	0	// MOD-BY-XUL 01/22/2010-FROM:
+					for(int ny=0;ny<=0;ny++)
+						for(int nx=0; nx<=0; nx++)
+				#else	// MOD-BY-XUL 01/22/2010-TO:
+				for(int ny=-radius;ny<=radius;ny++)
+					for(int nx=-radius; nx<=radius; nx++)
+				#endif	// MOD-BY-XUL 01/22/2010-END
 					{
 						int x=nx+(int)p.x();
 						int y=ny+(int)p.y();
@@ -1019,6 +1043,215 @@ void Trimhalflines(list<vtListSeedTrace*> lines, int* occupied,int* grid_res)
 	
 }
 
+// ADD-BY-XUL 01/22/2010-BEGIN
+void FindNeighbors(VECTOR3 pImage, int stride, int* neighbors, int* grid_res)
+{
+	int xidx, yidx, index, cellNum, iFor, jFor, count;
+
+	int xdim=grid_res[0];
+	int ydim=grid_res[1];
+	
+	xidx=pImage.x();
+	yidx=pImage.y();
+
+	index = yidx*xdim+xidx;
+	cellNum = stride*stride;
+
+	// getting index to neighboring cells and itself
+	stride = (stride-1)/2;
+	count = 0;
+	for(jFor = -stride; jFor <= stride; jFor++)
+	{
+		for(iFor = -stride; iFor <= stride; iFor++)
+		{
+			index = (yidx+jFor) * xdim + (xidx+iFor);
+			if(((yidx+jFor) < 0) || ((xidx + iFor) < 0) || ((yidx+jFor) >= ydim) || ((xidx+iFor) >= xdim))
+				neighbors[count++] = -1;
+			else
+				neighbors[count++] = index;
+		}
+	}
+}
+
+bool IsDistValid(VECTOR3& p1, VECTOR3& p2, float dist, bool& bNeedDelete)
+{
+	float d;
+	d = sqrt((p1[0]-p2[0])*(p1[0]-p2[0]) + (p1[1]-p2[1])*(p1[1]-p2[1]));
+	bNeedDelete = false;
+
+	if(d < dist)
+		return false;
+	else
+		return true;
+}
+void PutPointInGrid(VECTOR3 p, int streamlineId, int index, int pntIdx,int* grid_res,PointRef* m_grid)
+{
+	int xidx, yidx, idx,xdim;
+	xdim=grid_res[0];
+	idx=(int)p.x()+((int)p.y())*xdim;
+	m_grid[idx].push_back(GridPoint(p, p, streamlineId, index, pntIdx, true));
+}
+
+bool CheckValidness(VECTOR3 p, VECTOR3 pObj,PointRef* m_grid, float m_sepDist,float m_sepMinDist,int* grid_res)
+{
+	//int xidx, yidx;
+	int iFor, jFor, cellNum, stride, count;
+	int* neighbors;
+	int xdim=grid_res[0];
+
+	// deciding searching neighbors
+	stride = (int)ceil(m_sepDist/m_sepMinDist)*2 + 1;
+	cellNum = stride*stride;
+	neighbors = new int[cellNum];
+	FindNeighbors(p, stride, neighbors,grid_res);
+	
+	// checking current cell, and 8 neighboring cells
+	for(iFor = 0; iFor < cellNum; iFor++)
+	{
+		if(neighbors[iFor] != -1)		// valid neighbor
+		{
+			vector<GridPoint>::iterator pIter;
+			pIter = m_grid[neighbors[iFor]].begin();
+			pIter++;					// skip the first dummy vector
+			for(; pIter != m_grid[neighbors[iFor]].end(); pIter++)
+			{
+				VECTOR3 pPos;
+				bool bNeedDelete;
+				pPos = (*pIter).posImage;
+				if(!IsDistValid(p, pPos, m_sepDist, bNeedDelete))
+				{
+					delete[] neighbors;
+					return false;
+				}
+			}
+		}
+	}
+
+	delete[] neighbors;
+	return true;			
+}
+
+bool discardredundantstreamlines(float& cur_entropy,float eplison, list<vtListSeedTrace*> new_lines,
+								 float* vectors, float* new_vectors,int* grid_res)
+{
+
+	int* dummy=new int[grid_res[0]*grid_res[1]*grid_res[2]];
+	float* tmp_new_vectors=new float[grid_res[0]*grid_res[1]*grid_res[2]*3];
+	memcpy(tmp_new_vectors,new_vectors,sizeof(float)*grid_res[0]*grid_res[1]*grid_res[2]*3);
+	reconstruct_field_GVF_2D(new_vectors,vectors,grid_res,new_lines,dummy);
+	float entropy=calcRelativeEntropy6(  vectors, new_vectors,  grid_res, VECTOR3(0,0,0),VECTOR3(grid_res[0],grid_res[1],0),0);
+	printf(" entropy dif=%f\n",cur_entropy-entropy);
+	if(cur_entropy-entropy>eplison)
+	{
+		cur_entropy=entropy;
+		delete [] dummy;
+		delete [] tmp_new_vectors;
+		return false;
+	}
+	else
+	{
+		memcpy(new_vectors,tmp_new_vectors,sizeof(float)*grid_res[0]*grid_res[1]*grid_res[2]*3);
+		delete [] tmp_new_vectors;
+		delete [] dummy;
+		return true;
+	}
+}
+
+void combinehalflines_check_stop(list<vtListSeedTrace*> lines, list<vtListSeedTrace*>& long_lines,int* grid_res,PointRef* m_grid,int streamlineId)
+{
+	float m_sepDist, m_sepMinDist;
+	m_sepDist=m_sepMinDist=1;
+	vtListSeedTrace* newlist;
+	list<vtListSeedTrace*>::iterator pIter;
+	pIter =lines.begin(); 
+	int sou=0;
+	for (; pIter!=lines.end(); pIter++) 
+	{
+		std::list<VECTOR3*>::iterator pnIter; 
+		if(sou%2==0)//create new list
+			newlist=new vtListSeedTrace();
+		vtListSeedTrace *trace = *pIter; 
+		pnIter = trace->begin(); 
+
+		for (; pnIter!= trace->end(); pnIter++) 
+		{
+			VECTOR3 p = **pnIter; 
+			int idx=(int)(p.x())+((int)(p.y()))*grid_res[0];
+			
+			if(sou%2==0)
+			newlist->push_front(new VECTOR3(p.x(),p.y(),0));
+			else
+			newlist->push_back(new VECTOR3(p.x(),p.y(),0));
+
+
+			bool valid=CheckValidness(p,p, m_grid, m_sepDist,m_sepMinDist, grid_res);
+			if(valid==false)
+				break;
+		}
+		if((sou%2==1)&&newlist->size()>10)
+			long_lines.push_back(newlist);
+		sou++;
+	}
+	int pntIdx=0;
+	pIter = long_lines.begin(); 
+	for (; pIter!=long_lines.end(); pIter++) 
+	{
+		vtListSeedTrace *trace = *pIter; 
+		std::list<VECTOR3*>::iterator pnIter; 
+		pnIter = trace->begin(); 
+		for (; pnIter!= trace->end(); pnIter++) 
+		{
+			VECTOR3 p = **pnIter; 
+			PutPointInGrid(p,  streamlineId,streamlineId, pntIdx++, grid_res, m_grid);
+		}
+	}
+	
+}
+//stop when entering a dull region
+void combinehalflines_check_stop_entropy(list<vtListSeedTrace*> lines, list<vtListSeedTrace*>& long_lines,int* grid_res,
+										 float* entropies)
+{
+	vtListSeedTrace* newlist;
+	list<vtListSeedTrace*>::iterator pIter;
+	pIter =lines.begin(); 
+	int sou=0;
+	for (; pIter!=lines.end(); pIter++) 
+	{
+		std::list<VECTOR3*>::iterator pnIter; 
+		if(sou%2==0)//create new list
+			newlist=new vtListSeedTrace();
+		vtListSeedTrace *trace = *pIter; 
+		pnIter = trace->begin(); 
+
+		for (; pnIter!= trace->end(); pnIter++) 
+		{
+			VECTOR3 p = **pnIter; 
+			int idx=(int)(p.x())+((int)(p.y()))*grid_res[0];
+			
+			if(sou%2==0)
+			newlist->push_front(new VECTOR3(p.x(),p.y(),0));
+			else
+			newlist->push_back(new VECTOR3(p.x(),p.y(),0));
+
+	
+			bool valid=false;
+			float u = ((float)rand()/(float)RAND_MAX);
+			float prob=entropies[idx];
+			if(prob>0.5)
+				valid=true;
+			else 
+			if(u<sqrt(prob))
+				valid=true;
+			if (valid==false)
+				break;
+		}
+		if((sou%2==1)&&newlist->size()>10)
+			long_lines.push_back(newlist);
+		sou++;
+	}
+
+}
+// ADD-BY-XUL 01/22/2010-END
 
 void combinehalflines(list<vtListSeedTrace*> lines, list<vtListSeedTrace*>& long_lines,int* grid_res)
 {
@@ -1153,12 +1386,145 @@ void save_streamline_steps(char* filename, int* data, int xdim, int ydim)
 	fclose(fp);
 }
 
+// ADD-BY-XUL 01/22/2010-BEGIN
+void reconstruct_field_GVF_2D_tmp(float* new_vectors,float* vectors, int* grid_res,
+								  std::vector<VECTOR3*> verts,
+								  std::vector<int> vernum,int* donotchange)
+{
+	int iter=2*max(grid_res[0],grid_res[1]);
+
+	//initial GVF, combine with input new_vectors
+	list<vtListSeedTrace*>::iterator pIter;
+	float* kx=new float[grid_res[0]*grid_res[1]];
+	float* ky=new float[grid_res[0]*grid_res[1]];
+
+	float* b=new float[grid_res[0]*grid_res[1]];
+	float* c1=new float[grid_res[0]*grid_res[1]];
+	float* c2=new float[grid_res[0]*grid_res[1]];
+
+	for(int i=0; i<grid_res[0]*grid_res[1];i++)
+	{
+		kx[i]=ky[i]=b[i]=c1[i]=c2[i]=0;
+	}
+	for(int t=0;t<verts.size();t++)
+	{
+		VECTOR3* vert_tmp=verts[t];
+		int num=vernum[t];
+		for(int i=0;i<num;i++)
+		{
+			VECTOR3 p=vert_tmp[i];
+			int idx=(int)p.x()+((int)p.y())*grid_res[0];
+			float vx=vectors[idx*3+0];
+			float vy=vectors[idx*3+1];
+			//normalize
+			float len=sqrt(vx*vx+vy*vy);
+			if(len>0)
+			{
+				vx=vx/len;	vy=vy/len;
+			}
+			
+			//calc kx and ky
+			kx[idx]=vx;
+			ky[idx]=vy;
+			//initial GVF  to kx ky
+			new_vectors[idx*3+0]=kx[idx];
+			new_vectors[idx*3+1]=ky[idx];
+			donotchange[idx]=1;
+			
+		}
+	}
+	//other initials
+	for(int y=0; y<grid_res[1];y++)
+	{
+		for(int x=0; x<grid_res[0];x++)
+		{
+			int idx=x+y*grid_res[0];
+			b[idx]=kx[idx]*kx[idx]+ky[idx]*ky[idx];
+			c1[idx]=b[idx]*kx[idx];
+			c2[idx]=b[idx]*ky[idx];
+	
+
+		}
+	}
+	
+	//update the GVF
+	float* tmp_new_vectors=new float[grid_res[0]*grid_res[1]*3];
+	for(int i=0; i<grid_res[0]*grid_res[1]*3;i++)
+		tmp_new_vectors[i]=new_vectors[i];
+
+	//parameter setting:
+	float mu=0.1;
+	//iteration by iteration
+	for(int i=0; i<iter; i++)
+	{
+		//start iterations
+		//update the GVF
+		for(int y=1; y<grid_res[1]-1;y++)
+		{
+			for(int x=1; x<grid_res[0]-1;x++)//cut boundary for now
+			{
+				int idx=x+y*grid_res[0]; 
+				int idx_1=x+1+y*grid_res[0]; 
+				int idx_2=x+(y+1)*grid_res[0]; 
+				int idx_3=x-1+y*grid_res[0]; 
+				int idx_4=x+(y-1)*grid_res[0]; 
+
+				tmp_new_vectors[idx*3+0]=	(1-b[idx])*new_vectors[idx*3+0]+
+											mu*(new_vectors[idx_1*3+0]+new_vectors[idx_2*3+0]+new_vectors[idx_3*3+0]+new_vectors[idx_4*3+0]-4*new_vectors[idx*3+0])+
+											c1[idx];
+
+				tmp_new_vectors[idx*3+1]=	(1-b[idx])*new_vectors[idx*3+1]+
+											mu*(new_vectors[idx_1*3+1]+new_vectors[idx_2*3+1]+new_vectors[idx_3*3+1]+new_vectors[idx_4*3+1]-4*new_vectors[idx*3+1])+
+											c2[idx];
+
+			}
+		}
+		
+		//update the GVF
+		for(int y=0; y<grid_res[1];y++)
+		{
+			for(int x=0; x<grid_res[0];x++)
+			{
+				int idx=x+y*grid_res[0]; 
+				//only update when the value improves
+				float error_before, error_now;
+				VECTOR3 before,now,input,tmp;
+				before.Set(new_vectors[idx*3+0],new_vectors[idx*3+1],new_vectors[idx*3+2]);
+				now.Set(tmp_new_vectors[idx*3+0],tmp_new_vectors[idx*3+1],tmp_new_vectors[idx*3+2]);
+				input.Set(vectors[idx*3+0],vectors[idx*3+1],vectors[idx*3+2]);
+				before.Normalize(); now.Normalize();
+				tmp=before-input;
+				error_before=tmp.GetMag();
+				tmp=now-input;
+				error_now=tmp.GetMag();
+				//if((error_before>error_now))//&&(donotchange[idx]==0))
+				{
+				new_vectors[idx*3+0]=tmp_new_vectors[idx*3+0];
+				new_vectors[idx*3+1]=tmp_new_vectors[idx*3+1];
+				}
+
+	
+			}
+		}
+	}
+	delete [] tmp_new_vectors;
+	delete [] kx;
+	delete [] ky;
+	delete [] b;
+	delete [] c1;
+	delete [] c2;
+}
+// ADD-BY-XUL 01/22/2010-END
+
 //reconstruct by diffusion
 void reconstruct_field_GVF_2D(float* new_vectors,float* vectors, int* grid_res,list<vtListSeedTrace*> l_list,
 							  int* donotchange)
 {
-
-	int iter=max(grid_res[0],grid_res[1]);
+	// MOD-BY-XUL 01/22/2010-FROM:
+		// int iter=max(grid_res[0],grid_res[1]);
+	// TO:
+	int iter = 2 * max(grid_res[0],grid_res[1]);
+	// DEL-BY-XUL 01/22/2010-END
 
 	//initial GVF, combine with input new_vectors
 	list<vtListSeedTrace*>::iterator pIter;
@@ -1740,8 +2106,145 @@ float calcEntropy( float* vectors, int* grid_res, VECTOR3 startpt,VECTOR3 endpt)
 }
 
 
+// ADD-BY-XUL 01/22/2010-BEGIN
+float calcRelativeEntropy6_load_bins(int* bin_vector, int* bin_newvectors,int* grid_res, VECTOR3 startpt,VECTOR3 endpt)
+{
+	int binnum=60;
+	int *histo_pxy=new int[binnum*binnum];
+	int *histo_py=new int[binnum];
+	memset(histo_pxy,0,sizeof(int)*binnum*binnum);
+	memset(histo_py,0,sizeof(int)*binnum);
 
+	int area=(endpt.y()-startpt.y())*(endpt.x()-startpt.x());
+	float pi=3.1415926;
+	
+	float total_err=0;
+	int vac_count=0;//vacuum region
+	
+	for(int y=(int)startpt.y(); y<(int)endpt.y();y++)
+	{
+		for(int x=(int)startpt.x(); x<(int)endpt.x();x++)
+		{
+			
+			//VECTOR3 p=point_cloud[i];
+			
+			int idx=x+y*grid_res[0];
+			int bin_no_ori=bin_vector[idx];
+			int bin_no_new=bin_newvectors[idx];
 
+			//if the point is on boundary, do not consider
+			if( (x<=0) || x>=grid_res[0]-1 ||
+				 y<=0  || y>=grid_res[1]-1)
+				 bin_no_ori=bin_no_new;
+
+			if(bin_no_ori<0 || bin_no_ori>=binnum||
+				bin_no_new<0 || bin_no_new>=binnum)
+			{
+				printf("sth wrong, bin id=%d  %d\n", bin_no_ori,bin_no_new);
+			}
+			idx=bin_no_ori+binnum*bin_no_new;
+			histo_pxy[idx]++;//p(x,y)
+			//p(y)
+			histo_py[bin_no_new]++;
+		}
+	}
+
+	//calc probs.
+	float* pxy=new float[binnum*binnum];
+	float* py=new float[binnum];
+
+	int total_num=0;
+	for(int i=0; i<binnum*binnum; i++)
+		total_num+=histo_pxy[i];
+
+	//H(x|y=a)
+	float* entropy_tmp=new float[binnum];
+
+	for(int y=0; y<binnum; y++)
+	{
+		entropy_tmp[y]=0;
+		for(int x=0; x<binnum; x++)
+		{
+			//p(x|y=a)
+			if(histo_pxy[x+binnum*y]==0)
+				continue;
+			float p_tmp=histo_pxy[x+binnum*y]/((float)(histo_py[y]));
+			if(p_tmp>0)
+			entropy_tmp[y]-=(p_tmp*log2(p_tmp));
+		}
+	}
+	
+	float entropy=0;
+	for(int i=0; i<binnum; i++)
+	{
+		py[i]=(((float)histo_py[i])/((float)area));
+		entropy=entropy+py[i]*entropy_tmp[i];
+	}
+	
+
+	delete [] pxy;
+	delete [] py;
+	delete [] histo_pxy;
+	delete [] histo_py;
+	delete [] entropy_tmp;
+	return entropy;
+
+}
+
+float calcRelativeEntropy6_load_histograms(int* bin_vector, int* bin_newvectors,int* grid_res, VECTOR3 startpt,VECTOR3 endpt,
+										   int* histo_pxy,int *histo_py)
+{
+	int binnum=60;
+
+	int area=(endpt.y()-startpt.y())*(endpt.x()-startpt.x());
+	float pi=3.1415926;
+	
+	float total_err=0;
+	int vac_count=0;//vacuum region
+	
+
+	//calc probs.
+	float* pxy=new float[binnum*binnum];
+	float* py=new float[binnum];
+
+	int total_num=0;
+	for(int i=0; i<binnum*binnum; i++)
+		total_num+=histo_pxy[i];
+
+	//H(x|y=a)
+	float* entropy_tmp=new float[binnum];
+
+	for(int y=0; y<binnum; y++)
+	{
+		entropy_tmp[y]=0;
+		for(int x=0; x<binnum; x++)
+		{
+			//p(x|y=a)
+			if(histo_pxy[x+binnum*y]==0)
+				continue;
+			float p_tmp=histo_pxy[x+binnum*y]/((float)(histo_py[y]));
+			if(p_tmp>0)
+			entropy_tmp[y]-=(p_tmp*log2(p_tmp));
+		}
+	}
+	
+	float entropy=0;
+	for(int i=0; i<binnum; i++)
+	{
+		py[i]=(((float)histo_py[i])/((float)area));
+		entropy=entropy+py[i]*entropy_tmp[i];
+	}
+	
+
+	delete [] pxy;
+	delete [] py;
+	//delete [] histo_pxy;
+	//delete [] histo_py;
+	delete [] entropy_tmp;
+	return entropy;
+
+}
+// ADD-BY-XUL 01/22/2010-END
 
 float calcRelativeEntropy6( float* vectors,float* new_vectors, int* grid_res, VECTOR3 startpt,VECTOR3 endpt,int* occupied)
 {
@@ -2082,5 +2585,10 @@ void QuadTree::drawSelf()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.1.1.1  2009/12/07 20:01:41  leeten
+
+[12/07/2009]
+1. [1ST] First time checkin.
+
 
 */

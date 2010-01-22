@@ -55,6 +55,88 @@
 	}
 #endif // DEL-BY-LEETEN 12/01/2009-END
 
+// ADD-BY-XUL 01/22/2010-BEGIN
+bool discardredundantstreamlines(float& cur_entropy,float eplison, list<vtListSeedTrace*> new_lines,
+								 float* vectors, float* new_vectors,int* grid_res,
+								 int* bin_my_vector,int* bin_new_vector,int binnum,
+								 float* theta, float* phi,
+								 int* histo_puv,int* histo_pv,float* pv,float* entropy_tmp)
+{
+	
+
+	int* dummy=new int[grid_res[0]*grid_res[1]*grid_res[2]];
+	float* tmp_new_vectors=new float[grid_res[0]*grid_res[1]*grid_res[2]*3];
+	memcpy(tmp_new_vectors,new_vectors,sizeof(float)*grid_res[0]*grid_res[1]*grid_res[2]*3);
+	
+	float* kx=new float[grid_res[0]*grid_res[1]*grid_res[2]];
+	float* ky=new float[grid_res[0]*grid_res[1]*grid_res[2]];
+	float* kz=new float[grid_res[0]*grid_res[1]*grid_res[2]];
+
+	float* b=new float[grid_res[0]*grid_res[1]*grid_res[2]];
+	float* c1=new float[grid_res[0]*grid_res[1]*grid_res[2]];
+	float* c2=new float[grid_res[0]*grid_res[1]*grid_res[2]];
+	float* c3=new float[grid_res[0]*grid_res[1]*grid_res[2]];
+	
+	memset(kx,0,sizeof(float)*grid_res[0]*grid_res[1]*grid_res[2]);
+	memset(ky,0,sizeof(float)*grid_res[0]*grid_res[1]*grid_res[2]);
+	memset(kz,0,sizeof(float)*grid_res[0]*grid_res[1]*grid_res[2]);
+	memset(b,0,sizeof(float)*grid_res[0]*grid_res[1]*grid_res[2]);
+	memset(c1,0,sizeof(float)*grid_res[0]*grid_res[1]*grid_res[2]);
+	memset(c2,0,sizeof(float)*grid_res[0]*grid_res[1]*grid_res[2]);
+	memset(c3,0,sizeof(float)*grid_res[0]*grid_res[1]*grid_res[2]);
+
+	reconstruct_field_GVF_3D(new_vectors,vectors,grid_res,new_lines,dummy,
+							kx,ky,kz,b,c1,c2,c3);
+
+	delete [] kx;
+	delete [] ky;
+	delete [] kz;
+	delete [] b;
+	delete [] c1;
+	delete [] c2;
+	delete [] c3;
+	
+	float entropy=0;
+	int *new_bin;
+	new_bin=new int [grid_res[0]*grid_res[1]*grid_res[2]];
+	for(int i=0;i<grid_res[0]*grid_res[1]*grid_res[2];i++)
+		{
+			VECTOR3 newf,orif;
+			//orif.Set(vectors[i*3+0],vectors[i*3+1],vectors[i*3+2]);
+			newf.Set(new_vectors[i*3+0],new_vectors[i*3+1],new_vectors[i*3+2]);
+			//if within error range, let it be teh same bin as the ori, otherwise select the bin num
+			newf.Normalize();
+			//float dotv=dot(newf,orif);
+			new_bin[i]=get_bin_number_3D(newf,theta, phi,binnum);
+		}
+	entropy=calcRelativeEntropy6_new(vectors, new_vectors,  grid_res, VECTOR3(2,2,2),//do not count boundaries
+								VECTOR3(grid_res[0]-2,grid_res[1]-2,grid_res[2]-2),theta,phi,bin_my_vector,new_bin,0,binnum,
+								 histo_puv, histo_pv, pv,entropy_tmp,
+						  0,0);
+	printf(" entropy dif=%f\n",cur_entropy-entropy);
+	//printf(" cur_entropy=%f\n",cur_entropy);
+	//printf(" entropy =%f\n",entropy);
+
+	if(cur_entropy-entropy>eplison)//keep
+	{
+		cur_entropy=entropy;
+		//memcpy(bin_new_vector,new_bin,sizeof(int)*grid_res[0]*grid_res[1]*grid_res[2]);
+		delete [] dummy;
+		delete [] tmp_new_vectors;
+		delete [] new_bin;
+		return false;
+	}
+	else//discard
+	{
+		memcpy(new_vectors,tmp_new_vectors,sizeof(float)*grid_res[0]*grid_res[1]*grid_res[2]*3);
+		delete [] tmp_new_vectors;
+		delete [] dummy;
+		delete [] new_bin;
+		return true;
+	}
+}
+// ADD-BY-XUL 01/22/2010-END
+
 void dumpArray( vector<float> entropies,  char* filename)
 {
 
@@ -169,6 +251,94 @@ void save2PPM(char* filename, unsigned char* data, int xdim, int ydim)
 
 	fclose(fp);
 }
+
+// ADD-BY-XUL 01/22/2010-BEGIN
+void combinehalflines_check_stop_entropy(list<vtListSeedTrace*> lines, list<vtListSeedTrace*>& long_lines,int* grid_res,
+										 float* entropies)
+{
+	int shortest_line=1;
+	vtListSeedTrace* newlist;
+	list<vtListSeedTrace*>::iterator pIter;
+	pIter =lines.begin(); 
+	int sou=0;
+	for (; pIter!=lines.end(); pIter++) 
+	{
+		std::list<VECTOR3*>::iterator pnIter; 
+		if(sou%2==0)//create new list
+			newlist=new vtListSeedTrace();
+		vtListSeedTrace *trace = *pIter; 
+		pnIter = trace->begin(); 
+		bool short_line=false;
+		
+		for (; pnIter!= trace->end(); pnIter++) 
+		{
+			VECTOR3 p = **pnIter; 
+			int idx=(int)(p.x())+((int)(p.y()))*grid_res[0]+((int)(p.z()))*grid_res[0]*grid_res[1];
+			
+			if(sou%2==0)
+			newlist->push_front(new VECTOR3(p.x(),p.y(),p.z()));
+			else
+			newlist->push_back(new VECTOR3(p.x(),p.y(),p.z()));
+
+			float prob=entropies[idx];
+			if(prob<0.1)
+			{
+			bool valid=false;
+			float u = ((float)rand()/(float)RAND_MAX);
+			float prob=entropies[idx];
+			
+			if(u<prob)
+				valid=true;
+			if (valid==false)//walk for several steps and stop
+			{
+				short_line=true;
+				//break;
+			}
+			if(short_line==true)
+			{
+				if(newlist->size()>shortest_line)
+					break;
+			}
+			}
+		}
+		if((sou%2==1)&&newlist->size()>10)
+			long_lines.push_back(newlist);
+		sou++;
+	}
+
+}
+void calc_entropy( int* bins,int* grid_res, int binnum,float* entropies)
+{
+	int radius[3];
+	radius[0]=radius[1]=8; radius[2]=8;
+	VECTOR3 startpt,endpt;
+	for(int z=0;z<grid_res[2];z++)
+	{
+		for(int y=0;y<grid_res[1];y++)
+		{
+			for(int x=0;x<grid_res[0];x++)
+			{
+				float sx,sy,sz,ex,ey,ez;
+				sx=max(0,x-radius[0]);	sy=max(0,y-radius[1]);	sz=max(0,z-radius[2]);
+				ex=min(x+radius[0],grid_res[0]-1);
+				ey=min(y+radius[1],grid_res[1]-1);
+				ez=min(z+radius[2],grid_res[2]-1);
+
+				startpt.Set(sx,sy,sz);
+				endpt.Set(ex,ey,ez);
+
+				float tmp=calcEntropy_known_bins(bins,grid_res, startpt,endpt, binnum);
+
+				entropies[x+y*grid_res[0]+z*grid_res[0]*grid_res[1]]=tmp;
+			}
+		}
+		printf("z=%d/%d\r",z,grid_res[2]);
+	}
+	dumpImportanceField("importance.bin",entropies, grid_res);
+
+}
+// ADD-BY-XUL 01/22/2010-END
+
 //crop the image manaually
 void save2PPM_1(char* filename, unsigned char* data, int xdim, int ydim)
 {
@@ -186,7 +356,11 @@ void save2PPM_1(char* filename, unsigned char* data, int xdim, int ydim)
 			int idx = i * xdim + j;
 
 			int r,g,b; 
-			r=data[idx]*255;
+			// MOD-BY-XUL 01/22/2010-FROM:
+				// r=data[idx]*255;
+			// TO:
+			r=data[idx];
+			// MOD-BY-XUL 01/22/2010-END
 			g=b=r;
 			fprintf(fp, " %d %d %d", r,g,b); 
 		}
@@ -507,6 +681,262 @@ void dumpSeeds(vector<VECTOR3> seeds, char* filename)//crtical points excluded
 
 }
 
+// ADD-BY-XUL 01/22/2010-BEGIN
+VECTOR3* get_line_vertices(VECTOR3* vecs,int* ver_num, int line_no,int& length)
+{
+	int first_ver_num=0;
+	for(int i=0;i<line_no;i++)
+		first_ver_num+=ver_num[i];
+
+	VECTOR3* ret=vecs+first_ver_num;
+	length=ver_num[line_no];
+	return ret;
+}
+
+VECTOR4* get_line_rgba(VECTOR4* rgba,int* ver_num, int line_no)
+{
+	int first_ver_num=0;
+	for(int i=0;i<line_no;i++)
+		first_ver_num+=ver_num[i];
+	VECTOR4* ret=rgba+first_ver_num;
+	return ret;
+}	
+/*
+void adjustLengthByEntropies(char*  entropyfile,char* streamlinefile,char* outputstreamlinesfile)
+{
+	int grid_res[3];
+	FILE* fp=fopen(entropyfile,"rb");
+	fread(grid_res,sizeof(int),3,fp);
+	float* entropies=new float[grid_res[0]*grid_res[1]*grid_res[2]];
+	fread(entropies,sizeof(float),grid_res[0]*grid_res[1]*grid_res[2],fp);
+	fclose(fp);
+
+	int line_num,*ver_num,total_ver_num=0;
+	fp=fopen(streamlinefile,"rb");
+	fread(&line_num,sizeof(int),1,fp);
+	ver_num=new int[line_num];
+	fread(ver_num,sizeof(int),line_num,fp);
+	for(int i=0;i<line_num;i++)
+		total_ver_num+=ver_num[i];
+	VECTOR3* verts=new VECTOR3[total_ver_num];
+	fread(verts,sizeof(VECTOR3),total_ver_num,fp);
+	VECTOR4* rgba=new VECTOR4[total_ver_num];
+	fread(rgba,sizeof(VECTOR4),total_ver_num,fp);
+	fclose(fp);
+
+	int* tmp_ver_num=new int[line_num];
+	memcpy(tmp_ver_num,ver_num,sizeof(int)*line_num);
+
+	srand((unsigned)time(NULL));
+
+	//start prunning
+	for(int i=0;i<line_num;i++)
+	{
+		int length;
+		VECTOR3* line=get_line_vertices(verts, ver_num, i,length);
+		for(int j=0;j<length;j++)
+		{
+			VECTOR3 p=line[j];
+			int idx=(int)p[0]+((int)p[1])*grid_res[0]+((int)p[2])*grid_res[0]*grid_res[1];
+			float u = ((float)rand()/(float)RAND_MAX);
+			float prob=entropies[idx];
+			
+			if(u>prob)
+			{//cut the line short here
+				tmp_ver_num[i]=j+1;
+				break;
+			}
+
+		}
+	}
+
+	
+	int selected_line_num=0;
+	int total_selected_ver=0;
+	for(int i=0;i<line_num;i++)
+	{
+		if(tmp_ver_num[i]>0)
+			selected_line_num++;
+		total_selected_ver+=tmp_ver_num[i];
+
+	}
+
+	int* selected_ver_num=new int[selected_line_num];
+	int count=0;
+	for(int i=0;i<line_num;i++)
+	{
+		if(tmp_ver_num[i]<=0)
+			continue;
+		selected_ver_num[count++]=tmp_ver_num[i];
+	}
+	VECTOR3* selected_verts=new VECTOR3[total_selected_ver];
+	VECTOR4* selected_rgba=new VECTOR4[total_selected_ver];
+	int start=0;
+	for(int i=0;i<line_num;i++)
+	{
+		int length=tmp_ver_num[i];
+		if(length<=0)
+			continue;
+		int ori_length;
+		VECTOR3* line=get_line_vertices(verts, ver_num, i,ori_length);
+		VECTOR4* rgbline=get_line_rgba(rgba, ver_num, i);
+		
+		for(int j=0;j<length;j++)
+		{
+			selected_verts[start+j]=line[j];
+			selected_rgba[start+j]=rgbline[j];
+		}
+		start+=length;
+
+	}
+	fp=fopen(outputstreamlinesfile,"wb");
+	fp=fopen("F:\\xul\\illuminite lines\\examples\\viewer\\data\\velocity.dat","wb");
+	
+	fwrite(&selected_line_num,sizeof(int),1,fp);
+	fwrite(selected_ver_num,sizeof(int),selected_line_num,fp);
+	fwrite(selected_verts,sizeof(VECTOR3),total_selected_ver,fp);
+	fwrite(rgba,sizeof(VECTOR4),total_selected_ver,fp);
+	fclose(fp);
+
+	delete [] entropies;
+	delete [] rgba;
+	delete [] selected_rgba;
+	delete [] selected_verts;
+	delete [] tmp_ver_num;
+}
+*/
+
+void adjustLengthByEntropies(char*  entropyfile,char* streamlinefile,char* outputstreamlinesfile)
+{
+	int grid_res[3];
+	FILE* fp=fopen(entropyfile,"rb");
+	fread(grid_res,sizeof(int),3,fp);
+	float* entropies=new float[grid_res[0]*grid_res[1]*grid_res[2]];
+	fread(entropies,sizeof(float),grid_res[0]*grid_res[1]*grid_res[2],fp);
+	fclose(fp);
+
+	int line_num,*ver_num,total_ver_num=0;
+	fp=fopen(streamlinefile,"rb");
+	fread(&line_num,sizeof(int),1,fp);
+	ver_num=new int[line_num];
+	fread(ver_num,sizeof(int),line_num,fp);
+	for(int i=0;i<line_num;i++)
+		total_ver_num+=ver_num[i];
+	VECTOR3* verts=new VECTOR3[total_ver_num];
+	fread(verts,sizeof(VECTOR3),total_ver_num,fp);
+	VECTOR4* rgba=new VECTOR4[total_ver_num];
+	fread(rgba,sizeof(VECTOR4),total_ver_num,fp);
+	fclose(fp);
+
+	srand((unsigned)time(NULL));
+
+	//start prunning
+	for(int i=0;i<line_num;i++)
+	{
+		int length;
+		VECTOR3* line=get_line_vertices(verts, ver_num, i,length);
+		VECTOR4* line_rgba=get_line_rgba(rgba, ver_num, i);
+
+
+		float maxi=0;int ind=0;
+		for(int j=0;j<length;j++)
+		{
+			VECTOR3 p=line[j];
+			int idx=(int)p[0]+((int)p[1])*grid_res[0]+((int)p[2])*grid_res[0]*grid_res[1];
+			float prob=entropies[idx];
+			if(prob>maxi)
+			{
+				maxi=prob;
+				ind=j;
+			}
+		}
+		//start walk
+		for(int j=ind;j<length;j++)
+		{
+			VECTOR3 p=line[j];
+			int idx=(int)p[0]+((int)p[1])*grid_res[0]+((int)p[2])*grid_res[0]*grid_res[1];
+			float u = ((float)rand()/(float)RAND_MAX);
+			float prob=entropies[idx];
+
+			if(u>prob)//non-important regions
+			{
+				for(int k=j;k<length;k++)
+				line_rgba[k][3]=prob*prob*prob;
+				break;
+			}
+			else
+				line_rgba[j][3]=prob;
+
+
+		}
+		//start walk
+		for(int j=ind;j>=0;j--)
+		{
+			VECTOR3 p=line[j];
+			int idx=(int)p[0]+((int)p[1])*grid_res[0]+((int)p[2])*grid_res[0]*grid_res[1];
+			float u = ((float)rand()/(float)RAND_MAX);
+			float prob=entropies[idx];
+			if(u>prob*2)
+			{
+				for(int k=j;k>=0;k--)
+				line_rgba[k][3]=0.1;
+				break;
+			}
+			else
+				line_rgba[j][3]=prob;
+
+		}
+
+	}
+
+	fp=fopen(outputstreamlinesfile,"wb");
+	fp=fopen("F:\\xul\\illuminite lines\\examples\\viewer\\data\\velocity.dat","wb");
+	
+	fwrite(&line_num,sizeof(int),1,fp);
+	fwrite(ver_num,sizeof(int),line_num,fp);
+	fwrite(verts,sizeof(VECTOR3),total_ver_num,fp);
+	fwrite(rgba,sizeof(VECTOR4),total_ver_num,fp);
+	fclose(fp);
+
+	delete [] entropies;
+	delete [] rgba;
+
+}
+void dumpEntropyField(char*  filename,float* importance, int* grid_res)
+{
+	FILE* fp=fopen(filename,"wb");
+	if(fp==0)
+	{
+		printf("can not open importance file to write \n");
+		return ;//return;
+
+	}
+
+	//normalize
+	float max_imp=0;
+	for(int i=0;i<grid_res[0]*grid_res[1]*grid_res[2];i++)
+	{
+		if(importance[i]>max_imp)
+			max_imp=importance[i];
+	}
+
+	if(max_imp>0)
+	{
+		for(int i=0;i<grid_res[0]*grid_res[1]*grid_res[2];i++)
+		{
+			importance[i]=importance[i]/max_imp;
+			//importance[i]=sqrt(sqrt(sqrt(sqrt(importance[i]))));
+		}
+	}	
+
+	
+	fwrite(grid_res,sizeof(int),3,fp);
+	fwrite(importance,sizeof(float),grid_res[0]*grid_res[1]*grid_res[2],fp);
+	fclose(fp);
+
+}
+// ADD-BY-XUL 01/22/2010-END
+
 void dumpImportanceField(char*  filename,float* importance, int* grid_res)
 {
 	FILE* fp=fopen(filename,"wb");
@@ -525,17 +955,32 @@ void dumpImportanceField(char*  filename,float* importance, int* grid_res)
 			max_imp=importance[i];
 	}
 
-	if(max_imp)
+	#if	0	// MOD-BY-XUL 01/22/2010-FROM:
+		if(max_imp)
+			for(int i=0;i<grid_res[0]*grid_res[1]*grid_res[2];i++)
+			{
+				importance[i]=importance[i]/max_imp;
+				importance[i]=sqrt(sqrt(sqrt(sqrt(importance[i]))));
+			}
+	#else	// MOD-BY-XUL 01/22/2010-TO:
+	if(max_imp>0)
+	{
 		for(int i=0;i<grid_res[0]*grid_res[1]*grid_res[2];i++)
 		{
 			importance[i]=importance[i]/max_imp;
-			importance[i]=sqrt(sqrt(sqrt(sqrt(importance[i]))));
+			//importance[i]=sqrt(sqrt(sqrt(sqrt(importance[i]))));
 		}
+	}	
+	#endif	// MOD-BY-XUL 01/22/2010-END
 	
 
 	unsigned char* char_importance= new unsigned char[grid_res[0]*grid_res[1]*grid_res[2]];
 	for(int i=0;i<grid_res[0]*grid_res[1]*grid_res[2];i++)
-		char_importance[i]=(1-importance[i])*255;//flip, to use the volume rendering transfer function
+		// MOD-BY-XUL 01/22/2010-FROM:
+			// char_importance[i]=(1-importance[i])*255;//flip, to use the volume rendering transfer function
+		// TO:
+		char_importance[i]=(importance[i])*255;//flip, to use the volume rendering transfer function
+		// MOD-BY-XUL 01/22/2010-END
 	fwrite(grid_res,sizeof(int),3,fp);
 	fwrite(char_importance,sizeof(unsigned char),grid_res[0]*grid_res[1]*grid_res[2],fp);
 	fclose(fp);
@@ -737,54 +1182,57 @@ int getBin(float angle, int binnum)
 {
 	return (binnum-1)*angle/(2*3.1415926);
 }
-float calcPoint2PointError( float* vectors,float* new_vectors, int* grid_res, VECTOR3 startpt,VECTOR3 endpt)
-{
-	int binnum=360;
 
-	float error_sum=0;
-	int vol=(endpt.y()-startpt.y())*(endpt.x()-startpt.x())*(endpt.z()-startpt.z());
-	for(int z=(int)startpt.z(); z<(int)endpt.z();z++)
+#if	0	// DEL-BY-XUL 01/22/2010-BEGIN
+	float calcPoint2PointError( float* vectors,float* new_vectors, int* grid_res, VECTOR3 startpt,VECTOR3 endpt)
 	{
-		for(int y=(int)startpt.y(); y<(int)endpt.y();y++)
+		int binnum=360;
+
+		float error_sum=0;
+		int vol=(endpt.y()-startpt.y())*(endpt.x()-startpt.x())*(endpt.z()-startpt.z());
+		for(int z=(int)startpt.z(); z<(int)endpt.z();z++)
 		{
-			for(int x=(int)startpt.x(); x<(int)endpt.x();x++)
+			for(int y=(int)startpt.y(); y<(int)endpt.y();y++)
 			{
-				VECTOR3 orif,newf;
-				int idx=x+y*grid_res[0]+z*grid_res[0]*grid_res[1];
-				orif.Set(vectors[idx*3+0],vectors[idx*3+1],vectors[idx*3+2]);
-				newf.Set(new_vectors[idx*3+0],new_vectors[idx*3+1],new_vectors[idx*3+2]);
-				
-				float scalar[2];
-				if((orif.x()==0) && (orif.y()==0))
-					scalar[0]=0;
-				else
-					scalar[0]=pi+(atan2(orif.y(),orif.x()));
-
-				if((newf.x()==0)&&(newf.y()==0))
+				for(int x=(int)startpt.x(); x<(int)endpt.x();x++)
 				{
-					scalar[1]=0;
-//					vac_count++;
+					VECTOR3 orif,newf;
+					int idx=x+y*grid_res[0]+z*grid_res[0]*grid_res[1];
+					orif.Set(vectors[idx*3+0],vectors[idx*3+1],vectors[idx*3+2]);
+					newf.Set(new_vectors[idx*3+0],new_vectors[idx*3+1],new_vectors[idx*3+2]);
+					
+					float scalar[2];
+					if((orif.x()==0) && (orif.y()==0))
+						scalar[0]=0;
+					else
+						scalar[0]=pi+(atan2(orif.y(),orif.x()));
+
+					if((newf.x()==0)&&(newf.y()==0))
+					{
+						scalar[1]=0;
+	//					vac_count++;
+					}
+					else
+						scalar[1]=pi+(atan2(newf.y(),newf.x()));
+
+					int bin_no_ori=(binnum-1)*scalar[0]/(2*3.1415926);
+					int bin_no_new=(binnum-1)*scalar[1]/(2*3.1415926);
+
+					//orif.Normalize();//already normalizedd
+					//newf.Normalize();
+
+					VECTOR3 error=orif-newf;
+					error_sum=error_sum+error.GetMag();
+					//float tmp=abs(bin_no_ori-bin_no_new);
+					//tmp=tmp/360.0;
+					//error_sum=error_sum+tmp;
+		
 				}
-				else
-					scalar[1]=pi+(atan2(newf.y(),newf.x()));
-
-				int bin_no_ori=(binnum-1)*scalar[0]/(2*3.1415926);
-				int bin_no_new=(binnum-1)*scalar[1]/(2*3.1415926);
-
-				//orif.Normalize();//already normalizedd
-				//newf.Normalize();
-
-				VECTOR3 error=orif-newf;
-				error_sum=error_sum+error.GetMag();
-				//float tmp=abs(bin_no_ori-bin_no_new);
-				//tmp=tmp/360.0;
-				//error_sum=error_sum+tmp;
-	
 			}
 		}
+		return error_sum/vol;
 	}
-	return error_sum/vol;
-}
+#endif	// DEL-BY-XUL 01/22/2010-END
 
 // ADD-BY-LEETEN 12/01/2009-BEGIN
 int get_bin_by_angle(float mytheta, float myphi, int binnum, float* theta, float* phi)
@@ -829,12 +1277,18 @@ int get_bin_by_angle(float mytheta, float myphi, int binnum, float* theta, float
 }
 // ADD-BY-LEETEN 12/01/2009-END
 
-int get_bin_number_3D(VECTOR3 v, float* theta, float* phi)
+// MOD-BY-XUL 01/22/2010-FROM:
+	// int get_bin_number_3D(VECTOR3 v, float* theta, float* phi)
+// TO:
+int get_bin_number_3D(VECTOR3 v, float* theta, float* phi, int binnum=360)
+// MOD-BY-XUL 01/22/2010-END
 {
 	float mytheta=getAngle(v.x(), v.y());//0~2pi
 	float myphi=  getAngle2(sqrt(v.x()*v.x()+v.y()*v.y()), v.z());//0~pi
-
-	int binnum=360;
+	
+	// DEL-BY-XUL 01/22/2010-BEGIN
+		// int binnum=360;
+	// DEL-BY-XUL 01/22/2010-END
 	if(!theta || !phi)
 	{
 		printf("read in the regions first\n");
@@ -916,9 +1370,105 @@ float log2(float v)
 	return log(v)/log(2.0);
 }
 
-float calcEntropy1( float* vectors,int* grid_res, VECTOR3 startpt,VECTOR3 endpt,float* theta, float* phi)
+// ADD-BY-XUL 01/22/2010-BEGIN
+float calcEntropy_known_bins( int* bins,int* grid_res, VECTOR3 startpt,VECTOR3 endpt,int binnum)
 {
-int binnum=360;
+
+
+	//start calc p(u|v)
+	int *histo_pv=new int[binnum];
+	memset(histo_pv,0,sizeof(int)*binnum);
+
+	int vol=(endpt.y()-startpt.y())*(endpt.x()-startpt.x())*(endpt.z()-startpt.z());
+
+	for(int z=(int)startpt.z(); z<(int)endpt.z();z++)
+	{
+		for(int y=(int)startpt.y(); y<(int)endpt.y();y++)
+		{
+			for(int x=(int)startpt.x(); x<(int)endpt.x();x++)
+			{
+				VECTOR3 orif;
+				int idx=x+y*grid_res[0]+z*grid_res[0]*grid_res[1];
+				int bin_no_ori,bin_no_new;
+				bin_no_ori=bins[idx];
+				histo_pv[bin_no_ori]++;//p(v)
+			}
+		}
+	}
+	//calc probs.
+	float* pv=new float[binnum];
+
+	float entropy=0;
+	for(int i=0; i<binnum; i++)
+	{
+		pv[i]=(((float)histo_pv[i])/((float)vol));
+		entropy=entropy+pv[i];
+		if(pv[i]>0)
+		entropy-=(pv[i]*log2(pv[i]));
+	}
+
+	delete [] pv;
+	delete [] histo_pv;
+	return entropy;
+
+}
+// ADD-BY-XUL 01/22/2010-END
+
+#if	0	// MOD-BY-XUL 01/22/2010-FROM:
+	float calcEntropy1( float* vectors,int* grid_res, VECTOR3 startpt,VECTOR3 endpt,float* theta, float* phi)
+	{
+	int binnum=360;
+
+		//start calc p(u|v)
+		int *histo_pv=new int[binnum];
+		memset(histo_pv,0,sizeof(int)*binnum);
+
+		int vol=(endpt.y()-startpt.y())*(endpt.x()-startpt.x())*(endpt.z()-startpt.z());
+
+		for(int z=(int)startpt.z(); z<(int)endpt.z();z++)
+		{
+			for(int y=(int)startpt.y(); y<(int)endpt.y();y++)
+			{
+				for(int x=(int)startpt.x(); x<(int)endpt.x();x++)
+				{
+					VECTOR3 orif;
+					int idx=x+y*grid_res[0]+z*grid_res[0]*grid_res[1];
+					orif.Set(vectors[idx*3+0],vectors[idx*3+1],vectors[idx*3+2]);
+
+					int bin_no_ori,bin_no_new;
+					bin_no_ori=get_bin_number_3D(orif,theta, phi);
+
+					if(bin_no_ori<0 || bin_no_ori>=binnum)
+					{
+						printf("sth wrong, bin id=%d  %d\n", bin_no_ori,bin_no_new);
+						continue;
+					}
+
+					histo_pv[bin_no_ori]++;//p(v)
+				}
+			}
+		}
+		//calc probs.
+		float* pv=new float[binnum];
+
+		float entropy=0;
+		for(int i=0; i<binnum; i++)
+		{
+			pv[i]=(((float)histo_pv[i])/((float)vol));
+			entropy=entropy+pv[i];
+			if(pv[i]>0)
+			entropy-=(pv[i]*log2(pv[i]));
+		}
+
+		delete [] pv;
+		delete [] histo_pv;
+		return entropy;
+
+	}
+#else	// MOD-BY-XUL 01/22/2010-TO:
+float calcEntropy1( float* vectors,int* grid_res, VECTOR3 startpt,VECTOR3 endpt,float* theta, float* phi,int binnum)
+{
+
 
 	//start calc p(u|v)
 	int *histo_pv=new int[binnum];
@@ -937,7 +1487,7 @@ int binnum=360;
 				orif.Set(vectors[idx*3+0],vectors[idx*3+1],vectors[idx*3+2]);
 
 				int bin_no_ori,bin_no_new;
-				bin_no_ori=get_bin_number_3D(orif,theta, phi);
+				bin_no_ori=get_bin_number_3D(orif,theta, phi,binnum);
 
 				if(bin_no_ori<0 || bin_no_ori>=binnum)
 				{
@@ -966,7 +1516,34 @@ int binnum=360;
 	return entropy;
 
 }
-void UpdateOccupied(list<vtListSeedTrace*> lines, int* occupied,int* grid_res)
+#endif	// MOD-BY-XUL 01/22/2010-END
+
+#if	0	// MOD-BY-XUL 01/22/2010-FROM:
+	void UpdateOccupied(list<vtListSeedTrace*> lines, int* occupied,int* grid_res)
+	{
+		vtListSeedTrace* newlist;
+		list<vtListSeedTrace*>::iterator pIter;
+		
+		//update occupied
+		pIter =lines.begin(); 
+		for (; pIter!=lines.end(); pIter++) 
+		{
+			vtListSeedTrace *trace = *pIter; 
+			std::list<VECTOR3*>::iterator pnIter; 
+			pnIter = trace->begin(); 
+
+			for (; pnIter!= trace->end(); pnIter++) 
+			{
+				VECTOR3 p = **pnIter; 
+				int idx=(int)(p.x())+((int)(p.y()))*grid_res[0]+((int)(p.z()))*grid_res[0]*grid_res[1];
+				occupied[idx]=1;
+			}
+		}
+
+		
+	}
+#else	// MOD-BY-XUL 01/22/2010-TO:
+void UpdateOccupied(list<vtListSeedTrace*> lines, int* occupied,int* grid_res,float radius)
 {
 	vtListSeedTrace* newlist;
 	list<vtListSeedTrace*>::iterator pIter;
@@ -982,13 +1559,27 @@ void UpdateOccupied(list<vtListSeedTrace*> lines, int* occupied,int* grid_res)
 		for (; pnIter!= trace->end(); pnIter++) 
 		{
 			VECTOR3 p = **pnIter; 
-			int idx=(int)(p.x())+((int)(p.y()))*grid_res[0]+((int)(p.z()))*grid_res[0]*grid_res[1];
-			occupied[idx]=1;
+			for(int z=-radius;z<=radius;z++)
+			for(int y=-radius;y<=radius;y++)
+			for(int x=-radius;x<=radius;x++)
+			{
+				int nx,ny,nz;
+				nx=p.x()+x; ny=p.y()+y;	nz=p.z()+z;
+
+				if( nx<0||nx>grid_res[0]-1||
+					ny<0||ny>grid_res[1]-1||
+					nz<0||nz>grid_res[2]-1)
+					continue;
+				int idx=nx+ny*grid_res[0]+nz*grid_res[0]*grid_res[1];
+				occupied[idx]=1;
+			}
 		}
 	}
 
 	
 }
+
+#endif	// MOD-BY-XUL 01/22/2010-END
 
 // ADD-BY-LEETEN 12/14/2009-BEGIN
 
@@ -1015,34 +1606,203 @@ calcRelativeEntropy6Free()
 }
 // ADD-BY-LEETEN 12/14/2009-END
 
+#if	0	// MOD-BY-XUL 01/22/2010-FROM:
+	float calcRelativeEntropy6( float* vectors,float* new_vectors, int* grid_res, VECTOR3 startpt,VECTOR3 endpt,
+							   float* theta, float* phi,
+							   int* old_bin, int* new_bin,int* occupied)
+	{
+		int binnum=360;
+		float penalty=0;
+
+		//start calc p(u|v)
+		#if	0	// MOD-BY-LEETEN 12/14/2009-FROM:
+			int *histo_puv=new int[binnum*binnum];
+			int *histo_pv=new int[binnum];
+			int *histo_pu=new int[binnum];
+		#else	// MOD-BY-LEETEN 12/14/2009-TO:
+		if( !bIsCalcRelativeEntropy6Initialized )
+		{
+			MALLOC(histo_puv,	int, binnum*binnum);
+			MALLOC(histo_pv,	int, binnum);
+			MALLOC(histo_pu,	int, binnum);
+		}
+		#endif	// MOD-BY-LEETEN 12/14/2009-END
+		memset(histo_puv,0,sizeof(int)*binnum*binnum);
+		memset(histo_pv,0,sizeof(int)*binnum);
+		memset(histo_pu,0,sizeof(int)*binnum);
+
+		float error_probability=0;
+		int vol=(endpt.y()-startpt.y())*(endpt.x()-startpt.x())*(endpt.z()-startpt.z());
+
+		int count_empty_space=0;
+		bool dif=false;
+		for(int z=(int)startpt.z(); z<(int)endpt.z();z++)
+		{
+			for(int y=(int)startpt.y(); y<(int)endpt.y();y++)
+			{
+				for(int x=(int)startpt.x(); x<(int)endpt.x();x++)
+				{
+					VECTOR3 orif,newf;
+					int idx=x+y*grid_res[0]+z*grid_res[0]*grid_res[1];
+					if(occupied && occupied[idx]==1)
+					{
+						vol--;
+						continue;
+					}
+					orif.Set(vectors[idx*3+0],vectors[idx*3+1],vectors[idx*3+2]);
+					newf.Set(new_vectors[idx*3+0],new_vectors[idx*3+1],new_vectors[idx*3+2]);
+
+
+					if((newf.x()==0) && (newf.y()==0)&&(newf.z()==0))
+						if((orif.x()!=0)||(orif.y()!=0)||(orif.z()!=0))
+						count_empty_space++;
+					int bin_no_ori,bin_no_new;
+					bin_no_ori=old_bin[idx];
+					bin_no_new=new_bin[idx];
+
+
+					if(bin_no_ori!=bin_no_new)
+						error_probability=error_probability+1;
+					//bin_no_ori=get_bin_number_3D(orif,  theta,  phi);
+					//bin_no_new=get_bin_number_3D(newf,  theta,  phi);
+					if(bin_no_ori<0 || bin_no_ori>=binnum||
+						bin_no_new<0 || bin_no_new>=binnum)
+					{
+						printf("sth wrong, bin id=%d  %d\n", bin_no_ori,bin_no_new);
+						continue;
+					}
+
+					idx=bin_no_ori+binnum*bin_no_new;
+					histo_puv[idx]++;//p(u|v)
+					histo_pu[bin_no_ori]++;//p(u)
+					histo_pv[bin_no_new]++;//p(v)
+					if(bin_no_new!=bin_no_ori)
+						dif=true;
+				}
+			}
+		}
+		//calc probs.
+		#if	0	// MOD-BY-LEETEN 12/14/2009-FROM:
+			float* puv=new float[binnum*binnum];
+			float* pu=new float[binnum];
+			float* pv=new float[binnum];
+		#else	// MOD-BY-LEETEN 12/14/2009-TO:
+		if( !bIsCalcRelativeEntropy6Initialized )
+		{
+			MALLOC(puv,	float, binnum*binnum);
+			MALLOC(pu,	float, binnum);
+			MALLOC(pv,	float, binnum);
+		}
+		memset(puv, 0, sizeof(float)*binnum*binnum);
+		memset(pu, 0, sizeof(float)*binnum);
+		memset(pv, 0, sizeof(float)*binnum);
+		#endif	// MOD-BY-LEETEN 12/14/2009-END
+
+		int total_num=0;
+		for(int i=0; i<binnum*binnum; i++)
+			total_num+=histo_puv[i];
+
+		//H(x|y=a)
+		// MOD-BY-LEETEN 12/14/2009-FROM:
+			// float* entropy_tmp=new float[binnum];
+		// TO: 
+		if( !bIsCalcRelativeEntropy6Initialized )
+		{
+			MALLOC(entropy_tmp, float, binnum);
+		}
+		memset(entropy_tmp, 0, sizeof(float)*binnum);
+		// MOD-BY-LEETEN 12/14/2009-END
+
+		// ADD-BY-LEETEN 12/14/2009-BEGIN
+		if( !bIsCalcRelativeEntropy6Initialized )
+		{
+			atexit(calcRelativeEntropy6Free);
+			bIsCalcRelativeEntropy6Initialized = true;
+		}
+		// ADD-BY-LEETEN 12/14/2009-END
+
+		for(int y=0; y<binnum; y++)
+		{
+			entropy_tmp[y]=0;
+
+			if(histo_pv[y]==0)
+				continue;
+			
+		//	float* p_tmp=new float[binnum];
+		//	memset(p_tmp,0,sizeof(float)*binnum);
+			for(int x=0; x<binnum; x++)
+			{
+			//	if(x!=y)//penalty for errors, if x is recog as y, and exist one such  
+			//		if(histo_puv[x+binnum*y]==1)
+			//		penalty=penalty+0.001;
+			
+				//p(x|y=a)
+				float p_tmp=histo_puv[x+binnum*y]/((float)(histo_pv[y]));
+				if(p_tmp>1)
+					printf("p(x,y)/p(y) is not always between (0~1)\n");
+				if(p_tmp>0)
+				entropy_tmp[y]-=(p_tmp*log2(p_tmp));
+			}
+			//delete [] p_tmp;
+		}
+		
+
+		float tmp_entropy=0;
+		float entropy=0;
+		for(int i=0; i<binnum; i++)
+		{
+			pu[i]=(((float)histo_pu[i])/((float)vol));
+			pv[i]=(((float)histo_pv[i])/((float)vol));
+			entropy=entropy+pv[i]*entropy_tmp[i];
+		//	entropy=entropy+1/((float)binnum)*entropy_tmp[i];
+			tmp_entropy=tmp_entropy-pu[i]*log2(pu[i]);
+		}
+
+	//	entropy=error_probability/((float)vol);
+	//	if(entropy<0.000001)  
+	//		if(dif==true)//take care where entropy is low and error is high
+	//			entropy=100;
+	//	penalty=penalty+count_empty_space*0.001;
+		//entropy=entropy+penalty;
+		
+	//	if(tmp_entropy>0)
+	//	entropy=entropy/tmp_entropy;
+
+		#if	0	// DEL-BY-LEETEN 12/14/2009-BEGIN
+			delete [] puv;
+			delete [] pv;
+			delete [] histo_puv;
+			delete [] histo_pv;
+			delete [] entropy_tmp;
+			// ADD-BY-LEETEN 2009/11/25-BEGIN
+			delete [] histo_pu;
+			delete [] pu;
+			// ADD-BY-LEETEN 2009/11/25-END
+		#endif	// MOD-BY-LEETEN 12/14/2009-END
+		return entropy;
+
+	}
+#else	// MOD-BY-XUL 01/22/2010-TO:
 float calcRelativeEntropy6( float* vectors,float* new_vectors, int* grid_res, VECTOR3 startpt,VECTOR3 endpt,
 						   float* theta, float* phi,
-						   int* old_bin, int* new_bin,int* occupied)
+						   int* old_bin, int* new_bin,int* occupied,int binnum,
+						   int* histo_puv,int* histo_pv,float* pv,float* entropy_tmp,
+						   int* g_histo,int* g_histo_puv)
 {
-	int binnum=360;
+	if(histo_puv==0)
+		return 0;
+
+	
 	float penalty=0;
 
 	//start calc p(u|v)
-	#if	0	// MOD-BY-LEETEN 12/14/2009-FROM:
-		int *histo_puv=new int[binnum*binnum];
-		int *histo_pv=new int[binnum];
-		int *histo_pu=new int[binnum];
-	#else	// MOD-BY-LEETEN 12/14/2009-TO:
-	if( !bIsCalcRelativeEntropy6Initialized )
-	{
-		MALLOC(histo_puv,	int, binnum*binnum);
-		MALLOC(histo_pv,	int, binnum);
-		MALLOC(histo_pu,	int, binnum);
-	}
-	#endif	// MOD-BY-LEETEN 12/14/2009-END
+
 	memset(histo_puv,0,sizeof(int)*binnum*binnum);
 	memset(histo_pv,0,sizeof(int)*binnum);
-	memset(histo_pu,0,sizeof(int)*binnum);
 
 	float error_probability=0;
 	int vol=(endpt.y()-startpt.y())*(endpt.x()-startpt.x())*(endpt.z()-startpt.z());
 
-	int count_empty_space=0;
 	bool dif=false;
 	for(int z=(int)startpt.z(); z<(int)endpt.z();z++)
 	{
@@ -1050,84 +1810,30 @@ float calcRelativeEntropy6( float* vectors,float* new_vectors, int* grid_res, VE
 		{
 			for(int x=(int)startpt.x(); x<(int)endpt.x();x++)
 			{
-				VECTOR3 orif,newf;
+				//VECTOR3 orif,newf;
 				int idx=x+y*grid_res[0]+z*grid_res[0]*grid_res[1];
-				if(occupied && occupied[idx]==1)
-				{
-					vol--;
-					continue;
-				}
-				orif.Set(vectors[idx*3+0],vectors[idx*3+1],vectors[idx*3+2]);
-				newf.Set(new_vectors[idx*3+0],new_vectors[idx*3+1],new_vectors[idx*3+2]);
-
-
-				if((newf.x()==0) && (newf.y()==0)&&(newf.z()==0))
-					if((orif.x()!=0)||(orif.y()!=0)||(orif.z()!=0))
-					count_empty_space++;
+			
 				int bin_no_ori,bin_no_new;
 				bin_no_ori=old_bin[idx];
 				bin_no_new=new_bin[idx];
-
-
-				if(bin_no_ori!=bin_no_new)
-					error_probability=error_probability+1;
-				//bin_no_ori=get_bin_number_3D(orif,  theta,  phi);
-				//bin_no_new=get_bin_number_3D(newf,  theta,  phi);
-				if(bin_no_ori<0 || bin_no_ori>=binnum||
+				
+			/*	if(bin_no_ori<0 || bin_no_ori>=binnum||
 					bin_no_new<0 || bin_no_new>=binnum)
 				{
 					printf("sth wrong, bin id=%d  %d\n", bin_no_ori,bin_no_new);
 					continue;
 				}
-
-				idx=bin_no_ori+binnum*bin_no_new;
-				histo_puv[idx]++;//p(u|v)
-				histo_pu[bin_no_ori]++;//p(u)
+			*/
+				int bin_idx=bin_no_ori+binnum*bin_no_new;
+				histo_puv[bin_idx]++;//p(u|v)
 				histo_pv[bin_no_new]++;//p(v)
-				if(bin_no_new!=bin_no_ori)
-					dif=true;
+				
 			}
 		}
 	}
-	//calc probs.
-	#if	0	// MOD-BY-LEETEN 12/14/2009-FROM:
-		float* puv=new float[binnum*binnum];
-		float* pu=new float[binnum];
-		float* pv=new float[binnum];
-	#else	// MOD-BY-LEETEN 12/14/2009-TO:
-	if( !bIsCalcRelativeEntropy6Initialized )
-	{
-		MALLOC(puv,	float, binnum*binnum);
-		MALLOC(pu,	float, binnum);
-		MALLOC(pv,	float, binnum);
-	}
-	memset(puv, 0, sizeof(float)*binnum*binnum);
-	memset(pu, 0, sizeof(float)*binnum);
-	memset(pv, 0, sizeof(float)*binnum);
-	#endif	// MOD-BY-LEETEN 12/14/2009-END
-
-	int total_num=0;
-	for(int i=0; i<binnum*binnum; i++)
-		total_num+=histo_puv[i];
+	
 
 	//H(x|y=a)
-	// MOD-BY-LEETEN 12/14/2009-FROM:
-		// float* entropy_tmp=new float[binnum];
-	// TO: 
-	if( !bIsCalcRelativeEntropy6Initialized )
-	{
-		MALLOC(entropy_tmp, float, binnum);
-	}
-	memset(entropy_tmp, 0, sizeof(float)*binnum);
-	// MOD-BY-LEETEN 12/14/2009-END
-
-	// ADD-BY-LEETEN 12/14/2009-BEGIN
-	if( !bIsCalcRelativeEntropy6Initialized )
-	{
-		atexit(calcRelativeEntropy6Free);
-		bIsCalcRelativeEntropy6Initialized = true;
-	}
-	// ADD-BY-LEETEN 12/14/2009-END
 
 	for(int y=0; y<binnum; y++)
 	{
@@ -1136,61 +1842,31 @@ float calcRelativeEntropy6( float* vectors,float* new_vectors, int* grid_res, VE
 		if(histo_pv[y]==0)
 			continue;
 		
-	//	float* p_tmp=new float[binnum];
-	//	memset(p_tmp,0,sizeof(float)*binnum);
 		for(int x=0; x<binnum; x++)
 		{
-		//	if(x!=y)//penalty for errors, if x is recog as y, and exist one such  
-		//		if(histo_puv[x+binnum*y]==1)
-		//		penalty=penalty+0.001;
 		
+			if(histo_puv[x+binnum*y]==0)
+				continue;
 			//p(x|y=a)
 			float p_tmp=histo_puv[x+binnum*y]/((float)(histo_pv[y]));
-			if(p_tmp>1)
-				printf("p(x,y)/p(y) is not always between (0~1)\n");
-			if(p_tmp>0)
+			//if(p_tmp>0)
 			entropy_tmp[y]-=(p_tmp*log2(p_tmp));
 		}
-		//delete [] p_tmp;
 	}
 	
 
-	float tmp_entropy=0;
 	float entropy=0;
 	for(int i=0; i<binnum; i++)
 	{
-		pu[i]=(((float)histo_pu[i])/((float)vol));
 		pv[i]=(((float)histo_pv[i])/((float)vol));
 		entropy=entropy+pv[i]*entropy_tmp[i];
-	//	entropy=entropy+1/((float)binnum)*entropy_tmp[i];
-		tmp_entropy=tmp_entropy-pu[i]*log2(pu[i]);
 	}
 
-//	entropy=error_probability/((float)vol);
-//	if(entropy<0.000001)  
-//		if(dif==true)//take care where entropy is low and error is high
-//			entropy=100;
-//	penalty=penalty+count_empty_space*0.001;
-	//entropy=entropy+penalty;
-	
-//	if(tmp_entropy>0)
-//	entropy=entropy/tmp_entropy;
 
-	#if	0	// DEL-BY-LEETEN 12/14/2009-BEGIN
-		delete [] puv;
-		delete [] pv;
-		delete [] histo_puv;
-		delete [] histo_pv;
-		delete [] entropy_tmp;
-		// ADD-BY-LEETEN 2009/11/25-BEGIN
-		delete [] histo_pu;
-		delete [] pu;
-		// ADD-BY-LEETEN 2009/11/25-END
-	#endif	// MOD-BY-LEETEN 12/14/2009-END
 	return entropy;
 
 }
-
+#endif	// MOD-BY-XUL 01/22/2010-END
 
 /*
 float calcRelativeEntropy6( float* vectors,float* new_vectors, int* grid_res, VECTOR3 startpt,VECTOR3 endpt,
@@ -1307,6 +1983,139 @@ float calcRelativeEntropy6( float* vectors,float* new_vectors, int* grid_res, VE
 
 }
 */
+
+// ADD-BY-XUL 01/22/2010-BEGIN
+float calcRelativeEntropy6_by_known_histograms( float* vectors,float* new_vectors, int* grid_res, VECTOR3 startpt,VECTOR3 endpt,
+						   float* theta, float* phi,
+						   int* old_bin, int* new_bin,int* occupied,int binnum,
+						   int* histo_puv,int* histo_pv,float* pv,float* entropy_tmp,
+						   int* g_histo,int* g_histo_puv)
+{
+	if(histo_puv==0)
+		return 0;
+
+	
+	float penalty=0;
+	int vol=(endpt.y()-startpt.y())*(endpt.x()-startpt.x())*(endpt.z()-startpt.z());
+
+	//H(x|y=a)
+
+	for(int y=0; y<binnum; y++)
+	{
+		entropy_tmp[y]=0;
+		if(histo_pv[y]==0)
+			continue;
+		
+		for(int x=0; x<binnum; x++)
+		{
+		
+			if(histo_puv[x+binnum*y]==0)
+				continue;
+			//p(x|y=a)
+			float p_tmp=histo_puv[x+binnum*y]/((float)(histo_pv[y]));
+			//if(p_tmp>0)
+			entropy_tmp[y]-=(p_tmp*log2(p_tmp));
+		}
+	}
+	
+
+	float entropy=0;
+	for(int i=0; i<binnum; i++)
+	{
+		pv[i]=(((float)histo_pv[i])/((float)vol));
+		entropy=entropy+pv[i]*entropy_tmp[i];
+	}
+
+
+	return entropy;
+
+}
+float calcRelativeEntropy6_new( float* vectors,float* new_vectors, int* grid_res, VECTOR3 startpt,VECTOR3 endpt,
+						   float* theta, float* phi,
+						   int* old_bin, int* new_bin,int* occupied,int binnum,
+						   int* histo_puv,int* histo_pv,float* pv,float* entropy_tmp,
+						   int* g_histo,int* g_histo_puv)
+{
+	if(histo_puv==0)
+		return 0;
+
+	
+	float penalty=0;
+
+	//start calc p(u|v)
+
+	memset(histo_puv,0,sizeof(int)*binnum*binnum);
+	memset(histo_pv,0,sizeof(int)*binnum);
+
+	float error_probability=0;
+	int vol=(endpt.y()-startpt.y())*(endpt.x()-startpt.x())*(endpt.z()-startpt.z());
+
+	bool dif=false;
+	for(int z=(int)startpt.z(); z<(int)endpt.z();z++)
+	{
+		for(int y=(int)startpt.y(); y<(int)endpt.y();y++)
+		{
+			for(int x=(int)startpt.x(); x<(int)endpt.x();x++)
+			{
+				//VECTOR3 orif,newf;
+				int idx=x+y*grid_res[0]+z*grid_res[0]*grid_res[1];
+			
+				int bin_no_ori,bin_no_new;
+				bin_no_ori=old_bin[idx];
+				bin_no_new=new_bin[idx];
+				
+			/*	if(bin_no_ori<0 || bin_no_ori>=binnum||
+					bin_no_new<0 || bin_no_new>=binnum)
+				{
+					printf("sth wrong, bin id=%d  %d\n", bin_no_ori,bin_no_new);
+					continue;
+				}
+			*/
+				int bin_idx=bin_no_ori+binnum*bin_no_new;
+				histo_puv[bin_idx]++;//p(u|v)
+				histo_pv[bin_no_new]++;//p(v)
+				
+			}
+		}
+	}
+	
+
+	//H(x|y=a)
+
+	for(int y=0; y<binnum; y++)
+	{
+		entropy_tmp[y]=0;
+
+		if(histo_pv[y]==0)
+			continue;
+		
+		for(int x=0; x<binnum; x++)
+		{
+		
+			if(histo_puv[x+binnum*y]==0)
+				continue;
+			//p(x|y=a)
+			float p_tmp=histo_puv[x+binnum*y]/((float)(histo_pv[y]));
+			//if(p_tmp>0)
+			entropy_tmp[y]-=(p_tmp*log2(p_tmp));
+		}
+	}
+	
+
+	float entropy=0;
+	for(int i=0; i<binnum; i++)
+	{
+		pv[i]=(((float)histo_pv[i])/((float)vol));
+		entropy=entropy+pv[i]*entropy_tmp[i];
+	}
+
+
+	return entropy;
+
+}
+
+// ADD-BY-XUL 01/22/2010-END
+
 /***************************
 begin octree
 **************************/
@@ -1331,8 +2140,42 @@ void OCNode::getLeaves(std::vector<VECTOR3>& leaves)
 		}
 	}
 }
-		
-void OCNode::calcEntropy( float* result, float* vectors,int* grid_res,float* theta,float* phi)
+
+#if	0	// MOD-BY-XUL 01/22/2010-FROM:
+	void OCNode::calcEntropy( float* result, float* vectors,int* grid_res,float* theta,float* phi)
+	{
+		if(LeaveNode==1)
+		{
+			 VECTOR3 startpt, endpt;
+			 startpt.Set(XMin,YMin,ZMin);
+			 endpt.Set(XMax, YMax,ZMax);
+			//write the result
+			float entropy=calcEntropy1(  vectors, grid_res,  startpt, endpt, theta,  phi);
+			for(int z=startpt.z(); z<endpt.z();z++)
+			{
+				for(int y=startpt.y(); y<endpt.y();y++)
+				{
+					for(int x=startpt.x(); x<endpt.x();x++)
+					{
+						int idx=x+y*grid_res[0]+z*grid_res[0]*grid_res[1];
+						result[idx]=entropy;
+					}
+				}
+			}
+			return;
+		}
+		else
+		{
+			for(int i=0; i<ChildrenNo;i++)
+			{
+				Children[i]->calcEntropy( result,vectors, grid_res,
+									theta,phi);
+
+			}
+		}
+	}
+#else	// MOD-BY-XUL 01/22/2010-TO:
+void OCNode::calcEntropy( float* result, float* vectors,int* grid_res,float* theta,float* phi,int binnum)
 {
 	if(LeaveNode==1)
 	{
@@ -1340,7 +2183,7 @@ void OCNode::calcEntropy( float* result, float* vectors,int* grid_res,float* the
 		 startpt.Set(XMin,YMin,ZMin);
 		 endpt.Set(XMax, YMax,ZMax);
 		//write the result
-		float entropy=calcEntropy1(  vectors, grid_res,  startpt, endpt, theta,  phi);
+		float entropy=calcEntropy1(  vectors, grid_res,  startpt, endpt, theta,  phi,binnum);
 		for(int z=startpt.z(); z<endpt.z();z++)
 		{
 			for(int y=startpt.y(); y<endpt.y();y++)
@@ -1359,11 +2202,13 @@ void OCNode::calcEntropy( float* result, float* vectors,int* grid_res,float* the
 		for(int i=0; i<ChildrenNo;i++)
 		{
 			Children[i]->calcEntropy( result,vectors, grid_res,
-								theta,phi);
+								theta,phi,binnum);
 
 		}
 	}
 }
+#endif	// MOD-BY-XUL 01/22/2010-END
+
 void OCNode::get_nodes_bounds(std::vector<VECTOR3>& lower_bound,std::vector<VECTOR3>& higher_bound)
 {
 	for(int i=0; i<ChildrenNo;i++)
@@ -1400,7 +2245,62 @@ float OCNode::CalcEntropy_InnerNode()
 	}
 }
 
+#if	0	// MOD-BY-XUL 01/22/2010-FROM:
+	void OCNode::CalcEntropy_FindMaxEntropyNode(float* vectors,float* new_vectors, int* grid_res, 
+												int& min_x, int& max_x, int& min_y, int& max_y, int& min_z, int& max_z,
+												 float* theta, float* phi,int* oldbin, int* newbin,int * occupied)
+	{
+		if(LeaveNode==1)
+		{
+			min_x=XMin; max_x=XMax; min_y=YMin; max_y=YMax;min_z=ZMin; max_z=ZMax;
+			return;
+		}
 
+		if(LeaveNode!=1)
+		{
+	 
+			float maxentropy=0;
+			int maxi=0;
+			for(int i=0; i<ChildrenNo;i++)
+			{
+				//(Children[i]->m_entropy
+				float entropy=calcRelativeEntropy6( vectors,new_vectors, grid_res, 
+					VECTOR3(Children[i]->XMin, Children[i]->YMin,Children[i]->ZMin),
+					VECTOR3(Children[i]->XMax, Children[i]->YMax,Children[i]->ZMax), 
+					theta, phi,
+					oldbin, newbin,occupied);
+
+				
+	//			if(entropy<0.00001)
+	//				entropy=point_error;
+				if(occupied)//add density control
+				{
+					int nonempty=0;
+					for(int z=Children[i]->ZMin;z<Children[i]->ZMax;z++)
+					for(int y=Children[i]->YMin;y<Children[i]->YMax;y++)
+					for(int x=Children[i]->XMin;x<Children[i]->XMax;x++)
+						{
+							if(occupied[x+y*grid_res[0]+z*grid_res[0]*grid_res[1]]!=0)
+								nonempty++;
+						}
+			
+					float pv=((float)nonempty)/((float)((Children[i]->ZMax - Children[i]->ZMin)*(Children[i]->YMax - Children[i]->YMin)*(Children[i]->XMax - Children[i]->XMin)));
+				//	printf("density control=%f\n",1-pv);
+					entropy=entropy*(1-pv);
+				}	
+				if(entropy > maxentropy)
+				{	
+					maxentropy=entropy;
+					maxi=i;
+				}
+			}
+			Children[maxi]->CalcEntropy_FindMaxEntropyNode( vectors, new_vectors,  grid_res,
+															min_x,  max_x,  min_y,  max_y,min_z,  max_z,
+															theta, phi,
+															oldbin, newbin,occupied);
+		}
+	}
+#else	// MOD-BY-XUL 01/22/2010-TO:
 void OCNode::CalcEntropy_FindMaxEntropyNode(float* vectors,float* new_vectors, int* grid_res, 
 											int& min_x, int& max_x, int& min_y, int& max_y, int& min_z, int& max_z,
 											 float* theta, float* phi,int* oldbin, int* newbin,int * occupied)
@@ -1423,7 +2323,7 @@ void OCNode::CalcEntropy_FindMaxEntropyNode(float* vectors,float* new_vectors, i
 				VECTOR3(Children[i]->XMin, Children[i]->YMin,Children[i]->ZMin),
 				VECTOR3(Children[i]->XMax, Children[i]->YMax,Children[i]->ZMax), 
 				theta, phi,
-				oldbin, newbin,occupied);
+				oldbin, newbin,occupied,NULL);
 
 			
 //			if(entropy<0.00001)
@@ -1455,8 +2355,52 @@ void OCNode::CalcEntropy_FindMaxEntropyNode(float* vectors,float* new_vectors, i
 														oldbin, newbin,occupied);
 	}
 }
+#endif	// MOD-BY-XUL 01/22/2010-END
 
+#if	0	// MOD-BY-XUL 01/22/2010-FROM:
+	void OCNode::CalcEntropy_LeafNode(float* vectors,float* new_vectors, int* grid_res, 
+												int& min_x, int& max_x, int& min_y, int& max_y, int& min_z, int& max_z,
+												 float* theta, float* phi,int* oldbin, int* newbin,int * occupied)
+	{
+		if(LeaveNode==1)
+		{
+	 
+			float maxentropy=0;
+			int maxi=0;
+			float entropy=calcRelativeEntropy6( vectors,new_vectors, grid_res, 
+				VECTOR3(XMin, YMin,ZMin),
+				VECTOR3(XMax, YMax,ZMax), 
+				theta, phi,
+				oldbin, newbin,occupied);
 
+			
+			if(occupied)//add density control
+			{
+				int nonempty=0;
+				for(int z=ZMin;z<ZMax;z++)
+				for(int y=YMin;y<YMax;y++)
+				for(int x=XMin;x<XMax;x++)
+					{
+						if(occupied[x+y*grid_res[0]+z*grid_res[0]*grid_res[1]]!=0)
+							nonempty++;
+					}
+		
+				float pv=((float)nonempty)/((float)((ZMax - ZMin)*(YMax - YMin)*(XMax - XMin)));
+				entropy=entropy*(1-pv);
+			}	
+			m_entropy=entropy;
+			
+		}
+		else
+		{
+			for(int i=0; i<ChildrenNo;i++)
+			Children[i]->CalcEntropy_LeafNode( vectors, new_vectors,  grid_res,
+															min_x,  max_x,  min_y,  max_y,min_z,  max_z,
+															theta, phi,
+															oldbin, newbin,occupied);
+		}
+	}
+#else	// MOD-BY-XUL 01/22/2010-TO:
 void OCNode::CalcEntropy_LeafNode(float* vectors,float* new_vectors, int* grid_res, 
 											int& min_x, int& max_x, int& min_y, int& max_y, int& min_z, int& max_z,
 											 float* theta, float* phi,int* oldbin, int* newbin,int * occupied)
@@ -1470,7 +2414,7 @@ void OCNode::CalcEntropy_LeafNode(float* vectors,float* new_vectors, int* grid_r
 			VECTOR3(XMin, YMin,ZMin),
 			VECTOR3(XMax, YMax,ZMax), 
 			theta, phi,
-			oldbin, newbin,occupied);
+			oldbin, newbin,occupied,NULL);
 
 		
 		if(occupied)//add density control
@@ -1499,6 +2443,8 @@ void OCNode::CalcEntropy_LeafNode(float* vectors,float* new_vectors, int* grid_r
 														oldbin, newbin,occupied);
 	}
 }
+
+#endif	// MOD-BY-XUL 01/22/2010-END
 
 void OCNode::FindMaxEntropyNode(int& min_x, int& max_x, int& min_y, int& max_y, int& min_z, int& max_z)
 {
@@ -1894,7 +2840,11 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 							  float* importance)
 {
 
-	int iter=64;
+	// MOD-BY-XUL 01/22/2010-FROM:
+		// int iter=64;
+	// TO:
+	int iter=max(grid_res[0],max(grid_res[1],grid_res[2]))*2;
+	// MOD-BY-XUL 01/22/2010-END
 
 	//initial GVF, combine with input new_vectors
 	list<vtListSeedTrace*>::iterator pIter;
@@ -1927,7 +2877,9 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 			ky[idx]=vy;
 			kz[idx]=vz;
 			//initial GVF  to kx ky
-			if(donot_change[idx]==0)
+			// DEL-BY-LEETEN 01/22/2010-BEGIN
+				// if(donot_change[idx]==0)
+			// DEL-BY-LEETEN 01/22/2010-END
 			{
 			new_vectors[idx*3+0]=kx[idx];
 			new_vectors[idx*3+1]=ky[idx];
@@ -2135,6 +3087,13 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.3  2009/12/15 20:11:03  leeten
+
+[12/15/2009]
+1. [ADD] Change the resolution of the lookup table.
+2. [MOD] When calculate the histogram, only allocate the memory once.
+3. [MOD] When KEEP_BOUNDARY is 1, the vector field along the boundary will be preserved.
+
 Revision 1.2  2009/12/07 20:08:01  leeten
 
 [12/07/2009]
