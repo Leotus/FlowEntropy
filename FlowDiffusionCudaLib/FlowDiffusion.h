@@ -7,7 +7,15 @@
 
 // ADD-BY-LEETEN 12/07/2009-BEGIN
 #include "cudpp/cudpp.h"
+// ADD-BY-LEETEN 01/25/2010-BEGIN
+#ifdef __DEVICE_EMULATION__
+#pragma comment (lib, "cudpp32d_emu.lib")
+#else
+// ADD-BY-LEETEN 01/25/2010-END
 #pragma comment (lib, "cudpp32.lib")
+// ADD-BY-LEETEN 01/25/2010-BEGIN
+#endif
+// ADD-BY-LEETEN 01/25/2010-END
 // ADD-BY-LEETEN 12/07/2009-END
 
 #include "cuda_macro.h"
@@ -131,6 +139,11 @@ void _FlowDiffusionFree();
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.3  2009/12/17 20:22:12  leeten
+
+[12/17/2009]
+1. [ADD] Incldue the header cudpp.h and the lib cudpp32.lib.
+
 Revision 1.2  2009/12/15 20:00:20  leeten
 
 [12/15/2009]
