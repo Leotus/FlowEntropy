@@ -3,19 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 9.00
 # Visual Studio 2005
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FlowEntropy", "FlowEntropy\FlowEntropy.vcproj", "{57C54BBA-8E38-4561-8673-D81761EA0C8E}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "myinterface3D", "..\entropy_final_3D\myinterface\myinterface3D.vcproj", "{176C73D8-AF40-47BC-A860-78CE2195A001}"
-	ProjectSection(ProjectDependencies) = postProject
-		{17C8E013-3B43-44A0-A16F-62B2A3DA2D10} = {17C8E013-3B43-44A0-A16F-62B2A3DA2D10}
-	EndProjectSection
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "myinterface2D", "..\entropy_final_2D\myinterface\myinterface2D.vcproj", "{2ADB44C6-5874-41DC-BF02-8F1C6087B4E1}"
-	ProjectSection(ProjectDependencies) = postProject
-		{17C8E013-3B43-44A0-A16F-62B2A3DA2D10} = {17C8E013-3B43-44A0-A16F-62B2A3DA2D10}
-	EndProjectSection
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FlowDiffusionCudaLib", "..\FlowDiffusionCudaLib\FlowDiffusionCudaLib.vcproj", "{17C8E013-3B43-44A0-A16F-62B2A3DA2D10}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FlowEntropyViewer", "..\FlowEntropyViewer\FlowEntropyViewer.vcproj", "{DEBD94C4-3599-432A-8207-3096C2C5E8C9}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "myinterface2D", "..\entropy_2D\myinterface2D\myinterface2D.vcproj", "{70949A31-E2E0-4E76-9862-C21562404F43}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "myinterface3D", "..\entropy_3D\myinterface3D\myinterface3D.vcproj", "{2ADB44C6-5874-41DC-BF02-8F1C6087B4E1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,14 +21,6 @@ Global
 		{57C54BBA-8E38-4561-8673-D81761EA0C8E}.Debug|Win32.Build.0 = Debug|Win32
 		{57C54BBA-8E38-4561-8673-D81761EA0C8E}.Release|Win32.ActiveCfg = Release|Win32
 		{57C54BBA-8E38-4561-8673-D81761EA0C8E}.Release|Win32.Build.0 = Release|Win32
-		{176C73D8-AF40-47BC-A860-78CE2195A001}.Debug|Win32.ActiveCfg = Debug|Win32
-		{176C73D8-AF40-47BC-A860-78CE2195A001}.Debug|Win32.Build.0 = Debug|Win32
-		{176C73D8-AF40-47BC-A860-78CE2195A001}.Release|Win32.ActiveCfg = Release|Win32
-		{176C73D8-AF40-47BC-A860-78CE2195A001}.Release|Win32.Build.0 = Release|Win32
-		{2ADB44C6-5874-41DC-BF02-8F1C6087B4E1}.Debug|Win32.ActiveCfg = Debug|Win32
-		{2ADB44C6-5874-41DC-BF02-8F1C6087B4E1}.Debug|Win32.Build.0 = Debug|Win32
-		{2ADB44C6-5874-41DC-BF02-8F1C6087B4E1}.Release|Win32.ActiveCfg = Release|Win32
-		{2ADB44C6-5874-41DC-BF02-8F1C6087B4E1}.Release|Win32.Build.0 = Release|Win32
 		{17C8E013-3B43-44A0-A16F-62B2A3DA2D10}.Debug|Win32.ActiveCfg = Debug|Win32
 		{17C8E013-3B43-44A0-A16F-62B2A3DA2D10}.Debug|Win32.Build.0 = Debug|Win32
 		{17C8E013-3B43-44A0-A16F-62B2A3DA2D10}.Release|Win32.ActiveCfg = Release|Win32
@@ -43,6 +29,14 @@ Global
 		{DEBD94C4-3599-432A-8207-3096C2C5E8C9}.Debug|Win32.Build.0 = Debug|Win32
 		{DEBD94C4-3599-432A-8207-3096C2C5E8C9}.Release|Win32.ActiveCfg = Release|Win32
 		{DEBD94C4-3599-432A-8207-3096C2C5E8C9}.Release|Win32.Build.0 = Release|Win32
+		{70949A31-E2E0-4E76-9862-C21562404F43}.Debug|Win32.ActiveCfg = Debug|Win32
+		{70949A31-E2E0-4E76-9862-C21562404F43}.Debug|Win32.Build.0 = Debug|Win32
+		{70949A31-E2E0-4E76-9862-C21562404F43}.Release|Win32.ActiveCfg = Release|Win32
+		{70949A31-E2E0-4E76-9862-C21562404F43}.Release|Win32.Build.0 = Release|Win32
+		{2ADB44C6-5874-41DC-BF02-8F1C6087B4E1}.Debug|Win32.ActiveCfg = Debug|Win32
+		{2ADB44C6-5874-41DC-BF02-8F1C6087B4E1}.Debug|Win32.Build.0 = Debug|Win32
+		{2ADB44C6-5874-41DC-BF02-8F1C6087B4E1}.Release|Win32.ActiveCfg = Release|Win32
+		{2ADB44C6-5874-41DC-BF02-8F1C6087B4E1}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
