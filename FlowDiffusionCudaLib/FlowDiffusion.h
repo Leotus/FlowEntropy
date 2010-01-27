@@ -46,6 +46,16 @@
 
 extern "C" {
 
+// ADD-BY-LEETEN 01/27/2010-BEGIN
+void
+_ComputeSrcEntropyVolume
+(
+	int iNrOfBins,
+	int iKernelWidth, int iKernelHeight, int iKernelDepth,
+	float *pfEntropyVolume_host = NULL
+);
+// ADD-BY-LEETEN 01/27/2010-END
+
 // ADD-BY-LEETEN 12/14/2009-BEGIN
 void 
 _FlowDiffusionSetAngleMap(int *piAngleMap, int iNrOfPhis, int iNrOfThetas);
@@ -139,6 +149,11 @@ void _FlowDiffusionFree();
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.4  2010/01/25 15:21:33  leeten
+
+[01/25/2010]
+1. [ADD] If the preprocessor __DEVICE_EMULATION__ is defined, link the cudpp32d_emu.lib.
+
 Revision 1.3  2009/12/17 20:22:12  leeten
 
 [12/17/2009]
