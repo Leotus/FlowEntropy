@@ -167,6 +167,158 @@
 				Name="VCPostBuildEventTool"
 			/>
 		</Configuration>
+		<Configuration
+			Name="EmuDebug|Win32"
+			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
+			IntermediateDirectory="$(ConfigurationName)"
+			ConfigurationType="1"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="0"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;__DEVICE_EMULATION__"
+				MinimalRebuild="true"
+				BasicRuntimeChecks="3"
+				RuntimeLibrary="3"
+				UsePrecompiledHeader="0"
+				WarningLevel="3"
+				Detect64BitPortabilityProblems="true"
+				DebugInformationFormat="4"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="libclip.lib libopt.lib libshader.lib libdvr2.lib libtfw.lib libgw.lib lib3ds-120d.lib"
+				LinkIncremental="2"
+				GenerateDebugInformation="true"
+				SubSystem="1"
+				TargetMachine="1"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCWebDeploymentTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
+		<Configuration
+			Name="EmuRelease|Win32"
+			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
+			IntermediateDirectory="$(ConfigurationName)"
+			ConfigurationType="1"
+			CharacterSet="1"
+			WholeProgramOptimization="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;__DEVICE_EMULATION__"
+				RuntimeLibrary="2"
+				UsePrecompiledHeader="0"
+				WarningLevel="3"
+				Detect64BitPortabilityProblems="true"
+				DebugInformationFormat="3"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="libclip.lib libopt.lib libshader.lib libdvr2.lib libtfw.lib libgw.lib lib3ds-120d.lib"
+				LinkIncremental="1"
+				GenerateDebugInformation="true"
+				SubSystem="1"
+				OptimizeReferences="2"
+				EnableCOMDATFolding="2"
+				TargetMachine="1"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCWebDeploymentTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
 	</Configurations>
 	<References>
 	</References>
@@ -234,6 +386,24 @@
 					Outputs="$(InputFileName).h"
 				/>
 			</FileConfiguration>
+			<FileConfiguration
+				Name="EmuDebug|Win32"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+					CommandLine="shader2string $(InputFileName) $(InputFileName).h&#x0D;&#x0A;"
+					Outputs="$(InputFileName).h"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="EmuRelease|Win32"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+					CommandLine="shader2string $(InputFileName) $(InputFileName).h&#x0D;&#x0A;"
+					Outputs="$(InputFileName).h"
+				/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath=".\importance_filling.frag"
@@ -256,6 +426,24 @@
 					Outputs="$(InputFileName).h"
 				/>
 			</FileConfiguration>
+			<FileConfiguration
+				Name="EmuDebug|Win32"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+					CommandLine="shader2string $(InputFileName) $(InputFileName).h&#x0D;&#x0A;"
+					Outputs="$(InputFileName).h"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="EmuRelease|Win32"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+					CommandLine="shader2string $(InputFileName) $(InputFileName).h&#x0D;&#x0A;"
+					Outputs="$(InputFileName).h"
+				/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath=".\line_drawing.geom"
@@ -265,7 +453,7 @@
 				>
 				<Tool
 					Name="VCCustomBuildTool"
-					CommandLine="shader2string $(InputFileName) $(InputFileName).h"
+					CommandLine="shader2string $(InputFileName) $(InputFileName).h&#x0D;&#x0A;"
 					Outputs="$(InputFileName).h"
 				/>
 			</FileConfiguration>
@@ -274,7 +462,25 @@
 				>
 				<Tool
 					Name="VCCustomBuildTool"
-					CommandLine="shader2string $(InputFileName) $(InputFileName).h"
+					CommandLine="shader2string $(InputFileName) $(InputFileName).h&#x0D;&#x0A;"
+					Outputs="$(InputFileName).h"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="EmuDebug|Win32"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+					CommandLine="shader2string $(InputFileName) $(InputFileName).h&#x0D;&#x0A;"
+					Outputs="$(InputFileName).h"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="EmuRelease|Win32"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+					CommandLine="shader2string $(InputFileName) $(InputFileName).h&#x0D;&#x0A;"
 					Outputs="$(InputFileName).h"
 				/>
 			</FileConfiguration>
@@ -293,6 +499,24 @@
 			</FileConfiguration>
 			<FileConfiguration
 				Name="Release|Win32"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+					CommandLine="shader2string $(InputFileName) $(InputFileName).h&#x0D;&#x0A;"
+					Outputs="$(InputFileName).h"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="EmuDebug|Win32"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+					CommandLine="shader2string $(InputFileName) $(InputFileName).h&#x0D;&#x0A;"
+					Outputs="$(InputFileName) $(InputFileName).h"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="EmuRelease|Win32"
 				>
 				<Tool
 					Name="VCCustomBuildTool"
@@ -322,6 +546,24 @@
 					Outputs="$(InputFileName).h"
 				/>
 			</FileConfiguration>
+			<FileConfiguration
+				Name="EmuDebug|Win32"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+					CommandLine="shader2string $(InputFileName) $(InputFileName).h&#x0D;&#x0A;"
+					Outputs="$(InputFileName).h"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="EmuRelease|Win32"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+					CommandLine="shader2string $(InputFileName) $(InputFileName).h&#x0D;&#x0A;"
+					Outputs="$(InputFileName).h"
+				/>
+			</FileConfiguration>
 		</File>
 		<File
 			RelativePath=".\SortSlab_cuda.cu"
@@ -337,6 +579,24 @@
 			</FileConfiguration>
 			<FileConfiguration
 				Name="Release|Win32"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+					CommandLine="&quot;$(CUDA_BIN_PATH)\nvcc.exe&quot; -ccbin &quot;$(VCInstallDir)bin&quot; -c -arch sm_11 -D_DEBUG -DWIN32 -D_CONSOLE -D_MBCS -Xcompiler /EHsc,/W3,/nologo,/Wp64,/O2,/Zi,/MD -o $(ConfigurationName)\$(InputName).obj $(InputPath)&#x0D;&#x0A;"
+					Outputs="$(ConfigurationName)\$(InputName).obj"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="EmuDebug|Win32"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+					CommandLine="&quot;$(CUDA_BIN_PATH)\nvcc.exe&quot; -keep -ccbin &quot;$(VCInstallDir)bin&quot; -c -arch sm_12 -D_DEBUG -DWIN32 -D_CONSOLE -D_MBCS -Xcompiler /EHsc,/W3,/nologo,/Wp64,/Od,/Zi,/RTC1,/MDd -o $(ConfigurationName)\$(InputName).obj $(InputPath)&#x0D;&#x0A;"
+					Outputs="$(ConfigurationName)\$(InputName).obj"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="EmuRelease|Win32"
 				>
 				<Tool
 					Name="VCCustomBuildTool"
