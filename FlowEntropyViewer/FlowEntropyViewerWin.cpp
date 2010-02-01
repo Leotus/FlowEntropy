@@ -699,6 +699,11 @@ CFlowEntropyViewerWin::_EndDisplay()
 {
 	glUseProgramObjectARB(0);
 
+	// ADD-BY-LEETEN 01/30/2010-BEGIN
+	if( 0 != cSphericalHistogram.ibIsEnabled )
+		cSphericalHistogram._DrawHistogrm();
+	// ADD-BY-LEETEN 01/30/2010-END
+
 	/////////////////////////////////////////
 	glPopMatrix();
 }
@@ -732,6 +737,8 @@ CFlowEntropyViewerWin::_InitFunc()
 	// ADD-BY-LEETEN 01/10/2010-BEGIN
 	_KeepUpdateOn();
 	// ADD-BY-LEETEN 01/10/2010-END
+
+	_DisplayFpsOn();	// TEST-ADD
 
 	// ADD-BY-LEETEN 01/05/2010-BEGIN
 	CClipVolume::_InitFunc();
@@ -863,9 +870,16 @@ CFlowEntropyViewerWin::_InitFunc()
 	GLUI_Panel *pcPanel_RenderMode = PCGetGluiWin()->add_rollout("Render Mode");
 	// MOD-BY-LEETEN 01/10/2010-END
 	GLUI_RadioGroup *pcRadioGroup_RenderMode = PCGetGluiWin()->add_radiogroup_to_panel(pcPanel_RenderMode, &iRenderMode);
+	// ADD-BY-LEETEN 01/30/2010-BEGIN
+	PCGetGluiWin()->add_radiobutton_to_group(pcRadioGroup_RenderMode, "None");
+	// ADD-BY-LEETEN 01/30/2010-END
 	PCGetGluiWin()->add_radiobutton_to_group(pcRadioGroup_RenderMode, "Entropy Field");
 	PCGetGluiWin()->add_radiobutton_to_group(pcRadioGroup_RenderMode, "Streamlines w/ Importance Culling");
 	PCGetGluiWin()->add_radiobutton_to_group(pcRadioGroup_RenderMode, "Streamlines in Slabs");
+
+	// ADD-BY-LEETEN 01/30/2010-BEGIN
+	cSphericalHistogram._AddGlui(PCGetGluiWin(), NULL);
+	// ADD-BY-LEETEN 01/30/2010-END
 
 	// ADD-BY-LEETEN 01/01/2010-BEGIN
 		// MOD-BY-LEETEN 01/10/2010-FROM:
@@ -982,6 +996,16 @@ CFlowEntropyViewerWin::~CFlowEntropyViewerWin(void)
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.9  2010/01/12 23:56:15  leeten
+
+[01/12/2010]
+1. [ADD] Incldue the header 'liblog.h'
+2. [ADD] Define a function UReadIsosurface() to load the isosurfaces as the basins in the IEEE Vis'06 Design contest benchmark.
+3. [ADD] Define a function _LoadData to load the data for builtin datasets.
+4. [MOD] Flipe the Z axis s.t the coordinate becomes right hand coordinate.
+5. [ADD] Enable depth test when rendering the backfground, and then disable the depth mask so the depth won't be changed.
+6. [MOD] Add the geometry shader 'lkine_drawing.geom' to the shader program pidImportanceCulling.
+
 Revision 1.8  2010/01/11 19:16:39  leeten
 
 [01/10/2010]
