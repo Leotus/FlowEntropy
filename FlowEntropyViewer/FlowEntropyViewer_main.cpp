@@ -42,6 +42,10 @@
 
 	TBuffer3D<float> pf3DEntropyField;
 
+	// ADD-BY-LEETEN 01/30/2010-BEGIN
+	TBuffer3D<float>	p3df3VectorField;
+	// ADD-BY-LEETEN 01/30/2010-END
+
 void
 _ReadEntropyField(char *szEntropyFieldFilename)
 {
@@ -105,6 +109,24 @@ _ReadStreamlines(char *szEntropyFieldFilename)
 	fread(&pf3DEntropyField[0],			sizeof(pf3DEntropyField[0]),	pf3DEntropyField.iWidth * pf3DEntropyField.iHeight * pf3DEntropyField.iDepth, fpFile);
 	fclose(fpFile);
 }
+
+// ADD-BY-LEETEN 01/30/2010-BEGIN
+void
+_ReadVectorField(char *szVectorFieldFilename)
+{
+	FILE *fpFile;
+	fpFile = fopen(szVectorFieldFilename, "rb");
+	assert(fpFile);
+
+	fread(&p3df3VectorField.iWidth,	sizeof(p3df3VectorField.iWidth),	1, fpFile);
+	fread(&p3df3VectorField.iHeight,	sizeof(p3df3VectorField.iHeight),	1, fpFile);
+	fread(&p3df3VectorField.iDepth,	sizeof(p3df3VectorField.iDepth),	1, fpFile);
+	p3df3VectorField.alloc(3 * p3df3VectorField.iWidth * p3df3VectorField.iHeight * p3df3VectorField.iDepth);
+	assert( p3df3VectorField.BIsAllocated() );
+	fread(&p3df3VectorField[0],		sizeof(p3df3VectorField[0]),		p3df3VectorField.USize(), fpFile);
+	fclose(fpFile);
+}
+// ADD-BY-LEETEN 01/30/2010-END
 
 void
 _UpdateTf()
@@ -171,6 +193,13 @@ main(int argn, char* argv[])
 		"earthquake",	CFlowEntropyViewerWin::DATA_NAME_EARTHQUAKE);
 	// ADD-BY-LEETEN 01/12/2010-END
 
+	// ADD-BY-LEETEN 01/30/2010-BEGIN
+	char *szVectorFieldFilename;
+	_OPTAddStringVector(
+		"--vector-field-filename", 1,
+		&szVectorFieldFilename, NULL);
+	// ADD-BY-LEETEN 01/30/2010-END
+
 						// specify the .gtc file
 	char *szEntropyFieldFilename;
 	_OPTAddStringVector(
@@ -198,6 +227,16 @@ main(int argn, char* argv[])
 		// ADD-BY-LEETEN 01/12/2010-BEGIN
 		cFlowEntropyViewerWin._LoadData(iDataName);
 		// ADD-BY-LEETEN 01/12/2010-END
+
+		// ADD-BY-LEETEN 01/30/2010-BEGIN
+		assert( szVectorFieldFilename );
+		_ReadVectorField(szVectorFieldFilename);
+		cFlowEntropyViewerWin.cSphericalHistogram._ComputeHistogram(
+			p3df3VectorField.iWidth,
+			p3df3VectorField.iHeight,
+			p3df3VectorField.iDepth,
+			&p3df3VectorField[0]);
+		// ADD-BY-LEETEN 01/30/2010-END
 
 		////////////////////////////////////////////////////////
 		// initialize the transfer func.
@@ -265,6 +304,11 @@ main(int argn, char* argv[])
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.6  2010/01/12 23:57:13  leeten
+
+[01/12/2010]
+1. [ADD] Add a new switch '--data-name  <string>' to load the builtin dataset.
+
 Revision 1.5  2010/01/09 22:24:33  leeten
 
 [01/09/2010]
