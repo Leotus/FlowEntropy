@@ -188,11 +188,21 @@ _Vector3DToBinVolume_kernel
 			f4Vector.x /= fLength;
 			f4Vector.y /= fLength;
 			f4Vector.z /= fLength;
-			fTheta = ( 0.0f == f4Vector.x && 0.0f == f4Vector.y )?0.0f:(float(M_PI)+(atan2(f4Vector.y, f4Vector.x)));
+			// MOD-BY-LEETEN 01/30/2010-FROM:
+				// fTheta = ( 0.0f == f4Vector.x && 0.0f == f4Vector.y )?0.0f:(float(M_PI)+(atan2(f4Vector.y, f4Vector.x)));
+			// TO:
+			fTheta = ( 0.0f == f4Vector.x && 0.0f == f4Vector.y )?0.0f:atan2(	f4Vector.y, f4Vector.x);
+			fTheta += float(M_PI);	// normalize the range to [0, 2 * PI]
+			// MOD-BY-LEETEN 01/30/2010-END
 			fTheta /= 2.0f * float(M_PI);
 
 			float fLength2D = sqrt(f4Vector.x * f4Vector.x + f4Vector.y * f4Vector.y);
-			fPhi = ((0.0f == fLength2D)&&(0.0f == f4Vector.z))?0.0f:fabs(float(M_PI)/2.0f-(atan2(f4Vector.z, fLength2D)));
+			// MOD-BY-LEETEN 01/30/2010-FROM:
+				// fPhi = ((0.0f == fLength2D)&&(0.0f == f4Vector.z))?0.0f:fabs(float(M_PI)/2.0f-(atan2(f4Vector.z, fLength2D)));
+			// TO:
+			fPhi = (0.0f == fLength2D)?0.0f:atan2(f4Vector.z, fLength2D);
+			fPhi = float(M_PI)/2.0f - fPhi;	// normalize the range to [0, PI]
+			// MOD-BY-LEETEN 01/30/2010-END
 			fPhi /= float(M_PI);
 			iBin = tex2D(t2dAngleMap, fPhi, fTheta);
 		}
@@ -211,6 +221,11 @@ _Vector3DToBinVolume_kernel
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.3  2009/12/27 19:10:42  leeten
+
+[12/27/2009]
+1. [DEL] Move the kernels into different files.
+
 Revision 1.2  2009/12/20 03:21:45  leeten
 
 [12/19/2009]
