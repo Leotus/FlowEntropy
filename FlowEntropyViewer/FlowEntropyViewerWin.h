@@ -22,6 +22,7 @@ struct CFlowEntropyViewerWin :
 	// MOD-BY-LEETEN 01/05/2010-END
 {
 	enum {
+		RENDER_MODE_NONE,	// ADD-BY-LEETEN 01/30/2010
 		RENDER_MODE_ENTROPY_FIELD,
 		RENDER_MODE_STREAMLINES_IMPORTANCE_CULLING,
 		RENDER_MODE_STREAMLINES_IN_SLABS,
@@ -171,6 +172,49 @@ struct CFlowEntropyViewerWin :
 	// ADD-BY-LEETEN 01/01/2010-END
 
 public:
+
+	// ADD-BY-LEETEN 01/30/2010-BEGIN
+	struct CSphericalHistogram
+	{
+		int ibIsEnabled;
+		float fOpacity;
+		float fMaxRadius;
+
+		enum {
+			NR_OF_THETAS	= 720,
+			NR_OF_PHIS		= 360,
+		};
+
+		GLuint pidHistogram;	// handle to the shaders to render the histogram
+
+		int iNrOfBins;
+		TBuffer<float> pfHistogram;
+		float fMaxCount;
+		TBuffer<float2> pf2Thetas;
+		TBuffer<float2> pf2Phis;
+		TBuffer<float4> pf4BinCartCoords;
+		TBuffer<float>	pfBinCounters;
+		int	ppiAngleMap[NR_OF_THETAS][NR_OF_PHIS];
+
+		GLuint vidPatches;
+
+		TBuffer<int>	piTriangleIndices;
+		GLuint vidTriangleIndices;
+
+		void _AddGlui(GLUI* pcGlui, GLUI_Panel	*pcPanel_Parent);
+		void _ReadPatches();
+		void _ComputeHistogram
+		(
+			int iWidth, 
+			int iHeight, 
+			int iDepth, 
+			float pfVectorField[]
+		);
+		void _DrawHistogrm();
+		CSphericalHistogram();
+	} cSphericalHistogram;
+	// ADD-BY-LEETEN 01/30/2010-END
+
 	// ADD-BY-LEETEN 01/12/2010-BEGIN
 	void _LoadData(int iDataName);
 	// ADD-BY-LEETEN 01/12/2010-END
@@ -208,6 +252,13 @@ public:
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.8  2010/01/12 23:44:51  leeten
+
+[01/12/2010]
+1. [MOD] Change the type of CFlowEntropyViewerWin from class to struct.
+2. [ADD] Define enum for built-in datasets (DATA_NAME_NONE, DATA_NAME_ISABEL and DATA_NAME_EARTHQUAKE) and a new union for the builltin datasets.
+3. [ADD] Declare a new metthod _LoadData to lad the builtin dataset.
+
 Revision 1.7  2010/01/11 19:18:00  leeten
 
 [01/10/2010]
