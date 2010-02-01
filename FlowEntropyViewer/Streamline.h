@@ -27,6 +27,10 @@ struct CStreamline
 	unsigned int uNrOfLines;
 	TBuffer<float> pfCoords;
 
+	// ADD-BY-LEETEN 01/30/2010-BEGIN
+	GLuint vidLines;	// vbo for the lines
+	// ADD-BY-LEETEN 01/30/2010-END
+
 	// ADD-BY-LEETEN 01/02/2010-BEGIN
 	unsigned int uSamplingRate;
 	// ADD-BY-LEETEN 01/02/2010-END
@@ -158,6 +162,11 @@ public:
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.7  2010/01/19 21:12:37  leeten
+
+[01/19/2010]
+1. [MOD] Extend the 2nd texture cooridnate from scalars to 4-tuple vectors.
+
 Revision 1.6  2010/01/12 23:42:59  leeten
 
 [01/12/2010]
