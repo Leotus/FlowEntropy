@@ -40,6 +40,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
+				AdditionalIncludeDirectories=".."
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -116,6 +117,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				AdditionalIncludeDirectories=".."
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS"
 				RuntimeLibrary="2"
 				UsePrecompiledHeader="0"
@@ -192,6 +194,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
+				AdditionalIncludeDirectories=".."
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;__DEVICE_EMULATION__"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -268,6 +271,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				AdditionalIncludeDirectories=".."
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;__DEVICE_EMULATION__"
 				RuntimeLibrary="2"
 				UsePrecompiledHeader="0"
@@ -334,6 +338,10 @@
 			</File>
 			<File
 				RelativePath=".\FlowEntropyViewerWin.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\FlowEntropyWin_SphericalHistogram.cpp"
 				>
 			</File>
 			<File
@@ -602,6 +610,86 @@
 					Name="VCCustomBuildTool"
 					CommandLine="&quot;$(CUDA_BIN_PATH)\nvcc.exe&quot; -ccbin &quot;$(VCInstallDir)bin&quot; -c -arch sm_11 -D_DEBUG -DWIN32 -D_CONSOLE -D_MBCS -Xcompiler /EHsc,/W3,/nologo,/Wp64,/O2,/Zi,/MD -o $(ConfigurationName)\$(InputName).obj $(InputPath)&#x0D;&#x0A;"
 					Outputs="$(ConfigurationName)\$(InputName).obj"
+				/>
+			</FileConfiguration>
+		</File>
+		<File
+			RelativePath=".\spherical_histogram.geom"
+			>
+			<FileConfiguration
+				Name="Debug|Win32"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+					CommandLine="shader2string $(InputFileName) $(InputFileName).h"
+					Outputs="$(InputFileName).h"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Release|Win32"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+					CommandLine="shader2string $(InputFileName) $(InputFileName).h"
+					Outputs="$(InputFileName).h"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="EmuDebug|Win32"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+					CommandLine="shader2string $(InputFileName) $(InputFileName).h"
+					Outputs="$(InputFileName).h"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="EmuRelease|Win32"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+					CommandLine="shader2string $(InputFileName) $(InputFileName).h"
+					Outputs="$(InputFileName).h"
+				/>
+			</FileConfiguration>
+		</File>
+		<File
+			RelativePath=".\spherical_histogram.vert"
+			>
+			<FileConfiguration
+				Name="Debug|Win32"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+					CommandLine="shader2string $(InputFileName) $(InputFileName).h&#x0D;&#x0A;"
+					Outputs="$(InputFileName).h"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Release|Win32"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+					CommandLine="shader2string $(InputFileName) $(InputFileName).h&#x0D;&#x0A;"
+					Outputs="$(InputFileName).h"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="EmuDebug|Win32"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+					CommandLine="shader2string $(InputFileName) $(InputFileName).h&#x0D;&#x0A;"
+					Outputs="$(InputFileName).h"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="EmuRelease|Win32"
+				>
+				<Tool
+					Name="VCCustomBuildTool"
+					CommandLine="shader2string $(InputFileName) $(InputFileName).h&#x0D;&#x0A;"
+					Outputs="$(InputFileName).h"
 				/>
 			</FileConfiguration>
 		</File>
