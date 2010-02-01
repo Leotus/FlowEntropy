@@ -6,6 +6,9 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FlowDiffusionCudaLib", "..\FlowDiffusionCudaLib\FlowDiffusionCudaLib.vcproj", "{17C8E013-3B43-44A0-A16F-62B2A3DA2D10}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FlowEntropyViewer", "..\FlowEntropyViewer\FlowEntropyViewer.vcproj", "{DEBD94C4-3599-432A-8207-3096C2C5E8C9}"
+	ProjectSection(ProjectDependencies) = postProject
+		{17C8E013-3B43-44A0-A16F-62B2A3DA2D10} = {17C8E013-3B43-44A0-A16F-62B2A3DA2D10}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "myinterface2D", "..\entropy_2D\myinterface2D\myinterface2D.vcproj", "{70949A31-E2E0-4E76-9862-C21562404F43}"
 EndProject
