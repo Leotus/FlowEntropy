@@ -9,6 +9,8 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
+#include "cuda_macro.h"	// TEST-ADD
+
 #include "Streamline.h"
 
 #include "SortSlab_cuda.h"
@@ -94,20 +96,32 @@ CStreamline::_SortSlab(
 	}
 
 	// sort the centroids according to their depth
-	#if	0	// TEST-DEBUG
+	// MOD-BY-LEETEN 01/30/2010-FROM:
+		// #if	0	// TEST-DEBUG
+	// TO:
+	#ifdef __DEVICE_EMULATION__
+	// MOD-BY-LEETEN 01/30/2010-END
 	for(int l = 0; l < int(uNrOfLines); l++)
 	{
 		double pdCentroid_win[3];
 		double pdCentroid_eye[3];
-		gluProject(
-			pfLineCentroids[l * 3 + 0], pfLineCentroids[l * 3 + 1], pfLineCentroids[l * 3 + 2], 
-			pdModelViewMatrix, pdProjectionMatrix, piViewport, 
-			&pdCentroid_win[0], &pdCentroid_win[1], &pdCentroid_win[2]);
-		gluUnProject(
-			pdCentroid_win[0], pdCentroid_win[1], pdCentroid_win[2], 
-			pdIdentityMatrix, pdProjectionMatrix, piViewport, 
-			&pdCentroid_eye[0], &pdCentroid_eye[1], &pdCentroid_eye[2]);
-		double dDepth = pdCentroid_eye[2];
+		#if	0	// MOD-BY-LEETEN 01/30/2010-FROM:
+			gluProject(
+				pfLineCentroids[l * 3 + 0], pfLineCentroids[l * 3 + 1], pfLineCentroids[l * 3 + 2], 
+				pdModelViewMatrix, pdProjectionMatrix, piViewport, 
+				&pdCentroid_win[0], &pdCentroid_win[1], &pdCentroid_win[2]);
+			gluUnProject(
+				pdCentroid_win[0], pdCentroid_win[1], pdCentroid_win[2], 
+				pdIdentityMatrix, pdProjectionMatrix, piViewport, 
+				&pdCentroid_eye[0], &pdCentroid_eye[1], &pdCentroid_eye[2]);
+			double dDepth = pdCentroid_eye[2];
+		#else	// MOD-BY-LEETEN 01/30/2010-TO:
+		double dDepth = 
+			pdModelViewMatrix[2]	* pfLineCentroids[l * 3 + 0] + 
+			pdModelViewMatrix[6]	* pfLineCentroids[l * 3 + 1] + 
+			pdModelViewMatrix[10]	* pfLineCentroids[l * 3 + 2] + 
+			pdModelViewMatrix[14]; 
+		#endif	// MOD-BY-LEETEN 01/30/2010-END
 
 		int iSlab = int(double(iNrOfSlabs) *  (dDepth - dMinZ) / (dMaxZ - dMinZ));
 		iSlab = min(max(iSlab, 0), iNrOfSlabs - 1);
@@ -118,7 +132,11 @@ CStreamline::_SortSlab(
 
 	// sort the indices by the slab indices
 	qsort(&pi2Slabs[0], uNrOfLines, sizeof(pi2Slabs[0]), ISortSlab);
-	#else
+	// MOD-BY-LEETEN 01/30/2010-FROM:
+		// #else
+	// TO:
+	#else	// #ifdef __DEVICE_EMULATION__
+	// MOD-BY-LEETEN 01/30/2010-END
 	_ComputeDepth_cuda
 	(
 		iNrOfSlabs,
@@ -131,7 +149,11 @@ CStreamline::_SortSlab(
 		int(uNrOfLines),
 		&pi2Slabs[0]
 	);
-	#endif
+	// MOD-BY-LEETEN 01/30/2010-FROM:
+		// #endif
+	// TO:
+	#endif	// #ifdef __DEVICE_EMULATION__
+	// MOD-BY-LEETEN 01/30/2010-END
 
 	// reorganize the vertices indices
 	// MOD-BY-LEETEN 01/02/2010-FROM:
@@ -366,23 +388,49 @@ CStreamline::_Read(float fScaleX, float fScaleY, float fScaleZ, char *szStreamli
 	}
 
 	#if	RENDER_STREAMLINE_AS_LINES
-	glVertexPointer(3, GL_FLOAT, 0, &pfCoords[0]);
-	// ADD-BY-LEETEN 12/31/2009-BEGIN
-	glNormalPointer(GL_FLOAT, 0,	&pfTangent[0]);
-	// ADD-BY-LEETEN 12/31/2009-END
+	#if	0	// MOD-BY-LEETEN 01/30/2010-FROM:
+		glVertexPointer(3, GL_FLOAT, 0, &pfCoords[0]);
+		// ADD-BY-LEETEN 12/31/2009-BEGIN
+		glNormalPointer(GL_FLOAT, 0,	&pfTangent[0]);
+		// ADD-BY-LEETEN 12/31/2009-END
 
-	// ADD-BY-LEETEN 01/10/2010-BEGIN
-						// bind the vertex indices to GL_TEXTURE0
-	glClientActiveTexture(GL_TEXTURE0 + 1);
-	// MOD-BY-LEETEN 01/19/2010-FROM:
-		// glTexCoordPointer(1, GL_INT, 0, &piVertexIndicesInStreamline[0]);
-	// TO:
-	glTexCoordPointer(4, GL_INT, 0, &pi4VertexIndicesInStreamline[0]);
-	// MOD-BY-LEETEN 01/19/2010-END
+		// ADD-BY-LEETEN 01/10/2010-BEGIN
+							// bind the vertex indices to GL_TEXTURE0
+		glClientActiveTexture(GL_TEXTURE0 + 1);
+		// MOD-BY-LEETEN 01/19/2010-FROM:
+			// glTexCoordPointer(1, GL_INT, 0, &piVertexIndicesInStreamline[0]);
+		// TO:
+		glTexCoordPointer(4, GL_INT, 0, &pi4VertexIndicesInStreamline[0]);
+		// MOD-BY-LEETEN 01/19/2010-END
 
-						// reset the default texture unit
-	glClientActiveTexture(GL_TEXTURE0);
-	// ADD-BY-LEETEN 01/10/2010-END
+							// reset the default texture unit
+		glClientActiveTexture(GL_TEXTURE0);
+		// ADD-BY-LEETEN 01/10/2010-END
+	#else	// MOD-BY-LEETEN 01/30/2010-TO:
+	glGenBuffers(1, &vidLines);
+	glBindBufferARB(GL_ARRAY_BUFFER, vidLines);
+	glBufferDataARB(
+		GL_ARRAY_BUFFER, 
+		sizeof(pfCoords[0]) * pfCoords.USize() + 
+			sizeof(pfTangent[0]) * pfTangent.USize() + 
+			sizeof(pi4VertexIndicesInStreamline[0]) * pi4VertexIndicesInStreamline.USize(), 
+		NULL, 
+		GL_STATIC_DRAW_ARB);
+	glBufferSubData(GL_ARRAY_BUFFER, 
+		0, 
+		sizeof(pfCoords[0]) * pfCoords.USize(), 
+		&pfCoords[0]);
+	glBufferSubData(GL_ARRAY_BUFFER, 
+		sizeof(pfCoords[0]) * pfCoords.USize(), 
+		sizeof(pfTangent[0]) * pfTangent.USize(), 
+		&pfTangent[0]);
+	glBufferSubData(GL_ARRAY_BUFFER, 
+		sizeof(pfCoords[0]) * pfCoords.USize() + sizeof(pfTangent[0]) * pfTangent.USize(), 
+		sizeof(pi4VertexIndicesInStreamline[0]) * pi4VertexIndicesInStreamline.USize(), 
+		&pi4VertexIndicesInStreamline[0]);
+
+	glBindBufferARB(GL_ARRAY_BUFFER, 0);
+	#endif	// MOD-BY-LEETEN 01/30/2010-END
 
 	#endif
 
@@ -757,17 +805,32 @@ CStreamline::_RenderLinesInSlab
 	glPushAttrib(GL_DEPTH_BUFFER_BIT);
 	// ADD-BY-LEETEN 01/10/2010-BEGIN
 	glPushClientAttrib(GL_CLIENT_VERTEX_ARRAY_BIT);
-	// ADD-BY-LEETEN 01/10/2010-END
+
+	#if	0	// MOD-BY-LEETEN 01/30/2010-FROM:
+		// ADD-BY-LEETEN 01/10/2010-END
+		glEnableClientState(GL_VERTEX_ARRAY);
+		// ADD-BY-LEETEN 12/31/2009-BEGIN
+		glEnableClientState(GL_NORMAL_ARRAY);
+
+		// ADD-BY-LEETEN 01/10/2010-BEGIN
+							// bind the vertex indices to GL_TEXTURE0
+		glClientActiveTexture(GL_TEXTURE0 + 1);
+		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+		// ADD-BY-LEETEN 01/10/2010-END
+		// ADD-BY-LEETEN 12/31/2009-END
+	#else	// MOD-BY-LEETEN 01/30/2010-TO:
+	glBindBuffer(GL_ARRAY_BUFFER, vidLines);
+
+	glVertexPointer(3, GL_FLOAT, 0, (void*)0);	// &pfCoords[0]);
 	glEnableClientState(GL_VERTEX_ARRAY);
-	// ADD-BY-LEETEN 12/31/2009-BEGIN
+
+	glNormalPointer(GL_FLOAT, 0,	(void*)(pfCoords.USize() * sizeof(pfCoords[0])));
 	glEnableClientState(GL_NORMAL_ARRAY);
 
-	// ADD-BY-LEETEN 01/10/2010-BEGIN
-						// bind the vertex indices to GL_TEXTURE0
 	glClientActiveTexture(GL_TEXTURE0 + 1);
+	glTexCoordPointer(4, GL_INT, 0, (void*)(pfCoords.USize() * sizeof(pfCoords[0]) + pfTangent.USize() * sizeof(pfTangent[0])));
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-	// ADD-BY-LEETEN 01/10/2010-END
-	// ADD-BY-LEETEN 12/31/2009-END
+	#endif	// MOD-BY-LEETEN 01/30/2010-END
 
 	if( bDrawHalo )
 	{
@@ -807,6 +870,10 @@ CStreamline::_RenderLinesInSlab
 	// ADD-BY-LEETEN 01/01/2010-BEGIN
 	}
 	// ADD-BY-LEETEN 01/01/2010-END
+
+	// ADD-BY-LEETEN 01/30/2010-BEGIN
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	// ADD-BY-LEETEN 01/30/2010-END
 
 	#if	0	// MOD-BY-LEETEN 01/10/2010-FROM:
 		glDisableClientState(GL_VERTEX_ARRAY);
@@ -852,7 +919,7 @@ CStreamline::_RenderLines()
 		1.0f);
 	glDrawElements(
 		GL_LINES, 
-		pu2LineSegmentIndicesToVertices.USize()/128, // TEST pu2LineSegmentIndicesToVertices.USize(), 
+		pu2LineSegmentIndicesToVertices.USize(), 
 		GL_UNSIGNED_INT, 
 		&pu2LineSegmentIndicesToVertices[0]);
 
@@ -914,6 +981,11 @@ CStreamline::_RenderTubes()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.7  2010/01/19 21:12:13  leeten
+
+[01/19/2010]
+1. [MOD] Extend the 2nd texture cooridnate from scalars to 4-tuple vectors and setup the t component in the 2nd texture coordinate to specify the streamline index.
+
 Revision 1.6  2010/01/12 23:51:12  leeten
 
 [01/12/2010]
