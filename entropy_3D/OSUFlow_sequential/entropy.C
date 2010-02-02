@@ -19,6 +19,10 @@
 #include <vector>
 #include <windows.h>
 
+#include "liblog.h"					// ADD-BY-LEETEN 02/02/2010
+
+#include "FlowDiffusion3DConfig.h"	// ADD-BY-LEETEN 02/02/2010
+
 // ADD-BY-LEETEN 2009/11/10-BEGIN
 //#include "../myinterface/FlowDiffusionCuda.h"
 // ADD-BY-LEETEN 2009/11/10-END
@@ -57,7 +61,11 @@ bool discardredundantstreamlines(float& cur_entropy,float eplison, list<vtListSe
 {
 	
 
-	int* dummy=new int[grid_res[0]*grid_res[1]*grid_res[2]];
+	// MOD-BY-LEETEN 02/02/2010-FROM:
+		// int* dummy=new int[grid_res[0]*grid_res[1]*grid_res[2]];
+	// TO:
+	int* dummy=NULL;
+	// MOD-BY-LEETEN 02/02/2010-END
 	float* tmp_new_vectors=new float[grid_res[0]*grid_res[1]*grid_res[2]*3];
 	memcpy(tmp_new_vectors,new_vectors,sizeof(float)*grid_res[0]*grid_res[1]*grid_res[2]*3);
 	
@@ -114,7 +122,7 @@ bool discardredundantstreamlines(float& cur_entropy,float eplison, list<vtListSe
 	{
 		cur_entropy=entropy;
 		//memcpy(bin_new_vector,new_bin,sizeof(int)*grid_res[0]*grid_res[1]*grid_res[2]);
-		delete [] dummy;
+		// DEL-BY-LEETEN 02/02/2010		delete [] dummy;
 		delete [] tmp_new_vectors;
 		delete [] new_bin;
 		return false;
@@ -123,7 +131,7 @@ bool discardredundantstreamlines(float& cur_entropy,float eplison, list<vtListSe
 	{
 		memcpy(new_vectors,tmp_new_vectors,sizeof(float)*grid_res[0]*grid_res[1]*grid_res[2]*3);
 		delete [] tmp_new_vectors;
-		delete [] dummy;
+		// DEL-BY-LEETEN 02/02/2010		delete [] dummy;
 		delete [] new_bin;
 		return true;
 	}
@@ -303,7 +311,13 @@ void combinehalflines_check_stop_entropy(list<vtListSeedTrace*> lines, list<vtLi
 void calc_entropy( int* bins,int* grid_res, int binnum,float* entropies)
 {
 	int radius[3];
-	radius[0]=radius[1]=8; radius[2]=8;
+	// MOD-BY-LEETEN 02/02/2010-FROM:
+		// radius[0]=radius[1]=8; radius[2]=8;
+	// TO:
+	radius[0]=KERNEL_HALF_WIDTH;
+	radius[1]=KERNEL_HALF_HEIGHT;
+	radius[2]=KERNEL_HALF_DEPTH;
+	// MOD-BY-LEETEN 02/02/2010-END
 	VECTOR3 startpt,endpt;
 	for(int z=0;z<grid_res[2];z++)
 	{
@@ -1211,6 +1225,52 @@ float calcPoint2PointError( float* vectors,float* new_vectors, int* grid_res, VE
 }
 
 */
+
+// ADD-BY-LEETEN 02/02/2010-BEGIN
+
+int 
+get_bin_by_angle(float mytheta, float myphi, int binnum, float* theta, float* phi)
+{
+	for(int i=0; i<binnum;i++)
+	{
+		if( (mytheta>=theta[i*2+0]) && (mytheta<=theta[i*2+1])&&
+			(myphi>=phi[i*2+0]) && (myphi<=phi[i*2+1])
+			)
+		{
+			return i;
+		}
+	}
+	for(int i=0; i<binnum;i++)
+	{
+		if( ((mytheta+2*pi)>=theta[i*2+0]) && ((mytheta+2*pi)<=theta[i*2+1])&&
+			(myphi>=phi[i*2+0]) && (myphi<=phi[i*2+1])
+			)
+		{
+			return i;
+		}
+	}
+	for(int i=0; i<binnum;i++)
+	{
+		if( ((mytheta)>=theta[i*2+0]) && ((mytheta)<=theta[i*2+1])&&
+			((myphi+2*pi)>=phi[i*2+0]) && ((myphi+2*pi)<=phi[i*2+1])
+			)
+		{
+			return i;
+		}
+	}
+	for(int i=0; i<binnum;i++)
+	{
+		if( ((mytheta+2*pi)>=theta[i*2+0]) && ((mytheta+2*pi)<=theta[i*2+1])&&
+			((myphi+2*pi)>=phi[i*2+0]) && ((myphi+2*pi)<=phi[i*2+1])
+			)
+		{
+			return i;
+		}
+	}
+	return -1;
+}
+// ADD-BY-LEETEN 02/02/2010-END
+
 int get_bin_number_3D(VECTOR3 v, float* theta, float* phi,int binnum)
 {
 	float mytheta=getAngle(v.x(), v.y());//0~2pi
@@ -1223,6 +1283,7 @@ int get_bin_number_3D(VECTOR3 v, float* theta, float* phi,int binnum)
 	}
 //	mytheta=4.7113109;
 //myphi=0.00015759557;
+	#if		!BIN_LOOKUP	// ADD-BY-LEETEN 02/02/20101
 	int theta_id,phi_id;
 	for(int i=0; i<binnum;i++)
 	{
@@ -1260,8 +1321,34 @@ int get_bin_number_3D(VECTOR3 v, float* theta, float* phi,int binnum)
 			return i;
 		}
 	}
-
 	return -1;//should not be this, but...
+	// ADD-BY-LEETEN 02/02/2010-BEGIN
+	#else	// #if	!BIN_LOOKUP	
+	static bool bIsAngleMapInitialized = false;
+	static const int iNrOfThetas =	720;
+	static const int iNrOfPhis =	360;
+	static const float fNrOfThetas =	float(iNrOfThetas);
+	static const float fNrOfPhis	=	float(iNrOfPhis);
+	static int	piAngleMap[iNrOfThetas][iNrOfPhis];
+	if( false == bIsAngleMapInitialized )
+	{
+		for(int t = 0; t < iNrOfThetas; t++)
+			for(int p = 0; p < iNrOfPhis; p++)
+			{
+				float fTheta =	M_PI * 2.0f * float(t) / fNrOfThetas;
+				float fPhi =	M_PI * float(p) / fNrOfPhis;
+				int iBin = get_bin_by_angle(fTheta, fPhi, binnum, theta, phi);
+				if( iBin >= 0 )
+					piAngleMap[t][p] = iBin;
+
+			}
+		bIsAngleMapInitialized = true;
+	}
+	int iTheta	=	min(iNrOfThetas - 1,	int(fNrOfThetas	* mytheta	/ (M_PI * 2.0)));
+	int iPhi	=	min(iNrOfPhis - 1,		int(fNrOfPhis	* myphi		/ M_PI));
+	return piAngleMap[iTheta][iPhi];
+	#endif	// #if	!BIN_LOOKUP		
+	// ADD-BY-LEETEN 02/02/2010-END
 }
 float log2(float v)
 {
@@ -2200,12 +2287,29 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 
 */
 
+// ADD-BY-LEETEN 02/02/2010-BEGIN
+
+float* tmp_new_vectors;
+void 
+quit_reconstruct_field_GVF_3D()
+{
+	FREE(tmp_new_vectors);
+}
+// ADD-BY-LEETEN 02/02/2010-END
 
 void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,list<vtListSeedTrace*> l_list,int* donot_change, 
 							  float* kx, float* ky, float* kz,
 							  float* b, float* c1, float* c2, float* c3,
 							  float* importance)
 {
+	// ADD-BY-LEETEN 02/02/2010-BEGIN
+	static bool bIsInitialized = false;
+	if( false == bIsInitialized )
+	{
+		atexit(quit_reconstruct_field_GVF_3D);
+		bIsInitialized = true;
+	}
+	// ADD-BY-LEETEN 02/02/2010-END
 
 	int iter=max(grid_res[0],max(grid_res[1],grid_res[2]))*2;
 
@@ -2247,8 +2351,7 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 			new_vectors[idx*3+0]=kx[idx];
 			new_vectors[idx*3+1]=ky[idx];
 			new_vectors[idx*3+2]=kz[idx];
-			donot_change[idx]=1;
-
+			// DEL-BY-LEETEN 02/02/2010			donot_change[idx]=1;
 			}
 		}
 	}
@@ -2271,7 +2374,11 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 		}
 	}
 	//update the GVF
-	float* tmp_new_vectors=new float[grid_res[0]*grid_res[1]*grid_res[2]*3];
+	// MOD-BY-LEETEN 02/02/2010-FROM:
+		// float* tmp_new_vectors=new float[grid_res[0]*grid_res[1]*grid_res[2]*3];
+	// TO:
+	MALLOC(tmp_new_vectors, float, grid_res[0]*grid_res[1]*grid_res[2]*3);
+	// MOD-BY-LEETEN 02/02/2010-END
 	for(int i=0; i<grid_res[0]*grid_res[1]*grid_res[2]*3;i++)
 		tmp_new_vectors[i]=new_vectors[i];
 
@@ -2279,8 +2386,27 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 	float mu=0.1;
 
 	// ADD-BY-LEETEN 2009/11/23-BEGIN
-	#if	USE_CUDA	
-	_FlowFusion(
+	// MOD-BY-LEETEN 02/02/2010-FROM:
+		// #if	USE_CUDA	
+	// TO:
+	#if	DIFFUSION_ON_GPU
+	// MOD-BY-LEETEN 02/02/2010-END
+	#if	0	// MOD-BY-LEETEN 02/02/2010-FROM:
+		_FlowFusion(
+			mu, 
+			iter, 
+			grid_res[0], grid_res[1], grid_res[2],
+			16,					// iBlockZSize
+			b,					// float *pfWeightVolume,
+			c1,					// float *pfOffsetVolume,
+			c2,					// 
+			c3,					//
+			tmp_new_vectors,	// float *pfSrcVolume,
+			new_vectors,		// float *pfDstVolume
+			donot_change		
+		);
+	#else	// MOD-BY-LEETEN 02/02/2010-TO:
+	_FlowDiffusion(
 		mu, 
 		iter, 
 		grid_res[0], grid_res[1], grid_res[2],
@@ -2293,7 +2419,9 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 		new_vectors,		// float *pfDstVolume
 		donot_change		
 	);
-	#else			
+	#endif	// MOD-BY-LEETEN 02/02/2010-END
+
+	#else	// #if	DIFFUSION_ON_GPU
 	// ADD-BY-LEETEN 2009/11/23-END
 
 	//iteration by iteration
@@ -2303,20 +2431,35 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 		//update the GVF
 //double dwStart = GetTickCount();
 
-		for(int z=1; z<grid_res[2]-1;z++)
-		{
-			for(int y=1; y<grid_res[1]-1;y++)
+		#if	0	// MOD-BY-LEETEN 02/02/2010-FROM:
+			for(int z=1; z<grid_res[2]-1;z++)
 			{
-				for(int x=1; x<grid_res[0]-1;x++)//cut boundary for now
+				for(int y=1; y<grid_res[1]-1;y++)
+				{
+					for(int x=1; x<grid_res[0]-1;x++)//cut boundary for now
+					{
+						int idx=x+y*grid_res[0]+z*grid_res[0]*grid_res[1]; 
+						int idx_1=x+1+y*grid_res[0]+z*grid_res[0]*grid_res[1]; 
+						int idx_2=x+(y+1)*grid_res[0]+z*grid_res[0]*grid_res[1]; 
+						int idx_3=x+y*grid_res[0]+(z+1)*grid_res[0]*grid_res[1]; 
+						int idx_4=x-1+y*grid_res[0]+z*grid_res[0]*grid_res[1]; 
+						int idx_5=x+(y-1)*grid_res[0]+z*grid_res[0]*grid_res[1]; 
+						int idx_6=x+y*grid_res[0]+(z-1)*grid_res[0]*grid_res[1]; 
+		#else	// MOD-BY-LEETEN 02/02/2010-TO:		
+		for(int z=0; z<grid_res[2];z++)
+		{
+			for(int y=0; y<grid_res[1];y++)
+			{
+				for(int x=0; x<grid_res[0];x++)//cut boundary for now
 				{
 					int idx=x+y*grid_res[0]+z*grid_res[0]*grid_res[1]; 
-					int idx_1=x+1+y*grid_res[0]+z*grid_res[0]*grid_res[1]; 
-					int idx_2=x+(y+1)*grid_res[0]+z*grid_res[0]*grid_res[1]; 
-					int idx_3=x+y*grid_res[0]+(z+1)*grid_res[0]*grid_res[1]; 
-					int idx_4=x-1+y*grid_res[0]+z*grid_res[0]*grid_res[1]; 
-					int idx_5=x+(y-1)*grid_res[0]+z*grid_res[0]*grid_res[1]; 
-					int idx_6=x+y*grid_res[0]+(z-1)*grid_res[0]*grid_res[1]; 
-
+					int idx_1=min(x+1, grid_res[0]-1)+y*grid_res[0]+z*grid_res[0]*grid_res[1]; 
+					int idx_2=x+min(y+1, grid_res[1]-1)*grid_res[0]+z*grid_res[0]*grid_res[1]; 
+					int idx_3=x+y*grid_res[0]+min(z+1,grid_res[2]-1)*grid_res[0]*grid_res[1]; 
+					int idx_4=max(x-1, 0)+y*grid_res[0]+z*grid_res[0]*grid_res[1]; 
+					int idx_5=x+max(y-1, 0)*grid_res[0]+z*grid_res[0]*grid_res[1]; 
+					int idx_6=x+y*grid_res[0]+max(z-1, 0)*grid_res[0]*grid_res[1]; 
+		#endif	// MOD-BY-LEETEN 02/02/2010-END
 					tmp_new_vectors[idx*3+0]=	(1-b[idx])*new_vectors[idx*3+0]+
 												mu*(new_vectors[idx_1*3+0]+new_vectors[idx_2*3+0]+new_vectors[idx_3*3+0]+new_vectors[idx_4*3+0]+new_vectors[idx_5*3+0]+new_vectors[idx_6*3+0]
 													-6*new_vectors[idx*3+0])+
@@ -2367,16 +2510,21 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 	}
 
 	// ADD-BY-LEETEN 2009/11/23-BEGIN
-	#endif	
+	#endif	// DIFFUSION_ON_GPU
 	// ADD-BY-LEETEN 2009/11/23-END
 
-	delete [] tmp_new_vectors;
-	
-
+	// DEL-BY-LEETEN 02/02/2010-BEGIN
+		// delete [] tmp_new_vectors;
+	// ADD-BY-LEETEN 02/02/2010-END
 }
 
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.1  2010/01/22 20:53:36  leeten
+
+[01/22/2010]
+1. [1ST] First time checkin.
+
 
 */
