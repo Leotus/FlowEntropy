@@ -179,6 +179,7 @@ public:
 		int ibIsEnabled;
 		float fOpacity;
 		float fMaxRadius;
+		float	fRelativeThreshold;	// ADD-BY-LEETEN 02/01/2010-BEGIN
 
 		enum {
 			NR_OF_THETAS	= 720,
@@ -210,6 +211,16 @@ public:
 			int iDepth, 
 			float pfVectorField[]
 		);
+		// ADD-BY-LEETEN 02/01/2010-BEGIN
+		void _Init();	// create the OpenGL-related data
+
+		void _ComputeHistogramFromStreamlineTangents
+		(
+			int		iNrOfLines, 
+			float	pf3Tangents[]
+		);
+		// ADD-BY-LEETEN 02/01/2010-END
+
 		void _DrawHistogrm();
 		CSphericalHistogram();
 	} cSphericalHistogram;
@@ -252,6 +263,12 @@ public:
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.9  2010/02/01 06:17:26  leeten
+
+[01/31/2010]
+1. [ADD] Add a new field cSphericalHistogram.
+2. [ADD] Add one more rendering mode "RENDERING_MODE_NONE."
+
 Revision 1.8  2010/01/12 23:44:51  leeten
 
 [01/12/2010]
