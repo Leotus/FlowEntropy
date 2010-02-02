@@ -229,14 +229,38 @@ main(int argn, char* argv[])
 		// ADD-BY-LEETEN 01/12/2010-END
 
 		// ADD-BY-LEETEN 01/30/2010-BEGIN
-		assert( szVectorFieldFilename );
-		_ReadVectorField(szVectorFieldFilename);
-		cFlowEntropyViewerWin.cSphericalHistogram._ComputeHistogram(
-			p3df3VectorField.iWidth,
-			p3df3VectorField.iHeight,
-			p3df3VectorField.iDepth,
-			&p3df3VectorField[0]);
+		#if	0	// MOD-BY-LEETEN 02/01/2010-FROM:
+			assert( szVectorFieldFilename );
+			_ReadVectorField(szVectorFieldFilename);
+			cFlowEntropyViewerWin.cSphericalHistogram._ComputeHistogram(
+				p3df3VectorField.iWidth,
+				p3df3VectorField.iHeight,
+				p3df3VectorField.iDepth,
+				&p3df3VectorField[0]);
+		#else	// MOD-BY-LEETEN 02/01/2010-TO:
+		if( szVectorFieldFilename )
+		{
+			_ReadVectorField(szVectorFieldFilename);
+			cFlowEntropyViewerWin.cSphericalHistogram._ComputeHistogram
+				(
+				p3df3VectorField.iWidth,
+				p3df3VectorField.iHeight,
+				p3df3VectorField.iDepth,
+				&p3df3VectorField[0]
+			);
+		}
+		else
+		{
+			cFlowEntropyViewerWin.cSphericalHistogram._ComputeHistogramFromStreamlineTangents
+			(
+				cFlowEntropyViewerWin.cStreamline.pfTangent.USize()/3,
+				&cFlowEntropyViewerWin.cStreamline.pfTangent[0]
+			);
+		}
+		cFlowEntropyViewerWin.cSphericalHistogram._Init();
+		#endif	// MOD-BY-LEETEN 02/01/2010-END
 		// ADD-BY-LEETEN 01/30/2010-END
+
 
 		////////////////////////////////////////////////////////
 		// initialize the transfer func.
@@ -304,6 +328,12 @@ main(int argn, char* argv[])
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.7  2010/02/01 06:18:59  leeten
+
+[01/31/2010]
+1. [ADD] Add a new switch "--vector-field-filename <filename>" to define the input vector field.
+2. [ADD] Add a new function _ReadVectorField to load the vector field.
+
 Revision 1.6  2010/01/12 23:57:13  leeten
 
 [01/12/2010]
