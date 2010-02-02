@@ -24,14 +24,26 @@
 
 #pragma comment (lib, "cudart.lib")      // link with my own library libfps
 
+#if	0	// MOD-BY-LEETEN 02/02/2010-FROM:
+	#define MALLOC(p, type, size)\
+		{	\
+			if( NULL == (p) )\
+			{\
+				(p) = (type*)calloc((size), sizeof(type));\
+			}\
+		}\
+
+#else	// MOD-BY-LEETEN 02/02/2010-TO:
 #define MALLOC(p, type, size)\
 	{	\
 		if( NULL == (p) )\
 		{\
 			(p) = (type*)calloc((size), sizeof(type));\
+			assert(p);\
 		}\
 	}\
 
+#endif	// MOD-BY-LEETEN 02/02/2010-END
 
 #define FREE(p)	\
 	{	\
@@ -149,6 +161,11 @@ void _FlowDiffusionFree();
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.5  2010/01/27 22:06:56  leeten
+
+[01/27/2010]
+1. [ADD] Add the declaration of the new _ComputeSrcEntropyVolume().
+
 Revision 1.4  2010/01/25 15:21:33  leeten
 
 [01/25/2010]
