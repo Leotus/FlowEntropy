@@ -401,12 +401,231 @@ _ComputeSrcEntropyVolume
 }	
 #endif	// MOD-BY-LEETEN 01/27/2010-END
 
+#if	0	// MOD-BY-LEETEN 02/02/2010-FROM:
+	void
+	_GetJointEntropyVolume
+	(
+		int iNrOfSrcBins,
+		int iNrOfDstBins,
+		int iKernelWidth, int iKernelHeight, int iKernelDepth
+	)
+	{
+		int iNrOfBins = iNrOfSrcBins * iNrOfDstBins;
+
+		int *piHistogram_global;
+		CUDA_SAFE_CALL_NO_SYNC(
+			cudaMalloc(	(void**)&piHistogram_global, sizeof(piHistogram_global[0]) * iNrOfBins) );
+		CUDA_SAFE_CALL_NO_SYNC(
+			cudaMemset(	(void*)piHistogram_global, 0, sizeof(piHistogram_global[0]) * iNrOfBins) );
+
+		float *pfLogHistogram_global;
+		CUDA_SAFE_CALL_NO_SYNC(
+			cudaMalloc(	(void**)&pfLogHistogram_global, sizeof(pfLogHistogram_global[0]) * iNrOfBins) );
+		CUDA_SAFE_CALL_NO_SYNC(
+			cudaMemset(	(void*)pfLogHistogram_global, 0, sizeof(pfLogHistogram_global[0]) * iNrOfBins) );
+
+		cudaExtent cEntropyVolumeExtent	= make_cudaExtent(
+			cVolumeExtent_array.width * sizeof(float),
+			cVolumeExtent_array.height,
+			cVolumeExtent_array.depth);
+		cudaPitchedPtr cEntropyVolume_pitched;
+		CUDA_SAFE_CALL( 
+			cudaMalloc3D(&cEntropyVolume_pitched, cEntropyVolumeExtent) );
+
+		// DEL-BY-LEETEN 12/18/2009-BEGIN
+			// CUDPPHandle hScanPlanEntropy = CInitEntropyField(iNrOfBins);
+		// DEL-BY-LEETEN 12/18/2009-END
+
+		// bind the bin volume as a 2D texture
+		t2dSrcBinVolume.addressMode[0] = cudaAddressModeClamp;
+		t2dSrcBinVolume.addressMode[1] = cudaAddressModeClamp;
+		t2dSrcBinVolume.filterMode =	cudaFilterModePoint;
+		t2dSrcBinVolume.normalized =	false;
+		CUDA_SAFE_CALL_NO_SYNC(
+			cudaBindTexture2D(
+				0, 
+				t2dSrcBinVolume, 
+				cSrcBinVolume_pitched.ptr, 
+				cudaCreateChannelDesc<int>(),
+				cVolumeExtent_array.width, 
+				cVolumeExtent_array.height * cVolumeExtent_array.depth, 
+				cSrcBinVolume_pitched.pitch) );
+
+		t2dDstBinVolume.addressMode[0] = cudaAddressModeClamp;
+		t2dDstBinVolume.addressMode[1] = cudaAddressModeClamp;
+		t2dDstBinVolume.filterMode =	cudaFilterModePoint;
+		t2dDstBinVolume.normalized =	false;
+		CUDA_SAFE_CALL_NO_SYNC(
+			cudaBindTexture2D(
+				0, 
+				t2dDstBinVolume, 
+				cDstBinVolume_pitched.ptr, 
+				cudaCreateChannelDesc<int>(),
+				cVolumeExtent_array.width, 
+				cVolumeExtent_array.height * cVolumeExtent_array.depth, 
+				cDstBinVolume_pitched.pitch) );
+
+		// bind the histogram as a 1D texture
+		// ...
+		cudaPitchedPtr cJointBinVolume_pitched;
+		CUDA_SAFE_CALL( 
+			cudaMalloc3D(
+				&cJointBinVolume_pitched, 
+				make_cudaExtent(
+					cVolumeExtent_array.width * sizeof(int),
+					cVolumeExtent_array.height,
+					cVolumeExtent_array.depth) ) );
+
+		dim3 v3Blk, v3Grid;
+		v3Blk = dim3(BLOCK_DIM_X, BLOCK_DIM_Y);
+		v3Grid = dim3(
+			size_t(ceilf(float(cVolumeExtent_array.width) / float(v3Blk.x))),
+			size_t(ceilf(float(cVolumeExtent_array.height * cVolumeExtent_array.depth) / float(v3Blk.y)))
+		);
+
+		_JointSrcDst_kernel<<<v3Grid, v3Blk, 0>>>
+		(
+			iNrOfSrcBins, 
+			iNrOfDstBins,
+
+			make_int3(
+				int(cVolumeExtent_array.width), 
+				int(cVolumeExtent_array.height), 
+				int(cVolumeExtent_array.depth)),
+
+			cJointBinVolume_pitched
+		);
+		CUT_CHECK_ERROR("_JointSrcDst_kernel() failed");
+
+	// MOD-BY-LEETEN 12/18/2009-FROM:
+		// _ComputeEntropyVolume
+	// TO:
+
+		#if	COMPUTE_ENTROPY_VOLUME == COMPUTE_ENTROPY_VOLUME_CUDA
+			_ComputeEntropyVolume_cuda
+		#endif
+
+		#if	COMPUTE_ENTROPY_VOLUME == COMPUTE_ENTROPY_VOLUME_HOST
+			_ComputeEntropyVolume_host
+		#endif
+
+		#if	COMPUTE_ENTROPY_VOLUME == COMPUTE_ENTROPY_VOLUME_WITH_SORTING_CUDA
+			_ComputeEntropyVolumeWithSorting_cuda
+		#endif
+
+		// ADD-BY-LEETEN 12/20/2009-BEGIN
+		#if	COMPUTE_ENTROPY_VOLUME == COMPUTE_ENTROPY_VOLUME_PER_SCANLINE_CUDA	
+			_ComputeEntropyVolumePerScanline_cuda
+		#endif	
+		// ADD-BY-LEETEN 12/20/2009-END
+
+		// ADD-BY-LEETEN 12/23/2009-END
+		#if	COMPUTE_ENTROPY_VOLUME == COMPUTE_ENTROPY_VOLUME_SORT_PER_VOXEL_CUDA	
+			_ComputeEntropyVolumePerVoxel_cuda
+		#endif	
+
+		#if	COMPUTE_ENTROPY_VOLUME == COMPUTE_ENTROPY_VOLUME_ON_SPARSE_HISTOGRAM_CUDA
+			_ComputeEntropyVolumeOnSparseHistogram_cuda
+		#endif	 
+
+		#if	COMPUTE_ENTROPY_VOLUME == COMPUTE_ENTROPY_VOLUME_WITH_MARGINAL_HISTOGRAM
+			_ComputeEntropyVolumeWithMarginalHistogram_cuda
+		#endif	
+		// ADD-BY-LEETEN 12/23/2009-END
+
+		#if	COMPUTE_ENTROPY_VOLUME == COMPUTE_ENTROPY_VOLUME_WITH_SORTING_IN_VECTORS_CUDA
+			_ComputeEntropyVolumeWithSortingInVectors_cuda
+		#endif	
+	// MOD-BY-LEETEN 12/18/2009-END
+		(
+							// res. of the neighboring region
+			make_int3(iKernelWidth, iKernelHeight, iKernelDepth),
+
+							// the histogram
+			iNrOfBins,
+			piHistogram_global,
+			pfLogHistogram_global,
+
+			// DEL-BY-LEETEN 12/18/2009-BEGIN
+				// hScanPlanEntropy,
+			// DEL-BY-LEETEN 12/18/2009-END
+
+							// res. of the volume																
+			make_int3(int(cVolumeExtent_array.width), int(cVolumeExtent_array.height), int(cVolumeExtent_array.depth)),
+
+							// bin volume																	
+			cJointBinVolume_pitched,
+			cEntropyVolume_pitched
+		);
+
+		// ADD-BY-LEETEN 12/19/2009-BEGIN
+		float *pfEntropyVolume_host;
+		CUDA_SAFE_CALL(
+			cudaMallocHost(
+				(void**)&pfEntropyVolume_host,
+				sizeof(pfEntropyVolume_host[0]) * iNrOfVoxels) );
+		CUDA_SAFE_CALL_NO_SYNC(
+			cudaMemcpy2D(
+				pfEntropyVolume_host, 
+				cVolumeExtent_array.width * sizeof(pfEntropyVolume_host[0]),
+				cEntropyVolume_pitched.ptr,
+				cEntropyVolume_pitched.pitch,
+				cVolumeExtent_array.width * sizeof(pfEntropyVolume_host[0]),
+				cVolumeExtent_array.height * cVolumeExtent_array.depth,
+				cudaMemcpyDeviceToHost) );
+		 /*
+		for(int	v = 0,		z = 0; z < i3VolumeSize.z; z++)
+			for(int			y = 0; y < i3VolumeSize.y; y++)
+				for(int		x = 0; x < i3VolumeSize.x; x++, v++)
+					fprintf(stderr, "E(%d, %d, %d) = %f\n", x, y, z, pfEntropyVolume_host[v]);
+		*/
+		#if	0	// TEST-DEBUG
+		FILE *fpFile;
+		fpFile = fopen( __FUNCTION__ "_" ENTROPY_VOLUME_POSTFIX ".txt", "wt");
+		assert(fpFile);
+
+		for(int	v = 0,		z = 0; z < int(cVolumeExtent_array.depth);	z++)
+			for(int			y = 0; y < int(cVolumeExtent_array.height);	y++)
+				for(int		x = 0; x < int(cVolumeExtent_array.width);	x++, v++)
+					fprintf(fpFile, "E(%d, %d, %d) = %.4f\n", x, y, z, pfEntropyVolume_host[v]);
+
+		fclose(fpFile);
+
+		// ADD-BY-LEETEN 12/28/2009-BEGIN
+		fpFile = fopen( __FUNCTION__ "_" ENTROPY_VOLUME_POSTFIX ".bin", "wb");
+		assert(fpFile);
+		fwrite(&cVolumeExtent_array.width,	sizeof(cVolumeExtent_array.width), 1, fpFile);
+		fwrite(&cVolumeExtent_array.height, sizeof(cVolumeExtent_array.height), 1, fpFile);
+		fwrite(&cVolumeExtent_array.depth,	sizeof(cVolumeExtent_array.depth), 1, fpFile);
+		fwrite(
+			pfEntropyVolume_host, 
+			sizeof(pfEntropyVolume_host[0]), 
+			cVolumeExtent_array.depth * cVolumeExtent_array.height * cVolumeExtent_array.width,
+			fpFile);
+		fclose(fpFile);
+		// ADD-BY-LEETEN 12/28/2009-END
+
+		#endif
+
+		FREE_MEMORY_ON_HOST(pfEntropyVolume_host);
+		// ADD-BY-LEETEN 12/19/2009-END
+
+		FREE_MEMORY(cJointBinVolume_pitched.ptr);
+		FREE_MEMORY(piHistogram_global);
+		FREE_MEMORY(pfLogHistogram_global);
+		FREE_MEMORY(cEntropyVolume_pitched.ptr);
+		// DEL-BY-LEETEN 12/18/2009-BEGIN
+			// cudppDestroyPlan(hScanPlanEntropy);
+		// DEL-BY-LEETEN 12/18/2009-END
+	}
+#else	// MOD-BY-LEETEN 02/02/2010-TO:
 void
-_GetJointEntropyVolume
+_ComputeJointEntropyVolume
 (
 	int iNrOfSrcBins,
 	int iNrOfDstBins,
-	int iKernelWidth, int iKernelHeight, int iKernelDepth
+	int iKernelWidth, int iKernelHeight, int iKernelDepth,
+	float *pfEntropyVolume_host
 )
 {
 	int iNrOfBins = iNrOfSrcBins * iNrOfDstBins;
@@ -496,10 +715,6 @@ _GetJointEntropyVolume
 	);
 	CUT_CHECK_ERROR("_JointSrcDst_kernel() failed");
 
-// MOD-BY-LEETEN 12/18/2009-FROM:
-	// _ComputeEntropyVolume
-// TO:
-
 	#if	COMPUTE_ENTROPY_VOLUME == COMPUTE_ENTROPY_VOLUME_CUDA
 		_ComputeEntropyVolume_cuda
 	#endif
@@ -535,7 +750,6 @@ _GetJointEntropyVolume
 	#if	COMPUTE_ENTROPY_VOLUME == COMPUTE_ENTROPY_VOLUME_WITH_SORTING_IN_VECTORS_CUDA
 		_ComputeEntropyVolumeWithSortingInVectors_cuda
 	#endif	
-// MOD-BY-LEETEN 12/18/2009-END
 	(
 						// res. of the neighboring region
 		make_int3(iKernelWidth, iKernelHeight, iKernelDepth),
@@ -545,10 +759,6 @@ _GetJointEntropyVolume
 		piHistogram_global,
 		pfLogHistogram_global,
 
-		// DEL-BY-LEETEN 12/18/2009-BEGIN
-			// hScanPlanEntropy,
-		// DEL-BY-LEETEN 12/18/2009-END
-
 						// res. of the volume																
 		make_int3(int(cVolumeExtent_array.width), int(cVolumeExtent_array.height), int(cVolumeExtent_array.depth)),
 
@@ -557,66 +767,23 @@ _GetJointEntropyVolume
 		cEntropyVolume_pitched
 	);
 
-	// ADD-BY-LEETEN 12/19/2009-BEGIN
-	float *pfEntropyVolume_host;
-	CUDA_SAFE_CALL(
-		cudaMallocHost(
-			(void**)&pfEntropyVolume_host,
-			sizeof(pfEntropyVolume_host[0]) * iNrOfVoxels) );
-	CUDA_SAFE_CALL_NO_SYNC(
-		cudaMemcpy2D(
-			pfEntropyVolume_host, 
-			cVolumeExtent_array.width * sizeof(pfEntropyVolume_host[0]),
-			cEntropyVolume_pitched.ptr,
-			cEntropyVolume_pitched.pitch,
-			cVolumeExtent_array.width * sizeof(pfEntropyVolume_host[0]),
-			cVolumeExtent_array.height * cVolumeExtent_array.depth,
-			cudaMemcpyDeviceToHost) );
-	 /*
-	for(int	v = 0,		z = 0; z < i3VolumeSize.z; z++)
-		for(int			y = 0; y < i3VolumeSize.y; y++)
-			for(int		x = 0; x < i3VolumeSize.x; x++, v++)
-				fprintf(stderr, "E(%d, %d, %d) = %f\n", x, y, z, pfEntropyVolume_host[v]);
-	*/
-	#if	1	// TEST-DEBUG
-	FILE *fpFile;
-	fpFile = fopen( __FUNCTION__ "_" ENTROPY_VOLUME_POSTFIX ".txt", "wt");
-	assert(fpFile);
-
-	for(int	v = 0,		z = 0; z < int(cVolumeExtent_array.depth);	z++)
-		for(int			y = 0; y < int(cVolumeExtent_array.height);	y++)
-			for(int		x = 0; x < int(cVolumeExtent_array.width);	x++, v++)
-				fprintf(fpFile, "E(%d, %d, %d) = %.4f\n", x, y, z, pfEntropyVolume_host[v]);
-
-	fclose(fpFile);
-
-	// ADD-BY-LEETEN 12/28/2009-BEGIN
-	fpFile = fopen( __FUNCTION__ "_" ENTROPY_VOLUME_POSTFIX ".bin", "wb");
-	assert(fpFile);
-	fwrite(&cVolumeExtent_array.width,	sizeof(cVolumeExtent_array.width), 1, fpFile);
-	fwrite(&cVolumeExtent_array.height, sizeof(cVolumeExtent_array.height), 1, fpFile);
-	fwrite(&cVolumeExtent_array.depth,	sizeof(cVolumeExtent_array.depth), 1, fpFile);
-	fwrite(
-		pfEntropyVolume_host, 
-		sizeof(pfEntropyVolume_host[0]), 
-		cVolumeExtent_array.depth * cVolumeExtent_array.height * cVolumeExtent_array.width,
-		fpFile);
-	fclose(fpFile);
-	// ADD-BY-LEETEN 12/28/2009-END
-
-	#endif
-
-	FREE_MEMORY_ON_HOST(pfEntropyVolume_host);
-	// ADD-BY-LEETEN 12/19/2009-END
+	if( NULL != pfEntropyVolume_host )
+		CUDA_SAFE_CALL_NO_SYNC(
+			cudaMemcpy2D(
+				pfEntropyVolume_host, 
+				cVolumeExtent_array.width * sizeof(pfEntropyVolume_host[0]),
+				cEntropyVolume_pitched.ptr,
+				cEntropyVolume_pitched.pitch,
+				cVolumeExtent_array.width * sizeof(pfEntropyVolume_host[0]),
+				cVolumeExtent_array.height * cVolumeExtent_array.depth,
+				cudaMemcpyDeviceToHost) );
 
 	FREE_MEMORY(cJointBinVolume_pitched.ptr);
 	FREE_MEMORY(piHistogram_global);
 	FREE_MEMORY(pfLogHistogram_global);
 	FREE_MEMORY(cEntropyVolume_pitched.ptr);
-	// DEL-BY-LEETEN 12/18/2009-BEGIN
-		// cudppDestroyPlan(hScanPlanEntropy);
-	// DEL-BY-LEETEN 12/18/2009-END
 }
+#endif	// MOD-BY-LEETEN 02/02/2010-END
 
 // ADD-BY-LEETEN 12/17/2009-END
 
@@ -662,7 +829,8 @@ _FlowDiffusionFree()
 		FREE_MEMORY_ON_HOST(piSrcAngleBinVolume_host);
 		FREE_MEMORY_ON_HOST(piDstAngleBinVolume_host);
 	#else	// MOD-BY-LEETEN 12/16/2009-TO:
-	FREE_MEMORY_ON_HOST(piBinVolume_host);
+
+	// DEL-BY-LEETEN 02/02/2010		FREE_MEMORY_ON_HOST(piBinVolume_host);
 	#endif	// MOD-BY-LEETEN 12/16/2009-END
 	// ADD-BY-LEETEN 12/14/2009-END
 }
@@ -694,6 +862,7 @@ _FlowDiffusionInit(
 		iVolumeWidth * sizeof(float4),
 		iVolumeHeight,
 		iVolumeDepth);
+
 	// allocate a local copy in the CPU side
 	CLOCK_BEGIN(PRINT_FLOW_FUSION_TIMING);
 	CUDA_SAFE_CALL(
@@ -765,8 +934,8 @@ _FlowDiffusionInit(
 		cudaMallocHost(
 			(void**)&pf4WeightOffsetVolume_host,
 			sizeof(pf4WeightOffsetVolume_host[0]) * iNrOfVoxels) );
-	// ADD-BY-LEETEN 10/02/2009-END
 
+	// ADD-BY-LEETEN 10/02/2009-END
 	CLOCK_END(PRINT_FLOW_FUSION_TIMING, true);
 
 	CLOCK_PRINT(PRINT_FLOW_FUSION_TIMING);
@@ -835,10 +1004,12 @@ _FlowDiffusionSetAngleMap(int *piAngleMap, int iNrOfPhis, int iNrOfThetas)
 	// allocate the volume of bins in the host side
 	#if	0	// MOD-BY-LEETEN 2009/12/17-FROM:
 	#else	// MOD-BY-LEETEN 2009/12/17-TO:
-	CUDA_SAFE_CALL(
-		cudaMallocHost(
-			(void**)&piBinVolume_host,
-			sizeof(piBinVolume_host[0]) * iNrOfVoxels) );
+	#if	0	// DEL-BY-LEETEN 02/02/2010-BEGIN
+		CUDA_SAFE_CALL(
+			cudaMallocHost(
+				(void**)&piBinVolume_host,
+				sizeof(piBinVolume_host[0]) * iNrOfVoxels) );
+	#endif	// DEL-BY-LEETEN 02/02/2010-END
 	#endif	// MOD-BY-LEETEN 2009/12/17-END
 
 	// setup the src. texture for bin lookup
@@ -944,6 +1115,13 @@ _ComputeSrcBinVolume
 void 
 _GetSrcBinVolume(int *piBinVolume)
 {
+	// ADD-BY-LEETEN 02/02/2010-BEGIN
+	CUDA_SAFE_CALL(
+		cudaMallocHost(
+			(void**)&piBinVolume_host,
+			sizeof(piBinVolume_host[0]) * iNrOfVoxels) );
+	// ADD-BY-LEETEN 02/02/2010-END
+
 	cudaMemcpy3DParms cCopyParamsDeviceToHost = {0};
 	cCopyParamsDeviceToHost.srcPtr		= cSrcBinVolume_pitched;
 	cCopyParamsDeviceToHost.dstPtr		= make_cudaPitchedPtr(
@@ -965,11 +1143,23 @@ _GetSrcBinVolume(int *piBinVolume)
 	// TO:
 	memcpy(piBinVolume, piBinVolume_host, sizeof(piBinVolume) * iNrOfVoxels);
 	// MOD-BY-LEETEN 2009/12/17-END
+
+	// ADD-BY-LEETEN 02/02/2010-BEGIN
+	FREE_MEMORY_ON_HOST(piBinVolume_host);
+	// ADD-BY-LEETEN 02/02/2010-END
 }
 
 void 
 _GetDstBinVolume(int *piBinVolume)
 {
+	// ADD-BY-LEETEN 02/02/2010-BEGIN
+	CUDA_SAFE_CALL(
+		cudaMallocHost(
+			(void**)&piBinVolume_host,
+			sizeof(piBinVolume_host[0]) * iNrOfVoxels) );
+	// ADD-BY-LEETEN 02/02/2010-END
+
+
 	cudaMemcpy3DParms cCopyParamsDeviceToHost = {0};
 	cCopyParamsDeviceToHost.srcPtr		= cDstBinVolume_pitched;
 	cCopyParamsDeviceToHost.dstPtr		= make_cudaPitchedPtr(
@@ -992,6 +1182,10 @@ _GetDstBinVolume(int *piBinVolume)
 	// TO:
 	memcpy(piBinVolume, piBinVolume_host, sizeof(piBinVolume) * iNrOfVoxels);
 	// MOD-BY-LEETEN 2009/12/17-END
+
+	// ADD-BY-LEETEN 02/02/2010-BEGIN
+	FREE_MEMORY_ON_HOST(piBinVolume_host);
+	// ADD-BY-LEETEN 02/02/2010-END
 }
 
 // ADD-BY-LEETEN 12/14/2009-END
@@ -1061,6 +1255,8 @@ _FlowDiffusion(
 		unsigned int(ceilf( float(iVolumeDepth) /  float(iBlockZSize) ) ) );
 		#endif	// #if		DIFFUSION_BY_FOR_LOOP_ON_HOST
 		// ADD-BY-LEETEN 11/04/2009-END
+
+	// ADD-BY-LEETEN 10/02/2009-END
 
 	// convert the #channels in the src volume from 3 to 4
 	CLOCK_BEGIN(PRINT_FLOW_FUSION_TIMING);
@@ -1358,6 +1554,11 @@ _FlowDiffusion(
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.8  2010/01/27 22:07:27  leeten
+
+[01/27/2010]
+1. [MOD] Add the declaration of the new _ComputeSrcEntropyVolume() and remove the function _GetSrcEntropyVolume.
+
 Revision 1.7  2010/01/04 18:13:36  leeten
 
 [01/04/2010]
