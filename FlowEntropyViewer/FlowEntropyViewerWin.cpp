@@ -238,21 +238,46 @@ CFlowEntropyViewerWin::_BeginDisplay()
 	// MOD-BY-LEETEN 01/02/2010-END
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
+	#if	0	// MOD-BY-LEETEN 02/01/2010-FROM:
+		glPushMatrix();
+
+		float fMaxDim = max(pf3DEntropyField.iWidth, max(pf3DEntropyField.iHeight, pf3DEntropyField.iDepth));
+		glScalef(
+			pf3DEntropyField.iWidth / fMaxDim,
+			pf3DEntropyField.iHeight / fMaxDim,
+			pf3DEntropyField.iDepth / fMaxDim);
+
+		// ADD-BY-LEETEN 01/12/2010-BEGIN
+							// flip the Z axis
+		glScalef(1.0f, 1.0f, -1.0f);
+		// ADD-BY-LEETEN 01/12/2010-END
+	#else	// MOD-BY-LEETEN 02/01/2010-END
 	glPushMatrix();
+						// flip the Z axis
+	glScalef(1.0f, 1.0f, -1.0f);
+
+	// ADD-BY-LEETEN 02/01/2010-BEGIN
+	// render the histogram before the scaling
+	if( 0 != cSphericalHistogram.ibIsEnabled )
+		cSphericalHistogram._DrawHistogrm();
+	// ADD-BY-LEETEN 02/01/2010-END
 
 	float fMaxDim = max(pf3DEntropyField.iWidth, max(pf3DEntropyField.iHeight, pf3DEntropyField.iDepth));
 	glScalef(
 		pf3DEntropyField.iWidth / fMaxDim,
 		pf3DEntropyField.iHeight / fMaxDim,
 		pf3DEntropyField.iDepth / fMaxDim);
+	#endif	// MOD-BY-LEETEN 02/01/2010-END
 
-	// ADD-BY-LEETEN 01/12/2010-BEGIN
-						// flip the Z axis
-	glScalef(1.0f, 1.0f, -1.0f);
-	// ADD-BY-LEETEN 01/12/2010-END
+	// ADD-BY-LEETEN 02/01/2010-BEGIN
+	glPushAttrib(GL_DEPTH_BUFFER_BIT);
+	glEnable(GL_DEPTH_TEST);
+	// ADD-BY-LEETEN 02/01/2010-END
 
 	glColor4f(0.70f, 0.70f, 0.70f, 1.0f);
 	glutWireCube(2.0);
+
+	glPopAttrib();	// glPushAttrib(GL_DEPTH_BUFFER_BIT);	// ADD-BY-LEETEN 02/01/2010-BEGIN
 
 	// ADD-BY-LEETEN 01/12/2010-BEGIN
 	switch(iDataName)
@@ -699,10 +724,12 @@ CFlowEntropyViewerWin::_EndDisplay()
 {
 	glUseProgramObjectARB(0);
 
-	// ADD-BY-LEETEN 01/30/2010-BEGIN
-	if( 0 != cSphericalHistogram.ibIsEnabled )
-		cSphericalHistogram._DrawHistogrm();
-	// ADD-BY-LEETEN 01/30/2010-END
+	#if	0	// DEL-BY-LEETEN 02/01/2010-BEGIN
+		// ADD-BY-LEETEN 01/30/2010-BEGIN
+		if( 0 != cSphericalHistogram.ibIsEnabled )
+			cSphericalHistogram._DrawHistogrm();
+		// ADD-BY-LEETEN 01/30/2010-END
+	#endif	// DEL-BY-LEETEN 02/01/2010-END
 
 	/////////////////////////////////////////
 	glPopMatrix();
@@ -996,6 +1023,12 @@ CFlowEntropyViewerWin::~CFlowEntropyViewerWin(void)
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.10  2010/02/01 06:16:16  leeten
+
+[01/31/2010]
+1. [ADD] Draw the spherical coordinate of the vector field fi the flag ibIsEnabled is true.
+2. [ADD] Add one more radio button "None" to the rendering mode.
+
 Revision 1.9  2010/01/12 23:56:15  leeten
 
 [01/12/2010]
