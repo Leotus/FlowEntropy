@@ -9,7 +9,7 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
-#include "cuda_macro.h"	// TEST-ADD
+#include "cuda_macro.h"	// ADD-BY-LEETEN 02/01/2010
 
 #include "Streamline.h"
 
@@ -981,6 +981,14 @@ CStreamline::_RenderTubes()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.8  2010/02/01 06:08:55  leeten
+
+[01/31/2010]
+1. [ADD] include the header cuda_macro.h
+2. [MOD] if the preprocessor __DEVICE_EMULATION__ is defined, sort the seeds on CPU instread.
+3. [MOD] Use only one vector product to compute the depth in the eye space.
+4. [MOD] Use VBO to render the streamlines.
+
 Revision 1.7  2010/01/19 21:12:13  leeten
 
 [01/19/2010]
