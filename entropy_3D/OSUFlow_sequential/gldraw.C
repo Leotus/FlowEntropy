@@ -29,6 +29,11 @@ int binnum=360;
 // ADD-BY-LEETEN 2009/11/10-BEGIN
 //#include "../myinterface/FlowDiffusionCuda.h"
 // ADD-BY-LEETEN 2009/11/10-END
+
+#include "liblog.h"					// ADD-BY-LEETEN 02/02/2010
+
+#include "FlowDiffusion3DConfig.h"	// ADD-BY-LEETEN 02/02/2010
+
 float minstepsize=.5;
 float maxstepsize=1;
 int maxi_stepnum=500;
@@ -3154,6 +3159,36 @@ int sample_from( float* p,int num)
          return i+1;
 }
 
+// ADD-BY-LEETEN 02/02/2010-BEGIN
+
+int* bin_my_vector,*bin_new_vector;
+int *histo_puv;
+int *histo_pv;
+float* pv;
+float* entropy_tmp;
+int* selX, *selY,*selZ;
+float* qx;
+float* qy;
+float* qz;
+
+void 
+quit_selectStreamlines_by_distribution()
+{
+	FREE(bin_my_vector);
+	FREE(bin_new_vector);
+	FREE(histo_puv);
+	FREE(histo_pv);
+	FREE(pv);
+	FREE(entropy_tmp);
+	FREE(selX);
+	FREE(selY);
+	FREE(selZ);
+	FREE(qx);
+	FREE(qy);
+	FREE(qz);
+}
+// ADD-BY-LEETEN 02/02/2010-END
+
 //speed up by reusing histograms
 void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* grid_res, 
 									   int* occupied,
@@ -3163,18 +3198,37 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 										int* g_histo,int* g_histo_puv,int round,
 											std::vector<float>& line_importance, float in_entropy)
 {
+	// ADD-BY-LEETEN 02/02/2010-BEGIN
+	static bool bIsInitialized = false;
+	if( false == bIsInitialized  )
+	{
+		atexit(quit_selectStreamlines_by_distribution);
+		bIsInitialized  = true;
+	}
+	// ADD-BY-LEETEN 02/02/2010-END
 
 	int sample_number_allowed=50;
 	int  kernel_size[3];
-	kernel_size[0]=kernel_size[1]= 8;//this is radium, actuall kernel is 2 x kernel_size+1
-	kernel_size[2]=8;
+	#if	0	// MOD-BY-LEETEN 02/02/2010-FROM:
+		kernel_size[0]=kernel_size[1]= 8;//this is radium, actuall kernel is 2 x kernel_size+1
+		kernel_size[2]=8;
+	#else	// MOD-BY-LEETEN 02/02/2010-TO:
+	kernel_size[0]=KERNEL_HALF_WIDTH;
+	kernel_size[1]=KERNEL_HALF_HEIGHT;
+	kernel_size[2]=KERNEL_HALF_DEPTH;//this is radium, actuall kernel is 2 x kernel_size+1
+	#endif	// MOD-BY-LEETEN 02/02/2010-END
 	float* img_entropies=new float[grid_res[0]*grid_res[1]*grid_res[2]];
 	float sum=0;
 	float maximum=0;
-	
-	int* bin_my_vector,*bin_new_vector;
-	bin_my_vector=new int[grid_res[0]*grid_res[1]*grid_res[2]];
-	bin_new_vector=new int[grid_res[0]*grid_res[1]*grid_res[2]];
+
+	#if	0	// MOD-BY-LEETEN 02/02/2010-FROM:
+		int* bin_my_vector,*bin_new_vector;
+		bin_my_vector=new int[grid_res[0]*grid_res[1]*grid_res[2]];
+		bin_new_vector=new int[grid_res[0]*grid_res[1]*grid_res[2]];
+	#else	// MOD-BY-LEETEN 02/02/2010-TO:
+	MALLOC(bin_my_vector, int, grid_res[0]*grid_res[1]*grid_res[2]);
+	MALLOC(bin_new_vector, int, grid_res[0]*grid_res[1]*grid_res[2]);
+	#endif	// MOD-BY-LEETEN 02/02/2010-END
 	memcpy(bin_my_vector,bin_vector,sizeof(int)*grid_res[0]*grid_res[1]*grid_res[2]);
 	memcpy(bin_new_vector,bin_newvectors,sizeof(int)*grid_res[0]*grid_res[1]*grid_res[2]);
 //	memcpy(img_entropies,entropies,sizeof(float)*grid_res[0]*grid_res[1]*grid_res[2]);
@@ -3188,17 +3242,22 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 	
 	printf("calculate entropy...\n"); 
 
-
-
-	int *histo_puv=new int[binnum*binnum];
-	int *histo_pv=new int[binnum];
-	//float* puv=new float[binnum*binnum];
-	float* pv=new float[binnum];
-	float* entropy_tmp=new float[binnum];
-
+	#if	0	// MOD-BY-LEETEN 02/02/2010-FROM:
+		int *histo_puv=new int[binnum*binnum];
+		int *histo_pv=new int[binnum];
+		//float* puv=new float[binnum*binnum];
+		float* pv=new float[binnum];
+		float* entropy_tmp=new float[binnum];
+	#else	// MOD-BY-LEETEN 02/02/2010-TO:
+	MALLOC(histo_puv,	int,	binnum*binnum);
+	MALLOC(histo_pv,	int,	binnum);
+	MALLOC(pv,			float,	binnum);
+	MALLOC(entropy_tmp,	float,	binnum);
+	#endif	// MOD-BY-LEETEN 02/02/2010-END
 
 	int z=0;
 	double dwStart = GetTickCount();
+	#if		!ENTROPY_ON_GPU		// ADD-BY-LEETEN 02/02/2010
 	for(int y=0;y<grid_res[1];y++)
 	{
 		//double dwStart = GetTickCount();
@@ -3311,6 +3370,37 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 		printf("y=%d/%d\r",y,grid_res[1]);
 
 	}
+	// ADD-BY-LEETEN 02/02/2010-BEGIN
+	#else	// #if	!ENTROPY_ON_GPU	
+	LOG(printf("_ComputeJointEntropyVolume(): Enter"));
+	void
+	_ComputeJointEntropyVolume
+	(
+		int iNrOfSrcBins,
+		int iNrOfDstBins,
+		int iKernelWidth, int iKernelHeight, int iKernelDepth,
+		float *pfEntropyVolume_host
+	);
+
+	_ComputeJointEntropyVolume
+	(
+		binnum, 
+		binnum, 
+		kernel_size[0], 
+		kernel_size[1], 
+		kernel_size[2], 
+		img_entropies
+	);
+	LOG(printf("_ComputeJointEntropyVolume(): End"));
+
+	//normalized it to (0~1)
+	sum = 0.0f;
+	for(int i=0;i<grid_res[0]*grid_res[1]*grid_res[2];i++)
+	{
+		sum += img_entropies[i];
+	}
+	#endif	// #if	!ENTROPY_ON_GPU	
+	// ADD-BY-LEETEN 02/02/2010-END
 
 	
 	double elapsedTime= GetTickCount() - dwStart;
@@ -3322,21 +3412,24 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 
 	
 	//save result to file
-	unsigned char* data;
-	float* importance=new float[grid_res[0]*grid_res[1]*grid_res[2]];
-	data = new unsigned char[grid_res[0]*grid_res[1]*grid_res[2]];
-	for(int i=0;i<grid_res[0]*grid_res[1]*grid_res[2];i++)
-	{	
-		if(maximum>0)
-		{
-		data[i]=(unsigned char)((img_entropies[i]/maximum)*255);
-		importance[i]=img_entropies[i]/maximum;
+	#if	0	// DEL-BY-LEETEN 02/02/2010-BEGIN
+		unsigned char* data;
+		float* importance=new float[grid_res[0]*grid_res[1]*grid_res[2]];
+		data = new unsigned char[grid_res[0]*grid_res[1]*grid_res[2]];
+		for(int i=0;i<grid_res[0]*grid_res[1]*grid_res[2];i++)
+		{	
+			if(maximum>0)
+			{
+			data[i]=(unsigned char)((img_entropies[i]/maximum)*255);
+			importance[i]=img_entropies[i]/maximum;
+			}
 		}
-	}
-	char szname[255];
-	memset(szname,0,255);
-	sprintf(szname,"importance%d.bin",round);
-	dumpImportanceField(szname,importance, grid_res);
+
+		char szname[255];
+		memset(szname,0,255);
+		sprintf(szname,"importance%d.bin",round);
+		dumpImportanceField(szname,importance, grid_res);
+	#endif	// DEL-BY-LEETEN 02/02/2010-END
 
 	//normalized it to (0~1)
 	for(int i=0;i<grid_res[0]*grid_res[1]*grid_res[2];i++)
@@ -3385,11 +3478,18 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 	
 	dwStart= GetTickCount();
 	// DEL-BY-LEETEN 01/22/2010 srand((unsigned)time(NULL));
-	int* selX, *selY,*selZ;
-	selX=new int[sample_number_allowed];
-	selY=new int[sample_number_allowed];
-	selZ=new int[sample_number_allowed];
-	float* qz=new float[grid_res[2]];
+	#if	0	// MOD-BY-LEETEN 02/02/2010-FROM:
+		int* selX, *selY,*selZ;
+		selX=new int[sample_number_allowed];
+		selY=new int[sample_number_allowed];
+		selZ=new int[sample_number_allowed];
+		float* qz=new float[grid_res[2]];
+	#else	// MOD-BY-LEETEN 02/02/2010-TO:
+	MALLOC(selX,	int,	sample_number_allowed);
+	MALLOC(selY,	int,	sample_number_allowed);
+	MALLOC(selZ,	int,	sample_number_allowed);
+	MALLOC(qz,		float,	grid_res[2]);
+	#endif	// MOD-BY-LEETEN 02/02/2010-END
 	//get z marginal
 	for(int k=0;k<grid_res[2];k++)
 	{
@@ -3403,7 +3503,11 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 	}
 
 	//get y,z joint probs
-	float *qy=new float[grid_res[1]*grid_res[2]];
+	// MOD-BY-LEETEN 02/02/2010-FROM:
+		// float *qy=new float[grid_res[1]*grid_res[2]];
+	// TO:
+	MALLOC(qy, float, grid_res[1]*grid_res[2]);
+	// MOD-BY-LEETEN 02/02/2010-END
 	for(int z=0;z<grid_res[2];z++)
 	{
 		if(qz[z]<=0)
@@ -3428,7 +3532,11 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 	}
 
 	//get x,y,z joint probs
-	float *qx=new float[grid_res[1]*grid_res[2]*grid_res[0]];
+	// MOD-BY-LEETEN 02/02/2010-FROM:
+		// float *qx=new float[grid_res[1]*grid_res[2]*grid_res[0]];
+	// TO:
+	MALLOC(qx, float, grid_res[0]*grid_res[1]*grid_res[2]);
+	// MOD-BY-LEETEN 02/02/2010-END
 	for(int z=0;z<grid_res[2];z++)
 	{
 		for(int y=0;y<grid_res[1];y++)
@@ -3539,20 +3647,22 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 	//	line_color.push_back(i);
 	//save_streamlines_to_file_alpha_by_importance(line_color,line_importance,sl_list.size(), importance, grid_res);
 
-	delete [] pv;
-	delete [] histo_puv;
-	delete [] histo_pv;
-	delete [] entropy_tmp;
+	#if	0	// DEL-BY-LEETEN 02/02/2010-BEGIN
+		delete [] pv;
+		delete [] histo_puv;
+		delete [] histo_pv;
+		delete [] entropy_tmp;
 
-	delete [] selX;
-	delete [] selY;
-	delete [] selZ;
-	//save2PPM_3("cand_seeds_image.ppm", data, grid_res[0],grid_res[1]);
-	delete [] data;
-	delete [] img_entropies;
-	delete [] importance;
-	delete [] bin_my_vector;
-	delete [] bin_new_vector;
+		delete [] selX;
+		delete [] selY;
+		delete [] selZ;
+		//save2PPM_3("cand_seeds_image.ppm", data, grid_res[0],grid_res[1]);
+		delete [] data;
+		delete [] img_entropies;
+		delete [] importance;
+		delete [] bin_my_vector;
+		delete [] bin_new_vector;
+	#endif	// ADD-BY-LEETEN 02/02/2010-END
 	return;
 }
 
@@ -3718,8 +3828,6 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 }
 */
 
-
-
 //allow select multiple seed in one pass
 void compute_streamlines() 
 {
@@ -3730,8 +3838,12 @@ void compute_streamlines()
 	float* vectors=get_grid_vec_data(grid_res);//get vec data at each grid point
 	
 										//load seeds from file
-	int* donot_change=new int[grid_res[0]*grid_res[1]*grid_res[2]];
-	memset(donot_change,0,sizeof(int)*grid_res[0]*grid_res[1]*grid_res[2]);
+	#if	0	// MOD-BY-LEETEN 02/02/2010-FROM:
+		int* donot_change=new int[grid_res[0]*grid_res[1]*grid_res[2]];
+		memset(donot_change,0,sizeof(int)*grid_res[0]*grid_res[1]*grid_res[2]);
+	#else	// MOD-BY-LEETEN 02/02/2010-TO:
+	int* donot_change=NULL;
+	#endif	// MOD-BY-LEETEN 02/02/2010-END
 	float* new_vectors=new float[grid_res[0]*grid_res[1]*grid_res[2]*3];
 	memset(new_vectors,0,sizeof(float)*grid_res[0]*grid_res[1]*grid_res[2]*3);
 
@@ -3753,7 +3865,7 @@ void compute_streamlines()
 			new_vectors[idx*3+0]=vectors[idx*3+0];
 			new_vectors[idx*3+1]=vectors[idx*3+1];
 			new_vectors[idx*3+2]=vectors[idx*3+2];
-			donot_change[idx]=1;
+			// DEL-BY-LEETEN 02/02/2010		donot_change[idx]=1;
 		}
 	}
 
@@ -3761,6 +3873,32 @@ void compute_streamlines()
 	old_bin=new int [grid_res[0]*grid_res[1]*grid_res[2]];
 	new_bin=new int [grid_res[0]*grid_res[1]*grid_res[2]];
 
+	// ADD-BY-LEETEN 02/02/2010-BEGIN
+	#if	USE_CUDA
+	_FlowDiffusionInit(grid_res[0], grid_res[1], grid_res[2]);
+
+	int get_bin_by_angle(float mytheta, float myphi, int binnum, float* theta, float* phi);
+
+	static const int iNrOfThetas = 720;
+	static const int iNrOfPhis = 360;
+	static const double dNrOfThetas = double(iNrOfThetas);
+	static const double dNrOfPhis	= double(iNrOfPhis);
+	static int	ppiAngleMap[iNrOfThetas][iNrOfPhis];
+	for(int t = 0; t < iNrOfThetas; t++)
+		for(int p = 0; p < iNrOfPhis; p++)
+		{
+			float fTheta =	M_PI * 2.0f * float(t) / float(iNrOfThetas);
+			float fPhi =	M_PI * float(p) / float(iNrOfPhis);
+			int iBin = get_bin_by_angle(fTheta, fPhi, binnum, theta, phi);
+			if( iBin >= 0 )
+				ppiAngleMap[t][p] = iBin;
+		}
+
+	_FlowDiffusionSetAngleMap(&ppiAngleMap[0][0], iNrOfPhis, iNrOfThetas);
+	#endif	//	#if	USE_CUDA
+	// ADD-BY-LEETEN 02/02/2010-END
+
+	#if	!BIN_LOOKUP_ON_GPU		// ADD-BY-LEETEN 02/02/2010
 	for(int i=0;i<grid_res[0]*grid_res[1]*grid_res[2];i++)
 	{
 		VECTOR3 orif;
@@ -3768,23 +3906,44 @@ void compute_streamlines()
 		old_bin[i]=get_bin_number_3D(orif,theta, phi,binnum);
 		new_bin[i]=0.0;
 	}
+	// ADD-BY-LEETEN 02/02/2010-BEGIN
+	#else	// #if	!BIN_LOOKUP_ON_GPU		
+	memset(old_bin, 0, sizeof(old_bin[0]) * grid_res[0] * grid_res[1] * grid_res[2]);
+	memset(new_bin, 0, sizeof(new_bin[0]) * grid_res[0] * grid_res[1] * grid_res[2]);
 
+	_ComputeSrcBinVolume
+	(
+		grid_res[0],
+		grid_res[1],
+		grid_res[2],
+		1,
+		vectors
+	);
+	_GetSrcBinVolume(old_bin);
+	#endif	// #if	!BIN_LOOKUP_ON_GPU	
+	// ADD-BY-LEETEN 02/02/2010-END
 
 	if(!entropies)
 	{
 		printf("calculating every point entropies\n");
 		entropies=new float[grid_res[0]*grid_res[1]*grid_res[2]];
+		#if			!ENTROPY_ON_GPU		// ADD-BY-LEETEN 02/02/2010
 		calc_entropy( old_bin,grid_res, binnum, entropies);
-		dumpEntropyField("entropies.bin",entropies, grid_res);
-
-		printf("entropy calculation done\n");
-		
+		#if	0	// DEL-BY-LEETEN 02/02/2010-BEGIN
+			dumpEntropyField("entropies.bin",entropies, grid_res);
+			printf("entropy calculation done\n");
+		#endif	// DEL-BY-LEETEN 02/02/2010-END
+		// ADD-BY-LEETEN 02/02/2010-BEGIN
+		#else	// #if	!ENTROPY_ON_GPU	
+		_ComputeSrcEntropyVolume(binnum, KERNEL_HALF_WIDTH, KERNEL_HALF_HEIGHT, KERNEL_HALF_DEPTH, &entropies[0]);
+		#endif	// #if	!ENTROPY_ON_GPU	
+		// ADD-BY-LEETEN 02/02/2010-END
 	}		
 	int selected_line_num=0;
 	float entropy=8888;
 	std::vector<VECTOR3> seedlist,selected_list;
 	// DEL-BY-LEETEN 01/22/2010 srand((unsigned)time(NULL));			// initialize random number generator
-	std::vector<float> entropies;
+	// DEL-BY-LEETEN 02/02/2010		std::vector<float> entropies;
 
 	int x_min=0,x_max=0,y_min=0,y_max=0;
 	int* occupied=new int[grid_res[0]*grid_res[1]*grid_res[2]];
@@ -3800,9 +3959,11 @@ void compute_streamlines()
 	float* c3=new float[grid_res[0]*grid_res[1]*grid_res[2]];
 
 	// ADD-BY-LEETEN 2009/11/10-BEGIN
-	#if	USE_CUDA	
-	_FlowFusionInit(grid_res[0], grid_res[1], grid_res[2]);
-	#endif
+	#if	0	// DEL-BY-LEETEN 02/02/2010-BEGIN
+		#if	USE_CUDA	
+		_FlowFusionInit(grid_res[0], grid_res[1], grid_res[2]);
+		#endif
+	#endif	// DEL-BY-LEETEN 02/02/2010-END
 	// ADD-BY-LEETEN 2009/11/10-END
 	//initial entropy
 	float error=0.05;
@@ -3828,7 +3989,11 @@ void compute_streamlines()
 	std::vector<float> line_importance,entropy_list;
 
 //	while(selected_line_num<line_num_thres )//&& entropy>.5)
-	while(entropy>target_entropy)
+	// MOD-BY-LEETEN 02/02/2010-FROM:
+		// while(entropy>target_entropy)
+	// TO:
+	for(int iIter = 0; entropy>target_entropy; iIter++)
+	// MOD-BY-LEETEN 02/02/2010-END
 	{
 		VECTOR3 next_seed;
 		std::vector<VECTOR3> seeds;
@@ -3843,6 +4008,8 @@ void compute_streamlines()
 		selected_line_num+=seeds.size();
 
 		//printf("calculate the bin number\r");
+		#if	!BIN_LOOKUP_ON_GPU	// ADD-BY-LEETEN 02/02/2010
+
 		for(int i=0;i<grid_res[0]*grid_res[1]*grid_res[2];i++)
 		{
 			VECTOR3 newf,orif;
@@ -3853,6 +4020,13 @@ void compute_streamlines()
 			float dotv=dot(newf,orif);
 			new_bin[i]=get_bin_number_3D(newf,theta, phi,binnum);
 		}
+
+		// ADD-BY-LEETEN 02/02/2010-BEGIN
+		#else	//	#if	!BIN_LOOKUP_ON_GPU
+		if( iIter > 0 )
+			_GetDstBinVolume(new_bin);
+		#endif	//	#if	!BIN_LOOKUP_ON_GPU
+		// ADD-BY-LEETEN 02/02/2010-END
 
 		entropy=calcRelativeEntropy6_new(	vectors, new_vectors,  grid_res, VECTOR3(2,2,2),//do not count boundaries
 									VECTOR3(grid_res[0]-2,grid_res[1]-2,grid_res[2]-2),theta,phi,old_bin,new_bin,0,binnum,histo_puv,histo_pv,
@@ -3891,15 +4065,17 @@ void compute_streamlines()
 		sl_list.clear();*/
 		//dumpReconstruedField("r.vec", new_vectors, grid_res);
 		
-		unsigned char* dat=new unsigned char[grid_res[0]*grid_res[1]*grid_res[2]];
-		for(int i=0;i<grid_res[0]*grid_res[1]*grid_res[2];i++)
-			dat[i]=occupied[i]*255;
-		/*FILE* test=fopen("impor.bin","wb");
-		fwrite(grid_res,sizeof(int),3,test);
-		fwrite(occupied,sizeof(unsigned char),grid_res[0]*grid_res[1]*grid_res[2],test);
-		fclose(test);
-		*/
-		delete [] dat;
+		#if	0	// DEL-BY-LEETEN 02/02/2010-BEGIN
+			unsigned char* dat=new unsigned char[grid_res[0]*grid_res[1]*grid_res[2]];
+			for(int i=0;i<grid_res[0]*grid_res[1]*grid_res[2];i++)
+				dat[i]=occupied[i]*255;
+			/*FILE* test=fopen("impor.bin","wb");
+			fwrite(grid_res,sizeof(int),3,test);
+			fwrite(occupied,sizeof(unsigned char),grid_res[0]*grid_res[1]*grid_res[2],test);
+			fclose(test);
+			*/
+			delete [] dat;
+		#endif	// DEL-BY-LEETEN 02/02/2010-END
 
 		for(int i=0;i<sl_list.size();i++)
 		line_color.push_back(i);
@@ -3930,13 +4106,20 @@ void compute_streamlines()
 	delete [] c2;
 	delete [] c3;
 
-	delete [] donot_change;
+	// DEL-BY-LEETEN 02/02/2010		delete [] donot_change;
 	delete [] vectors;
 	delete [] new_vectors;
 	// ADD-BY-LEETEN 2009/11/10-BEGIN
-	#if	USE_CUDA	
-	_FlowFusionFree();
-	#endif
+
+	#if	0		// MOD-BY-LEETEN 02/02/2010-FROM:
+		#if	USE_CUDA	
+		_FlowFusionFree();
+		#endif
+	#else		// MOD-BY-LEETEN 02/02/2010-TO:
+	#if		USE_CUDA	
+	_FlowDiffusionFree();
+	#endif	// #if	USE_CUDA	
+	#endif	// MOD-BY-LEETEN 02/02/2010-END
 	// ADD-BY-LEETEN 2009/11/10-END
 }
 /*
@@ -6208,5 +6391,10 @@ void Streamline_entorpy_calculation_loadfile()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.1  2010/01/22 20:53:36  leeten
+
+[01/22/2010]
+1. [1ST] First time checkin.
+
 
 */
