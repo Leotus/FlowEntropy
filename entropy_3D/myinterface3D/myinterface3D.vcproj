@@ -45,10 +45,10 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="F:\xul\OSUFlow\myinterface;&quot;C:\Program Files\CGAL-3.3.1\include&quot;;F:\xul\tools;&quot;C:\Program Files\CGAL-3.3.1\include\CGAL\config\msvc&quot;;&quot;C:\Program Files\CGAL-3.3.1\auxiliary\gmp\include&quot;"
-				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
+				AdditionalIncludeDirectories="&quot;../..&quot;;$(ProjectDir)"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				StringPooling="true"
-				RuntimeLibrary="0"
+				RuntimeLibrary="3"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
 				PrecompiledHeaderThrough="stdafx.h"
@@ -139,11 +139,11 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="F:\xul\OSUFlow\myinterface;&quot;C:\Program Files\CGAL-3.3.1\include&quot;;F:\xul\tools;&quot;C:\Program Files\CGAL-3.3.1\include\CGAL\config\msvc&quot;;&quot;C:\Program Files\CGAL-3.3.1\auxiliary\gmp\include&quot;"
+				AdditionalIncludeDirectories="&quot;../..&quot;;$(ProjectDir)"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
-				RuntimeLibrary="1"
+				RuntimeLibrary="3"
 				PrecompiledHeaderFile=".\Debug/myinterface.pch"
 				AssemblerListingLocation=".\Debug/"
 				ObjectFile=".\Debug/"
@@ -233,11 +233,11 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="F:\xul\OSUFlow\myinterface;&quot;C:\Program Files\CGAL-3.3.1\include&quot;;F:\xul\tools;&quot;C:\Program Files\CGAL-3.3.1\include\CGAL\config\msvc&quot;;&quot;C:\Program Files\CGAL-3.3.1\auxiliary\gmp\include&quot;"
+				AdditionalIncludeDirectories="&quot;../..&quot;;$(ProjectDir)"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
-				RuntimeLibrary="1"
+				RuntimeLibrary="3"
 				PrecompiledHeaderFile=".\Debug/myinterface.pch"
 				AssemblerListingLocation=".\Debug/"
 				ObjectFile=".\Debug/"
@@ -328,10 +328,10 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="F:\xul\OSUFlow\myinterface;&quot;C:\Program Files\CGAL-3.3.1\include&quot;;F:\xul\tools;&quot;C:\Program Files\CGAL-3.3.1\include\CGAL\config\msvc&quot;;&quot;C:\Program Files\CGAL-3.3.1\auxiliary\gmp\include&quot;"
-				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
+				AdditionalIncludeDirectories="&quot;../..&quot;;$(ProjectDir)"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				StringPooling="true"
-				RuntimeLibrary="0"
+				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
 				PrecompiledHeaderThrough="stdafx.h"
@@ -1503,6 +1503,10 @@
 			Filter="ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"
 			>
 		</Filter>
+		<File
+			RelativePath=".\FlowDiffusion3DConfig.h"
+			>
+		</File>
 		<File
 			RelativePath="ReadMe.txt"
 			>
