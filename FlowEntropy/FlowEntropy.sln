@@ -13,6 +13,9 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "myinterface2D", "..\entropy_2D\myinterface2D\myinterface2D.vcproj", "{70949A31-E2E0-4E76-9862-C21562404F43}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "myinterface3D", "..\entropy_3D\myinterface3D\myinterface3D.vcproj", "{2ADB44C6-5874-41DC-BF02-8F1C6087B4E1}"
+	ProjectSection(ProjectDependencies) = postProject
+		{17C8E013-3B43-44A0-A16F-62B2A3DA2D10} = {17C8E013-3B43-44A0-A16F-62B2A3DA2D10}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Flow2Entropy", "..\Flow2Entropy\Flow2Entropy.vcproj", "{686F3472-7AF7-459C-8687-DAA3BD0DBE4B}"
 	ProjectSection(ProjectDependencies) = postProject
