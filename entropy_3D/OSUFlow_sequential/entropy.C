@@ -59,8 +59,6 @@ bool discardredundantstreamlines(float& cur_entropy,float eplison, list<vtListSe
 								 float* theta, float* phi,
 								 int* histo_puv,int* histo_pv,float* pv,float* entropy_tmp)
 {
-	
-
 	// MOD-BY-LEETEN 02/02/2010-FROM:
 		// int* dummy=new int[grid_res[0]*grid_res[1]*grid_res[2]];
 	// TO:
@@ -77,7 +75,6 @@ bool discardredundantstreamlines(float& cur_entropy,float eplison, list<vtListSe
 	float* c1=new float[grid_res[0]*grid_res[1]*grid_res[2]];
 	float* c2=new float[grid_res[0]*grid_res[1]*grid_res[2]];
 	float* c3=new float[grid_res[0]*grid_res[1]*grid_res[2]];
-	
 	memset(kx,0,sizeof(float)*grid_res[0]*grid_res[1]*grid_res[2]);
 	memset(ky,0,sizeof(float)*grid_res[0]*grid_res[1]*grid_res[2]);
 	memset(kz,0,sizeof(float)*grid_res[0]*grid_res[1]*grid_res[2]);
@@ -88,7 +85,6 @@ bool discardredundantstreamlines(float& cur_entropy,float eplison, list<vtListSe
 
 	reconstruct_field_GVF_3D(new_vectors,vectors,grid_res,new_lines,dummy,
 							kx,ky,kz,b,c1,c2,c3);
-
 	delete [] kx;
 	delete [] ky;
 	delete [] kz;
@@ -96,7 +92,7 @@ bool discardredundantstreamlines(float& cur_entropy,float eplison, list<vtListSe
 	delete [] c1;
 	delete [] c2;
 	delete [] c3;
-	
+
 	float entropy=0;
 	int *new_bin;
 	new_bin=new int [grid_res[0]*grid_res[1]*grid_res[2]];
@@ -114,7 +110,12 @@ bool discardredundantstreamlines(float& cur_entropy,float eplison, list<vtListSe
 								VECTOR3(grid_res[0]-2,grid_res[1]-2,grid_res[2]-2),theta,phi,bin_my_vector,new_bin,0,binnum,
 								 histo_puv, histo_pv, pv,entropy_tmp,
 						  0,0);
-	printf(" entropy dif=%f\n",cur_entropy-entropy);
+	// MOD-BY-LEETEN 02/04/2010-FROM:
+		// printf(" entropy dif=%f\n",cur_entropy-entropy);
+	// TO:
+	printf(" entropy dif=%+f\n",cur_entropy-entropy);
+	// MOD-BY-LEETEN 02/04/2010-END
+
 	//printf(" cur_entropy=%f\n",cur_entropy);
 	//printf(" entropy =%f\n",entropy);
 
@@ -2290,11 +2291,13 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 // ADD-BY-LEETEN 02/02/2010-BEGIN
 
 float* tmp_new_vectors;
+
 void 
 quit_reconstruct_field_GVF_3D()
 {
 	FREE(tmp_new_vectors);
 }
+
 // ADD-BY-LEETEN 02/02/2010-END
 
 void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,list<vtListSeedTrace*> l_list,int* donot_change, 
@@ -2303,13 +2306,20 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 							  float* importance)
 {
 	// ADD-BY-LEETEN 02/02/2010-BEGIN
-	static bool bIsInitialized = false;
-	if( false == bIsInitialized )
-	{
-		atexit(quit_reconstruct_field_GVF_3D);
-		bIsInitialized = true;
-	}
+	#if	0	// DEL-BY-LEETEN 02/04/2010-BEGIN
+		static bool bIsInitialized = false;
+		if( false == bIsInitialized )
+		{
+			atexit(quit_reconstruct_field_GVF_3D);
+			bIsInitialized = true;
+		}
+	#endif	// DEL-BY-LEETEN 02/04/2010-END
 	// ADD-BY-LEETEN 02/02/2010-END
+
+	// ADD-BY-LEETEN 02/04/2010-BEGIN
+	CLOCK_INIT(CLOCK_reconstruct_field_GVF_3D, __FUNCTION__ ":");
+	CLOCK_BEGIN(CLOCK_reconstruct_field_GVF_3D);
+	// ADD-BY-LEETEN 02/04/2010-END
 
 	int iter=max(grid_res[0],max(grid_res[1],grid_res[2]))*2;
 
@@ -2374,7 +2384,7 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 		}
 	}
 	//update the GVF
-	// MOD-BY-LEETEN 02/02/2010-FROM:
+	//	MOD-BY-LEETEN 02/02/2010-FROM:
 		// float* tmp_new_vectors=new float[grid_res[0]*grid_res[1]*grid_res[2]*3];
 	// TO:
 	MALLOC(tmp_new_vectors, float, grid_res[0]*grid_res[1]*grid_res[2]*3);
@@ -2385,11 +2395,16 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 	//parameter setting:
 	float mu=0.1;
 
+	// ADD-BY-LEETEN 02/04/2010-BEGIN
+	CLOCK_END(CLOCK_reconstruct_field_GVF_3D, false);
+	CLOCK_BEGIN(CLOCK_reconstruct_field_GVF_3D);
+	// ADD-BY-LEETEN 02/04/2010-END
+
 	// ADD-BY-LEETEN 2009/11/23-BEGIN
 	// MOD-BY-LEETEN 02/02/2010-FROM:
 		// #if	USE_CUDA	
 	// TO:
-	#if	DIFFUSION_ON_GPU
+	#if	DIFFUSION_ON_CUDA
 	// MOD-BY-LEETEN 02/02/2010-END
 	#if	0	// MOD-BY-LEETEN 02/02/2010-FROM:
 		_FlowFusion(
@@ -2421,7 +2436,22 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 	);
 	#endif	// MOD-BY-LEETEN 02/02/2010-END
 
-	#else	// #if	DIFFUSION_ON_GPU
+	// ADD-BY-LEETEN 02/04/2010-BEGIN
+	#elif DIFFUSION_ON_GLSL
+	_FlowDiffusionGLGL(
+		mu, 
+		iter, 
+		b,					// float *pfWeightVolume,
+		c1,					// float *pfOffsetVolume,
+		c2,					// 
+		c3,					//
+		tmp_new_vectors,	// float *pfSrcVolume
+		new_vectors			// float *pfDstVolume
+	);
+
+	// ADD-BY-LEETEN 02/04/2010-END
+
+	#else	// #if	DIFFUSION_ON_CUDA
 	// ADD-BY-LEETEN 2009/11/23-END
 
 	//iteration by iteration
@@ -2498,10 +2528,7 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 					new_vectors[idx*3+0]=tmp_new_vectors[idx*3+0];
 					new_vectors[idx*3+1]=tmp_new_vectors[idx*3+1];
 					new_vectors[idx*3+2]=tmp_new_vectors[idx*3+2];
-									
-
 					}
-
 				}
 			}
 		}
@@ -2510,17 +2537,41 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 	}
 
 	// ADD-BY-LEETEN 2009/11/23-BEGIN
-	#endif	// DIFFUSION_ON_GPU
+	#endif	// DIFFUSION_ON_CUDA
 	// ADD-BY-LEETEN 2009/11/23-END
+	// ADD-BY-LEETEN 02/04/2010-BEGIN
+	CLOCK_END(CLOCK_reconstruct_field_GVF_3D, false);
+	CLOCK_BEGIN(CLOCK_reconstruct_field_GVF_3D);
+	// ADD-BY-LEETEN 02/04/2010-END
 
 	// DEL-BY-LEETEN 02/02/2010-BEGIN
 		// delete [] tmp_new_vectors;
 	// ADD-BY-LEETEN 02/02/2010-END
+	// ADD-BY-LEETEN 02/04/2010-BEGIN
+	quit_reconstruct_field_GVF_3D();
+	// ADD-BY-LEETEN 02/04/2010-END
+
+	// ADD-BY-LEETEN 02/04/2010-BEGIN
+	CLOCK_END(CLOCK_reconstruct_field_GVF_3D, false);
+	CLOCK_PRINT(CLOCK_reconstruct_field_GVF_3D);
+	// ADD-BY-LEETEN 02/04/2010-END
 }
 
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.2  2010/02/02 23:47:07  leeten
+
+[02/02/2010]
+1. [ADD] Add the header liblog.h and FlowDiffusion3DConfig.h.
+2. [MOD] Set the pointer "dummy" to NULL since it won't be used.
+3. [MOD] Use preprocessor KERNEL_HALF_WIDTH, KERNEL_HALF_HEIGHT and KERNEL_HALF_DEPTH to control the kernel size.
+4. [ADD] Define a function get_bin_by_angle to convert the 3D coordinate from Cartesian to spherical one.
+5. [MOD] If the preprocessor BIN_LOOKUP is not zero, the bin is obtained via a lookup table.
+6. [ADD] Define a function quit_reconstruct_field_GVF_3D to free the memory used in the function reconstruct_field_GVF_3D.
+7. [MOD] All arrays used in the function reconstruct_field_GVF_3D are done by MALLOC.
+8. [MOD] Apply diffusion to voxels along the boundary too.
+
 Revision 1.1  2010/01/22 20:53:36  leeten
 
 [01/22/2010]
