@@ -21,6 +21,12 @@
 
 #define RENDER_STREAMLINE_AS_TUBES		0
 
+// ADD-BY-LEETEN 02/04/2010-BEGIN
+#define	SORT_ON_CUDA		0
+#ifdef	__DEVICE_EMULATION__
+	#define SORT_ON_CUDA	0
+#endif
+// ADD-BY-LEETEN 02/04/2010-END
 int 
 ISortSlab(const void *p0, const void *p1)
 {
@@ -99,12 +105,31 @@ CStreamline::_SortSlab(
 	// MOD-BY-LEETEN 01/30/2010-FROM:
 		// #if	0	// TEST-DEBUG
 	// TO:
-	#ifdef __DEVICE_EMULATION__
+	// MOD-BY-LEETEN 02/04/2010-FROM:
+		//	#ifdef __DEVICE_EMULATION__
+	// TO:
+	#if	!SORT_ON_CUDA
+	// MOD-BY-LEETEN 02/04/2010-END
+
+	// ADD-BY-LEETEN 02/03/2010-BEGIN
+	if( false == piNrOfLinesPerSlab.BIsAllocated() || iNrOfSlabs != piNrOfLinesPerSlab.USize() )
+		piNrOfLinesPerSlab.alloc(iNrOfSlabs);
+	else
+		memset(&piNrOfLinesPerSlab[0], 0, sizeof(piNrOfLinesPerSlab[0]) * piNrOfLinesPerSlab.USize());
+
+	if( false == piLineOffsetPerSlab.BIsAllocated() || iNrOfSlabs != piLineOffsetPerSlab.USize() )
+		piLineOffsetPerSlab.alloc(iNrOfSlabs);
+	else
+		memset(&piLineOffsetPerSlab[0], 0, sizeof(piLineOffsetPerSlab[0]) * piLineOffsetPerSlab.USize());
+	// ADD-BY-LEETEN 02/03/2010-END
+
 	// MOD-BY-LEETEN 01/30/2010-END
 	for(int l = 0; l < int(uNrOfLines); l++)
 	{
-		double pdCentroid_win[3];
-		double pdCentroid_eye[3];
+		#if	0	// DEL-BY-LEETEN 02/03/2010-BEGIN
+			double pdCentroid_win[3];
+			double pdCentroid_eye[3];
+		#endif	// DEL-BY-LEETEN 02/03/2010-END
 		#if	0	// MOD-BY-LEETEN 01/30/2010-FROM:
 			gluProject(
 				pfLineCentroids[l * 3 + 0], pfLineCentroids[l * 3 + 1], pfLineCentroids[l * 3 + 2], 
@@ -126,16 +151,38 @@ CStreamline::_SortSlab(
 		int iSlab = int(double(iNrOfSlabs) *  (dDepth - dMinZ) / (dMaxZ - dMinZ));
 		iSlab = min(max(iSlab, 0), iNrOfSlabs - 1);
 
-		pi2Slabs[l].x = iSlab; 
-		pi2Slabs[l].y = l; 
+		#if	0	// MOD-BY-LEETEN 02/03/2010-FROM:
+			pi2Slabs[l].x = iSlab; 
+			pi2Slabs[l].y = l; 
+		#else	// MOD-BY-LEETEN 02/03/2010-TO:
+		pi2SlabTemp[l].x = iSlab; 
+		pi2SlabTemp[l].y = l; 
+		piNrOfLinesPerSlab[iSlab]++;
+		#endif	// MOD-BY-LEETEN 02/03/2010-END
 	}
 
 	// sort the indices by the slab indices
-	qsort(&pi2Slabs[0], uNrOfLines, sizeof(pi2Slabs[0]), ISortSlab);
+	// MOD-BY-LEETEN 02/03/2010-FROM:
+		// qsort(&pi2Slabs[0], uNrOfLines, sizeof(pi2Slabs[0]), ISortSlab);
+	// TO:
+	for(int s = 1; s < iNrOfSlabs; s++)
+		piLineOffsetPerSlab[s] = piLineOffsetPerSlab[s-1] + piNrOfLinesPerSlab[s-1];
+
+	for(int l = 0; l < int(uNrOfLines); l++)
+	{
+		int iSlab = pi2SlabTemp[l].x;
+		pi2Slabs[piLineOffsetPerSlab[iSlab]++] = pi2SlabTemp[l];
+	}
+	// MOD-BY-LEETEN 02/03/2010-END
+
 	// MOD-BY-LEETEN 01/30/2010-FROM:
 		// #else
 	// TO:
-	#else	// #ifdef __DEVICE_EMULATION__
+	// MOD-BY-LEETEN 02/04/2010-FROM:
+		// #else	// #ifdef __DEVICE_EMULATION__
+	// TO:
+	#else	// #if	!SORT_ON_CUDA
+	// MOD-BY-LEETEN 02/04/2010-END
 	// MOD-BY-LEETEN 01/30/2010-END
 	_ComputeDepth_cuda
 	(
@@ -152,7 +199,12 @@ CStreamline::_SortSlab(
 	// MOD-BY-LEETEN 01/30/2010-FROM:
 		// #endif
 	// TO:
-	#endif	// #ifdef __DEVICE_EMULATION__
+	// MOD-BY-LEETEN 02/04/2010-FROM:
+		// #endif	// #ifdef __DEVICE_EMULATION__
+	// TO:
+	#endif	// #if	!SORT_ON_CUDA
+	// MOD-BY-LEETEN 02/04/2010-END
+
 	// MOD-BY-LEETEN 01/30/2010-END
 
 	// reorganize the vertices indices
@@ -217,6 +269,11 @@ CStreamline::_Read(float fScaleX, float fScaleY, float fScaleZ, char *szStreamli
 		vuNrOfVertices.push_back(uV);
 	}
 
+	// ADD-BY-LEETEN 02/03/2010-BEGIN
+	LOG_VAR(uNrOfLines);
+	LOG_VAR(uNrOfVertices);
+	// ADD-BY-LEETEN 02/03/2010-END
+
 	// ADD-BY-LEETEN 01/08/2010-BEGIN
 	uMaxNrOfStreamlines = uNrOfStreamlines;
 	// ADD-BY-LEETEN 01/08/2010-END
@@ -243,6 +300,7 @@ CStreamline::_Read(float fScaleX, float fScaleY, float fScaleZ, char *szStreamli
 	pu2SortedLineSegmentIndicesToVertices.alloc(2 * uNrOfLines);
 	pfLineCentroids.alloc(3 * uNrOfLines);
 	pi2Slabs.alloc(uNrOfLines);
+	pi2SlabTemp.alloc(uNrOfLines);	// ADD-BY-LEETEN 02/03/2010
 
 	unsigned int uCoordIndex = 0;
 	unsigned int uLineIndex = 0;
@@ -458,11 +516,17 @@ CStreamline::_Read(float fScaleX, float fScaleY, float fScaleZ, char *szStreamli
 			pfLineCentroids[l * 3 + p] = pdCoord_obj[p];
 	}
 
+	// ADD-BY-LEETEN 02/04/2010-BEGIN
+	#if	SORT_ON_CUDA	
+	// ADD-BY-LEETEN 02/04/2010-END
 	_ComputeDepthInit_cuda
 	(
 		int(uNrOfLines),
 		&pfLineCentroids[0]
 	);
+	// ADD-BY-LEETEN 02/04/2010-BEGIN
+	#endif	// #if	SORT_ON_CUDA
+	// ADD-BY-LEETEN 02/04/2010-END
 }
 
 void 
@@ -981,6 +1045,11 @@ CStreamline::_RenderTubes()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.9  2010/02/02 03:51:23  leeten
+
+[02/01/2010]
+1. [MOD] Mark the date to add the header "cuda_macro.h"
+
 Revision 1.8  2010/02/01 06:08:55  leeten
 
 [01/31/2010]
