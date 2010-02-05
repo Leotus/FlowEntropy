@@ -3160,7 +3160,6 @@ int sample_from( float* p,int num)
 }
 
 // ADD-BY-LEETEN 02/02/2010-BEGIN
-
 int* bin_my_vector,*bin_new_vector;
 int *histo_puv;
 int *histo_pv;
@@ -3198,16 +3197,22 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 										int* g_histo,int* g_histo_puv,int round,
 											std::vector<float>& line_importance, float in_entropy)
 {
-	// ADD-BY-LEETEN 02/02/2010-BEGIN
-	static bool bIsInitialized = false;
-	if( false == bIsInitialized  )
-	{
-		atexit(quit_selectStreamlines_by_distribution);
-		bIsInitialized  = true;
-	}
-	// ADD-BY-LEETEN 02/02/2010-END
+	#if	0	// DEL-BY-LEETEN 02/04/2010-BEGIN
+		// ADD-BY-LEETEN 02/02/2010-BEGIN
+		static bool bIsInitialized = false;
+		if( false == bIsInitialized  )
+		{
+			atexit(quit_selectStreamlines_by_distribution);
+			bIsInitialized  = true;
+		}
+		// ADD-BY-LEETEN 02/02/2010-END
+	#endif	// DEL-BY-LEETEN 02/04/2010-END
 
-	int sample_number_allowed=50;
+	// MOD-BY-LEETEN 02/04/2010-FROM:
+		// int sample_number_allowed=50;
+	// TO:
+	int sample_number_allowed = NR_OF_SAMPLES;
+	// DEL-BY-LEETEN 02/04/2010-END
 	int  kernel_size[3];
 	#if	0	// MOD-BY-LEETEN 02/02/2010-FROM:
 		kernel_size[0]=kernel_size[1]= 8;//this is radium, actuall kernel is 2 x kernel_size+1
@@ -3257,7 +3262,7 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 
 	int z=0;
 	double dwStart = GetTickCount();
-	#if		!ENTROPY_ON_GPU		// ADD-BY-LEETEN 02/02/2010
+	#if		!ENTROPY_ON_CUDA		// ADD-BY-LEETEN 02/02/2010
 	for(int y=0;y<grid_res[1];y++)
 	{
 		//double dwStart = GetTickCount();
@@ -3371,7 +3376,7 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 
 	}
 	// ADD-BY-LEETEN 02/02/2010-BEGIN
-	#else	// #if	!ENTROPY_ON_GPU	
+	#else	// #if	!ENTROPY_ON_CUDA	
 	LOG(printf("_ComputeJointEntropyVolume(): Enter"));
 	void
 	_ComputeJointEntropyVolume
@@ -3399,7 +3404,7 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 	{
 		sum += img_entropies[i];
 	}
-	#endif	// #if	!ENTROPY_ON_GPU	
+	#endif	// #if	!ENTROPY_ON_CUDA	
 	// ADD-BY-LEETEN 02/02/2010-END
 
 	
@@ -3621,7 +3626,11 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 		list<vtListSeedTrace*> tmp_whole_set_lines; 
 		if(new_lines.size())
 		{
-			float epsilon=0.01;
+			// MOD-BY-LEETEN 02/04/2010-FROM:
+				// float epsilon=0.01;
+			// TO:
+			float epsilon = PRUNING_THRESHOLD;
+			// MOD-BY-LEETEN 02/04/2010-END
 			tmp_whole_set_lines=sl_list;
 			tmp_whole_set_lines.push_back(*new_lines.begin());
 			bool discard=discardredundantstreamlines(cur_entropy,epsilon,tmp_whole_set_lines, vectors,new_vectors,grid_res,
@@ -3662,7 +3671,12 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 		delete [] importance;
 		delete [] bin_my_vector;
 		delete [] bin_new_vector;
-	#endif	// ADD-BY-LEETEN 02/02/2010-END
+	#endif	// DEL-BY-LEETEN 02/02/2010-END
+
+	// ADD-BY-LEETEN 02/04/2010-BEGIN
+	quit_selectStreamlines_by_distribution();
+	// ADD-BY-LEETEN 02/04/2010-END
+
 	return;
 }
 
@@ -3898,7 +3912,13 @@ void compute_streamlines()
 	#endif	//	#if	USE_CUDA
 	// ADD-BY-LEETEN 02/02/2010-END
 
-	#if	!BIN_LOOKUP_ON_GPU		// ADD-BY-LEETEN 02/02/2010
+	// ADD-BY-LEETEN 02/04/2010-BEGIN
+	#if		DIFFUSION_ON_GLSL
+	_FlowDiffusionGLGLInit(grid_res[0], grid_res[1], grid_res[2]);
+	#endif	// #if	DIFFUSION_ON_GLSL
+	// ADD-BY-LEETEN 02/04/2010-END
+
+	#if	!BIN_LOOKUP_ON_CUDA		// ADD-BY-LEETEN 02/02/2010
 	for(int i=0;i<grid_res[0]*grid_res[1]*grid_res[2];i++)
 	{
 		VECTOR3 orif;
@@ -3907,7 +3927,7 @@ void compute_streamlines()
 		new_bin[i]=0.0;
 	}
 	// ADD-BY-LEETEN 02/02/2010-BEGIN
-	#else	// #if	!BIN_LOOKUP_ON_GPU		
+	#else	// #if	!BIN_LOOKUP_ON_CUDA		
 	memset(old_bin, 0, sizeof(old_bin[0]) * grid_res[0] * grid_res[1] * grid_res[2]);
 	memset(new_bin, 0, sizeof(new_bin[0]) * grid_res[0] * grid_res[1] * grid_res[2]);
 
@@ -3920,23 +3940,23 @@ void compute_streamlines()
 		vectors
 	);
 	_GetSrcBinVolume(old_bin);
-	#endif	// #if	!BIN_LOOKUP_ON_GPU	
+	#endif	// #if	!BIN_LOOKUP_ON_CUDA	
 	// ADD-BY-LEETEN 02/02/2010-END
 
 	if(!entropies)
 	{
 		printf("calculating every point entropies\n");
 		entropies=new float[grid_res[0]*grid_res[1]*grid_res[2]];
-		#if			!ENTROPY_ON_GPU		// ADD-BY-LEETEN 02/02/2010
+		#if			!ENTROPY_ON_CUDA		// ADD-BY-LEETEN 02/02/2010
 		calc_entropy( old_bin,grid_res, binnum, entropies);
 		#if	0	// DEL-BY-LEETEN 02/02/2010-BEGIN
 			dumpEntropyField("entropies.bin",entropies, grid_res);
 			printf("entropy calculation done\n");
 		#endif	// DEL-BY-LEETEN 02/02/2010-END
 		// ADD-BY-LEETEN 02/02/2010-BEGIN
-		#else	// #if	!ENTROPY_ON_GPU	
+		#else	// #if	!ENTROPY_ON_CUDA	
 		_ComputeSrcEntropyVolume(binnum, KERNEL_HALF_WIDTH, KERNEL_HALF_HEIGHT, KERNEL_HALF_DEPTH, &entropies[0]);
-		#endif	// #if	!ENTROPY_ON_GPU	
+		#endif	// #if	!ENTROPY_ON_CUDA	
 		// ADD-BY-LEETEN 02/02/2010-END
 	}		
 	int selected_line_num=0;
@@ -3992,7 +4012,12 @@ void compute_streamlines()
 	// MOD-BY-LEETEN 02/02/2010-FROM:
 		// while(entropy>target_entropy)
 	// TO:
-	for(int iIter = 0; entropy>target_entropy; iIter++)
+	// MOD-BY-LEETEN 02/04/2010-FROM:
+		// for(int iIter = 0; entropy>target_entropy; iIter++)
+	// TO:
+	bool bIsConverged = false;
+	for(int iIter = 0; false == bIsConverged && entropy>target_entropy; iIter++)
+	// MOD-BY-LEETEN 02/04/2010-END
 	// MOD-BY-LEETEN 02/02/2010-END
 	{
 		VECTOR3 next_seed;
@@ -4001,14 +4026,13 @@ void compute_streamlines()
 		selectStreamlines_by_distribution(vectors,new_vectors, grid_res, occupied,seeds,
 			theta, phi,old_bin,new_bin,0,0,round++,line_importance,entropy);
 
-
 		//select new seed
 		for(int i=0;i<seeds.size();i++)
 			line_color.push_back(selected_line_num+i);
 		selected_line_num+=seeds.size();
 
 		//printf("calculate the bin number\r");
-		#if	!BIN_LOOKUP_ON_GPU	// ADD-BY-LEETEN 02/02/2010
+		#if	!BIN_LOOKUP_ON_CUDA	// ADD-BY-LEETEN 02/02/2010
 
 		for(int i=0;i<grid_res[0]*grid_res[1]*grid_res[2];i++)
 		{
@@ -4022,10 +4046,10 @@ void compute_streamlines()
 		}
 
 		// ADD-BY-LEETEN 02/02/2010-BEGIN
-		#else	//	#if	!BIN_LOOKUP_ON_GPU
+		#else	//	#if	!BIN_LOOKUP_ON_CUDA
 		if( iIter > 0 )
 			_GetDstBinVolume(new_bin);
-		#endif	//	#if	!BIN_LOOKUP_ON_GPU
+		#endif	//	#if	!BIN_LOOKUP_ON_CUDA
 		// ADD-BY-LEETEN 02/02/2010-END
 
 		entropy=calcRelativeEntropy6_new(	vectors, new_vectors,  grid_res, VECTOR3(2,2,2),//do not count boundaries
@@ -4040,8 +4064,11 @@ void compute_streamlines()
 		}
 	
 		//dumpEntropy(entropies,"entropy.bin");
-		dumpSeeds(seed_list,"myseeds.seed");//crtical points excluded
+		// DEL-BY-LEETEN 02/04/2010-BEGIN
+			// dumpSeeds(seed_list,"myseeds.seed");//crtical points excluded
+		// DEL-BY-LEETEN 02/04/2010-END
 		double dwStart= GetTickCount();
+
 
 		//printf("streamline size=%d\n",sl_list.size());
 		reconstruct_field_GVF_3D(new_vectors,vectors,grid_res,sl_list,donot_change,
@@ -4079,13 +4106,23 @@ void compute_streamlines()
 
 		for(int i=0;i<sl_list.size();i++)
 		line_color.push_back(i);
-		char filename[255];
-		memset(filename,0,255);
-		sprintf(filename,"streamlines%d.dat",round);
+		#if	0	// MOD-BY-LEETEN 02/04/2010-FROM:
+			char filename[255];
+			memset(filename,0,255);
+			sprintf(filename,"streamlines%d.dat",round);
+		#else	// MOD-BY-LEETEN 02/04/2010-TO:
+		char filename[1024];
+		sprintf(filename,"%s_streamlines%d.dat",g_filename, round);
+		#endif	// MOD-BY-LEETEN 02/04/2010-END
+
 		save_streamlines_to_file_hand_tuning(filename,line_color,nSeeds);
 		dumpEntropies(line_importance);
 		//	getchar();
 	//	printf("halted, save files now\n");
+		// ADD-BY-LEETEN 02/04/2010-BEGIN
+		bIsConverged = (0 == seeds.size())?true:false;
+		// ADD-BY-LEETEN 02/04/2010-END
+
 	}
 	
 
@@ -6062,7 +6099,6 @@ void convert_vis_data(char* filename)
 }
 int main(int argc, char** argv) 
 {
-	
 //combine_data();
 
 	/*
@@ -6129,7 +6165,6 @@ readPatches_region();
 	int xdim,ydim,zdim;
 	osuflow->GetFlowField()->getDimension(xdim,ydim,zdim);
 	//	reseeding(xdim, ydim,"Time00_fake_3D.vec.data", "Time02_fake_3D.vec.data","seed1.data","seed2.data");
-
 	glutInit(&argc, argv); 
 	glutInitDisplayMode(GLUT_RGB|GLUT_DOUBLE|GLUT_DEPTH); 
 	glutInitWindowSize(winWidth,winHeight); 
@@ -6144,7 +6179,14 @@ readPatches_region();
 	glutKeyboardFunc(mykey); 
 	//SetShaders();
 
+	// ADD-BY-LEETEN 02/04/2010-BEGIN
+	#if	DIFFUSION_ON_GLSL
+	glewInit();
+	#endif	// #if	DIFFUSION_ON_GLSL
+	// ADD-BY-LEETEN 02/04/2010-END
+	
 	glutMainLoop(); 
+
 	return 0;
 }
 
@@ -6391,6 +6433,18 @@ void Streamline_entorpy_calculation_loadfile()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.2  2010/02/02 23:51:29  leeten
+
+[02/02/2010]
+1. [ADD] Add the header liblog.h and FlowDiffusion3DConfig.h.
+2. [MOD] Use preprocessor KERNEL_HALF_WIDTH, KERNEL_HALF_HEIGHT and KERNEL_HALF_DEPTH to control the kernel size.
+3. [ADD] Define a function quit_selectStreamlines_by_distribution to free the memory used in the function selectStreamlines_by_distribution.
+4. [MOD] All arrays used in the function selectStreamlines_by_distribution are done by MALLOC.
+5. [ADD] If the preprocessor ENTROPY_ON_CUDA is not zero, use GPU to compute the entropy field.
+6. [ADD] If the preprocessor BIN_LOOKUP_ON_CUDA is not zero, use GPU to convert the vectors into bins.
+7. [DEL] Disable the dumpping of immediate result.
+8. [DEL] Set the pointer donot_change to NULL.
+
 Revision 1.1  2010/01/22 20:53:36  leeten
 
 [01/22/2010]
