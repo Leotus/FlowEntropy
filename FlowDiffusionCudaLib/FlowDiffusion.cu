@@ -847,9 +847,9 @@ _FlowDiffusionInit(
 )
 {
 	// MOD-BY-LEETEN 12/07/2009-FROM:
-		// CLOCK_INIT(PRINT_FLOW_FUSION_TIMING, "_FlowFusionInit(): ");
+		// CLOCK_INIT(PRINT_FLOW_DIFFUSION_TIMING, "_FlowFusionInit(): ");
 	// TO:
-	CLOCK_INIT(PRINT_FLOW_FUSION_TIMING, __FUNCTION__ ": ");
+	CLOCK_INIT(PRINT_FLOW_DIFFUSION_TIMING, __FUNCTION__ ": ");
 	// MOD-BY-LEETEN 12/07/2009-END
 
 	// MOD-BY-LEETEN 12/14/2009-FROM:
@@ -864,17 +864,17 @@ _FlowDiffusionInit(
 		iVolumeDepth);
 
 	// allocate a local copy in the CPU side
-	CLOCK_BEGIN(PRINT_FLOW_FUSION_TIMING);
+	CLOCK_BEGIN(PRINT_FLOW_DIFFUSION_TIMING);
 	CUDA_SAFE_CALL(
 		cudaMallocHost(
 			(void**)&pf4Volume_host,
 			sizeof(pf4Volume_host[0]) * iNrOfVoxels) );
-	CLOCK_END(PRINT_FLOW_FUSION_TIMING, true);
+	CLOCK_END(PRINT_FLOW_DIFFUSION_TIMING, true);
 
 	// Allocate 2 volumes on the  GPU's global memory.
 	// in each iteration, one of them will be used as the source
 	// 3D texture, and the other will be served as the dst.
-	CLOCK_BEGIN(PRINT_FLOW_FUSION_TIMING);
+	CLOCK_BEGIN(PRINT_FLOW_DIFFUSION_TIMING);
 
 	for(int i = 0; i < 2; i++)
 	{
@@ -936,9 +936,9 @@ _FlowDiffusionInit(
 			sizeof(pf4WeightOffsetVolume_host[0]) * iNrOfVoxels) );
 
 	// ADD-BY-LEETEN 10/02/2009-END
-	CLOCK_END(PRINT_FLOW_FUSION_TIMING, true);
+	CLOCK_END(PRINT_FLOW_DIFFUSION_TIMING, true);
 
-	CLOCK_PRINT(PRINT_FLOW_FUSION_TIMING);
+	CLOCK_PRINT(PRINT_FLOW_DIFFUSION_TIMING);
 }
 
 // ADD-BY-LEETEN 12/14/2009-BEGIN
@@ -1228,12 +1228,12 @@ _FlowDiffusion(
 	
 
 	// MOD-BY-LEETEN 12/07/2009-FROM:
-		// CLOCK_INIT(PRINT_FLOW_FUSION_TIMING, "_FlowFusion(): ");
+		// CLOCK_INIT(PRINT_FLOW_DIFFUSION_TIMING, "_FlowFusion(): ");
 	// TO:
 	// MOD-BY-LEETEN 12/14/2009-FROM:
-		// CLOCK_INIT(PRINT_FLOW_FUSION_TIMING, __FUNCTION__);
+		// CLOCK_INIT(PRINT_FLOW_DIFFUSION_TIMING, __FUNCTION__);
 	// TO:
-	CLOCK_INIT(PRINT_FLOW_FUSION_TIMING, __FUNCTION__ ": ");
+	CLOCK_INIT(PRINT_FLOW_DIFFUSION_TIMING, __FUNCTION__ ": ");
 	// MOD-BY-LEETEN 12/07/2009-END
 
 	// MOD-BY-LEETEN 10/02/2009-FROM:
@@ -1259,7 +1259,7 @@ _FlowDiffusion(
 	// ADD-BY-LEETEN 10/02/2009-END
 
 	// convert the #channels in the src volume from 3 to 4
-	CLOCK_BEGIN(PRINT_FLOW_FUSION_TIMING);
+	CLOCK_BEGIN(PRINT_FLOW_DIFFUSION_TIMING);
 	for(int v = 0,		d = 0; d < iVolumeDepth;	d++)
 		for(int			h = 0; h < iVolumeHeight;	h++)
 			for(int		w = 0; w < iVolumeWidth;	w++, v++)
@@ -1300,10 +1300,10 @@ _FlowDiffusion(
 			}
 	// ADD-BY-LEETEN 10/02/2009-END
 
-	CLOCK_END(PRINT_FLOW_FUSION_TIMING, true);
+	CLOCK_END(PRINT_FLOW_DIFFUSION_TIMING, true);
 
 	// Upload the input volume to the first volume on the GPU
-	CLOCK_BEGIN(PRINT_FLOW_FUSION_TIMING);
+	CLOCK_BEGIN(PRINT_FLOW_DIFFUSION_TIMING);
 
     cudaMemcpy3DParms cCopyParamsHostToDevice = {0};
 
@@ -1341,10 +1341,10 @@ _FlowDiffusion(
 		cudaBindTextureToArray(t3dWeightOffset, cWeightOffsetVolume_array, cWeightOffsetChannelDesc));
 	// ADD-BY-LEETEN 10/02/2009-END
 
-	CLOCK_END(PRINT_FLOW_FUSION_TIMING, true);
+	CLOCK_END(PRINT_FLOW_DIFFUSION_TIMING, true);
 
 	// calcuate the fusion operator on GPUs
-	CLOCK_BEGIN(PRINT_FLOW_FUSION_TIMING);
+	CLOCK_BEGIN(PRINT_FLOW_DIFFUSION_TIMING);
 
     t2dSrc.addressMode[0] = cudaAddressModeClamp;
     t2dSrc.addressMode[1] = cudaAddressModeClamp;
@@ -1513,12 +1513,12 @@ _FlowDiffusion(
 	}
 	// ADD-BY-LEETEN 12/14/2009-END
 
-	CLOCK_END(PRINT_FLOW_FUSION_TIMING, true);
+	CLOCK_END(PRINT_FLOW_DIFFUSION_TIMING, true);
 
 	int iDst = iSrc;
 
 	// read the result from latest iteration back to the CPU side
-	CLOCK_BEGIN(PRINT_FLOW_FUSION_TIMING);
+	CLOCK_BEGIN(PRINT_FLOW_DIFFUSION_TIMING);
 
 	cudaMemcpy3DParms cCopyParamsDeviceToHost = {0};
     cCopyParamsDeviceToHost.srcPtr		= pcVolumePtrs_global[iDst];
@@ -1532,10 +1532,10 @@ _FlowDiffusion(
 
 	CUDA_SAFE_CALL( cudaMemcpy3D(&cCopyParamsDeviceToHost) );  
 
-	CLOCK_END(PRINT_FLOW_FUSION_TIMING, true);
+	CLOCK_END(PRINT_FLOW_DIFFUSION_TIMING, true);
 
 	// convert the #channels in the dst volume from 4 to 3
-	CLOCK_BEGIN(PRINT_FLOW_FUSION_TIMING);
+	CLOCK_BEGIN(PRINT_FLOW_DIFFUSION_TIMING);
 	for(int v = 0,		d = 0; d < iVolumeDepth;	d++)
 		for(int			h = 0; h < iVolumeHeight;	h++)
 			for(int		w = 0; w < iVolumeWidth;	w++, v++)
@@ -1544,9 +1544,9 @@ _FlowDiffusion(
 				pfDstVolume[v * 3 + 1] = pf4Volume_host[v].y;
 				pfDstVolume[v * 3 + 2] = pf4Volume_host[v].z;
 			}
-	CLOCK_END(PRINT_FLOW_FUSION_TIMING, true);
+	CLOCK_END(PRINT_FLOW_DIFFUSION_TIMING, true);
 
-	CLOCK_PRINT(PRINT_FLOW_FUSION_TIMING);
+	CLOCK_PRINT(PRINT_FLOW_DIFFUSION_TIMING);
 }
 
 } // extern "C"
@@ -1554,6 +1554,11 @@ _FlowDiffusion(
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.9  2010/02/02 23:41:39  leeten
+
+[02/02/2010]
+1. [MOD] Change the name of the function _GetJointEntropyVolume to _ComputeJointEntropyVolume. Besides, one more paramter is added to specify the dst. for the result on the host side.
+
 Revision 1.8  2010/01/27 22:07:27  leeten
 
 [01/27/2010]

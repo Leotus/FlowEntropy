@@ -105,11 +105,11 @@
 	#include "libbuf.h"
 
 ////////////////////////////////////////////
-#if	0	// TEST-MOD
-	#define PRINT_FLOW_FUSION_TIMING	1
-#else
-	#define PRINT_FLOW_FUSION_TIMING	0
-#endif
+	// MOD-BY-LEETEN 02/04/2010-FROM:
+		// #define PRINT_FLOW_FUSION_TIMING	0
+	// MOD-BY-LEETEN 02/04/2010-TO:
+	#define PRINT_FLOW_DIFFUSION_TIMING	0
+	// MOD-BY-LEETEN 02/04/2010-END
 	#define USE_SHARED_MEMORY			0
 
 	// ADD-BY-LEETEN 12/14/2009-BEGIN
@@ -131,6 +131,11 @@
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.6  2010/02/02 23:40:36  leeten
+
+[02/02/2010]
+1. [DEL] Remove the preprocessor UPDATE_HISTOGRAM_ON_GPU and COMPUTE_ENTROPY_ON_GPU.
+
 Revision 1.5  2010/01/06 17:01:36  leeten
 
 [01/06/2010]
