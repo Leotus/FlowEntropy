@@ -15,12 +15,15 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "myinterface3D", "..\entropy_3D\myinterface3D\myinterface3D.vcproj", "{2ADB44C6-5874-41DC-BF02-8F1C6087B4E1}"
 	ProjectSection(ProjectDependencies) = postProject
 		{17C8E013-3B43-44A0-A16F-62B2A3DA2D10} = {17C8E013-3B43-44A0-A16F-62B2A3DA2D10}
+		{139BEFCC-484B-4DA9-99EA-56E23951F71F} = {139BEFCC-484B-4DA9-99EA-56E23951F71F}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Flow2Entropy", "..\Flow2Entropy\Flow2Entropy.vcproj", "{686F3472-7AF7-459C-8687-DAA3BD0DBE4B}"
 	ProjectSection(ProjectDependencies) = postProject
 		{17C8E013-3B43-44A0-A16F-62B2A3DA2D10} = {17C8E013-3B43-44A0-A16F-62B2A3DA2D10}
 	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FlowDiffusionGLSLLib", "..\FlowDiffusionGLSLLib\FlowDiffusionGLSLLib.vcproj", "{139BEFCC-484B-4DA9-99EA-56E23951F71F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -78,6 +81,14 @@ Global
 		{686F3472-7AF7-459C-8687-DAA3BD0DBE4B}.EmuRelease|Win32.Build.0 = EmuRelease|Win32
 		{686F3472-7AF7-459C-8687-DAA3BD0DBE4B}.Release|Win32.ActiveCfg = Release|Win32
 		{686F3472-7AF7-459C-8687-DAA3BD0DBE4B}.Release|Win32.Build.0 = Release|Win32
+		{139BEFCC-484B-4DA9-99EA-56E23951F71F}.Debug|Win32.ActiveCfg = Debug|Win32
+		{139BEFCC-484B-4DA9-99EA-56E23951F71F}.Debug|Win32.Build.0 = Debug|Win32
+		{139BEFCC-484B-4DA9-99EA-56E23951F71F}.EmuDebug|Win32.ActiveCfg = EmuDebug|Win32
+		{139BEFCC-484B-4DA9-99EA-56E23951F71F}.EmuDebug|Win32.Build.0 = EmuDebug|Win32
+		{139BEFCC-484B-4DA9-99EA-56E23951F71F}.EmuRelease|Win32.ActiveCfg = EmuRelease|Win32
+		{139BEFCC-484B-4DA9-99EA-56E23951F71F}.EmuRelease|Win32.Build.0 = EmuRelease|Win32
+		{139BEFCC-484B-4DA9-99EA-56E23951F71F}.Release|Win32.ActiveCfg = Release|Win32
+		{139BEFCC-484B-4DA9-99EA-56E23951F71F}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
