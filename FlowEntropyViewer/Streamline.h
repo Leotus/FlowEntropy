@@ -99,6 +99,11 @@ struct CStreamline
 	TBuffer<unsigned int> pu2LineSegmentIndicesToVertices;
 	// MOD-BY-LEETEN 01/02/2010-END
 
+	// ADD-BY-LEETEN 02/03/2010-BEGIN
+	TBuffer<int>	piNrOfLinesPerSlab;
+	TBuffer<int>	piLineOffsetPerSlab;
+	TBuffer<int2>	pi2SlabTemp;
+	// ADD-BY-LEETEN 02/03/2010-END
 	TBuffer<int2>	pi2Slabs;
 	TBuffer<float>	pfLineCentroids;
 	// MOD-BY-LEETEN 01/02/2010-FROM:
@@ -162,6 +167,11 @@ public:
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.8  2010/02/01 06:01:42  leeten
+
+[01/31/2010]
+1. [ADD] Use VBO to render the lines.
+
 Revision 1.7  2010/01/19 21:12:37  leeten
 
 [01/19/2010]
