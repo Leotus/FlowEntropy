@@ -5,6 +5,10 @@
 #define _USE_MATH_DEFINES	1
 #include <math.h>
 
+// ADD-BY-LEETEN 02/08/2010-BEGIN
+#define	DIFFUSION_CONVERGE_THRESHOLD	0.9995
+// ADD-BY-LEETEN 02/08/2010-END
+
 // ADD-BY-LEETEN 12/07/2009-BEGIN
 #include "cudpp/cudpp.h"
 // ADD-BY-LEETEN 01/25/2010-BEGIN
@@ -161,6 +165,11 @@ void _FlowDiffusionFree();
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.6  2010/02/02 23:39:59  leeten
+
+[02/02/2010]
+1. [ADD] Check whether the returned poitner is NULL in the macro MALLOC.
+
 Revision 1.5  2010/01/27 22:06:56  leeten
 
 [01/27/2010]
