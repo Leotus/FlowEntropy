@@ -3584,6 +3584,12 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 		i++;
 	}
 
+	// ADD-BY-LEETEN 02/06/2010-BEGIN
+	FREE(qx);
+	FREE(qy);
+	FREE(qz);
+	// ADD-BY-LEETEN 02/06/2010-END
+
 	elapsedTime= GetTickCount() - dwStart;
 	printf("\n\n sampling time is %.3f milli-seconds.\n",elapsedTime); 	
 
@@ -3609,7 +3615,11 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 
 		osuflow->GenStreamLines(lines , BACKWARD_AND_FORWARD,length, 0);	 //maxi steps
 //		combinehalflines(lines, new_lines);//for display only, the streamline stops when gets too near to an existing
-		combinehalflines_check_stop_entropy(lines, new_lines,grid_res,entropies);//for display only, the streamline stops when gets too near to an existing
+		// MOD-BY-LEETEN 02/06/2010-FROM:
+			// combinehalflines_check_stop_entropy(lines, new_lines,grid_res,entropies);//for display only, the streamline stops when gets too near to an existing
+		// TO: 
+		combinehalflines(lines, new_lines);	//for display only, the streamline stops when gets too near to an existing
+		// MOD-BY-LEETEN 02/06/2010-END
 		/*
 		if(new_lines.size())
 		{
@@ -4055,6 +4065,7 @@ void compute_streamlines()
 		entropy=calcRelativeEntropy6_new(	vectors, new_vectors,  grid_res, VECTOR3(2,2,2),//do not count boundaries
 									VECTOR3(grid_res[0]-2,grid_res[1]-2,grid_res[2]-2),theta,phi,old_bin,new_bin,0,binnum,histo_puv,histo_pv,
 									pv,entropy_tmp);
+
 	//	entropy_list.push_back(entropy);
 		for(int i=0;i<seeds.size();i++)
 		{
@@ -4122,6 +4133,10 @@ void compute_streamlines()
 		// ADD-BY-LEETEN 02/04/2010-BEGIN
 		bIsConverged = (0 == seeds.size())?true:false;
 		// ADD-BY-LEETEN 02/04/2010-END
+
+		// ADD-BY-LEETEN 02/06/2010-BEGIN
+		printf("seed %d selected, entropy=%f/%f \n",selected_line_num, entropy,target_entropy);
+		// ADD-BY-LEETEN 02/06/2010-END
 
 	}
 	
@@ -6433,6 +6448,16 @@ void Streamline_entorpy_calculation_loadfile()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.3  2010/02/05 01:35:25  leeten
+
+[02/02/2010]
+1. [MOD] Specify the samples by the preprocessor NR_OF_SAMPLES.
+2. [MOD] Specify the pruning threshold via the preprocessor PRUNING_THRESHOLD.
+3. [ADD] Call the function quit_selectStreamlines_by_distribution() at the end of the function selectStreamlines_by_distribution().
+4. [MOD] Stop the generation of seeds when no seed can be generated.
+5. [MOD] Output the generated streamlines to the path that is extended from the inpur vector's path.
+6. [ADD] Call glewInit in the function main().
+
 Revision 1.2  2010/02/02 23:51:29  leeten
 
 [02/02/2010]
