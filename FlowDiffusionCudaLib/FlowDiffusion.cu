@@ -1221,7 +1221,11 @@ _FlowDiffusion(
 {
 	// ADD-BY-LEETEN 12/07/2009-BEGIN
 	#if	CHECK_ERROR_CONVERGENCE_BY_CUDPP
-	iNrOfIterations = 4 * max(max(iVolumeWidth, iVolumeHeight), iVolumeDepth);
+	// MOD-BY-LEETEN 02/06/2010-FROM:
+		// iNrOfIterations = 4 * max(max(iVolumeWidth, iVolumeHeight), iVolumeDepth);
+	// TO:
+	iNrOfIterations = 1024 * max(max(iVolumeWidth, iVolumeHeight), iVolumeDepth);
+	// MOD-BY-LEETEN 02/06/2010-END
 	// LOG(printf("Warning! iNrOfIterations is changed to %d", iNrOfIterations));
 	#endif
 	// ADD-BY-LEETEN 12/07/2009-END
@@ -1485,8 +1489,14 @@ _FlowDiffusion(
 		// fprintf(stderr, "Error: %f\n", fError);
 
 		static float fPrevError = -1.0f;
-		float fErrorDif = fabsf(fPrevError - fError);
-		if( i > max(max(iVolumeWidth, iVolumeHeight), iVolumeDepth) && (fErrorDif/fPrevError < 0.01f || fErrorDif < 0.000001f) )
+		#if	0	// MOD-BY-LEETEN 02/06/2010-FROM:
+			float fErrorDif = fabsf(fPrevError - fError);
+			if( i > max(max(iVolumeWidth, iVolumeHeight), iVolumeDepth) && (fErrorDif/fPrevError < 0.05f || fErrorDif < 0.000001f) )
+		#else	// MOD-BY-LEETEN 02/06/2010-TO:
+		float fErrorRate = fError/fPrevError;
+		if( i > max(max(iVolumeWidth, iVolumeHeight), iVolumeDepth) && 
+			(DIFFUSION_CONVERGE_THRESHOLD <= fErrorRate && fErrorRate <= 1.00f ) )
+		#endif	// MOD-BY-LEETEN 02/06/2010-END
 		{
 			printf("\t#iters = %d;", i);
 			break;
@@ -1554,6 +1564,11 @@ _FlowDiffusion(
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.10  2010/02/05 01:39:53  leeten
+
+[02/02/2010]
+1. [MOD] Change the name of the macro from PRINT_FLOW_FUSION_TIMING to PRINT_FLOW_DIFFUSION_TIMING .
+
 Revision 1.9  2010/02/02 23:41:39  leeten
 
 [02/02/2010]
