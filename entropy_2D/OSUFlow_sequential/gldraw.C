@@ -23,6 +23,14 @@
 
 #include <list>
 #include <iterator>
+
+// ADD-BY-LEETEN 02/05/2010-BEGIN
+#include <liblog.h>
+
+#include "FlowDiffusion2DConfig.h"
+// ADD-BY-LEETEN 02/05/2010-END
+
+
 QuadTree* Tree=0;
 int g_xdim=0;
 int g_ydim=0;
@@ -668,9 +676,13 @@ void compute_streamlines_load_file_entropy()
 	delete [] donotchange;
 }
 
+#if	0	// MOD-BY-LEETEN 02/06/2010-FROM:
 void save_streamlines_to_file()
 {
-	
+#else	// MOD-BY-LEETEN 02/06/2010-TO:
+void save_streamlines_to_file(list<vtListSeedTrace*>& sl_list, char *szVectorFilename = NULL)
+{
+#endif	// MOD-BY-LEETEN 02/06/2010-END
 	int line_num=sl_list.size();
 	int* ver_num=new int[line_num];
 
@@ -709,7 +721,17 @@ void save_streamlines_to_file()
 		}
 	}
 
-	FILE* fp=fopen("streamlines.dat","wb");
+	// MOD-BY-LEETEN 02/05/2010-FROM:
+		// FILE* fp=fopen("streamlines.dat","wb");
+	// TO:
+	static char szFilename[1024+1];
+	if( szVectorFilename )
+		strcpy(szFilename, szVectorFilename);
+	else
+		sprintf(szFilename, "%s_streamlines.dat", g_filename);
+	FILE* fp=fopen(szFilename,"wb");
+	// ADD-BY-LEETEN 02/05/2010-END
+
 	fwrite(&line_num,sizeof(int),1,fp);
 	fwrite(ver_num,sizeof(int),line_num,fp);
 	fwrite(ver,sizeof(VECTOR3),total_ver_num,fp);
@@ -745,7 +767,11 @@ void compute_streamlines_load_file() {
 	printf("compute streamlines..\n"); 
 	osuflow->SetIntegrationParams(.1,.5); //small and large step size
 	osuflow->GenStreamLines(sl_list , BACKWARD_AND_FORWARD, 500, 0); //maxi steps
-	save_streamlines_to_file();
+	// MOD-BY-LEETEN 02/06/2010-FROM:
+		// save_streamlines_to_file();
+	// TO:
+	save_streamlines_to_file(sl_list);
+	// MOD-BY-LEETEN 02/06/2010-END
 /*
 	int grid_res[3];
 	float* vectors=get_grid_vec_data(grid_res);
@@ -2070,6 +2096,7 @@ int sample_from( float* p,int num)
          return i+1;
 }
 
+
 //speed up by reusing histogram partially
 void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* grid_res, 
 									   int x_min,int x_max,int y_min,int y_max,int* occupied,float hx,
@@ -2077,7 +2104,11 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 									   PointRef* m_grid, float in_entropy)
 {
 
-	int sample_number_allowed=100;
+	// MOD-BY-LEETEN 02/05/2010-FROM:
+		// int sample_number_allowed=100;
+	// TO:
+	int sample_number_allowed=NR_OF_SAMPLES;
+	// MOD-BY-LEETEN 02/05/2010-END
 	int  kernel_size= 8;//conditional entropy kernel
 	int radius=1;		//not using distance control
 	float* img_entropies=new float[grid_res[0]*grid_res[1]];
@@ -2316,6 +2347,12 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 		VECTOR3 newseed;
 		newseed.Set(sx[i],sy[i],0);
 
+		#if	0	// DEL-BY-LEETEN 02/08/2010-BEGIN
+			// ADD-BY-LEETEN 02/05/2010-BEGIN
+			LOG(printf("Seed %d = (%d, %d)", i, sx[i], sy[i]));
+			// ADD-BY-LEETEN 02/05/2010-END
+		#endif	// DEL-BY-LEETEN 02/08/2010-END
+
 		int idx=(int)newseed.x()+((int)newseed.y())*grid_res[0];
 		if(occupied[idx]==1)
 			continue;//do not select this one
@@ -2326,11 +2363,27 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 		
 		osuflow->SetEntropySeedPoints( &newseed,1);
 		osuflow->SetIntegrationParams(.1, .5);							//small and large step size
+		// MOD-BY-LEETEN 02/05/2010-FROM:
+			// osuflow->GenStreamLines(lines , BACKWARD_AND_FORWARD, 10,0);	 //maxi steps
+		// TO:
+		#if	GENERATE_PRIMITIVE == GENERATE_PRIMITIVE_GLYPHS
 		osuflow->GenStreamLines(lines , BACKWARD_AND_FORWARD, 10,0);	 //maxi steps
+		#endif
+
+		#if	GENERATE_PRIMITIVE == GENERATE_PRIMITIVE_STREAMLINES
+		osuflow->GenStreamLines(lines , BACKWARD_AND_FORWARD, 200,0);	 //maxi steps
+		#endif
+		// MOD-BY-LEETEN 02/05/2010-END
+
 		//osuflow->GenStreamLines(lines , BACKWARD_AND_FORWARD, 2,0);	 //maxi steps
 
 //		combinehalflines(lines, new_lines,grid_res);
-		combinehalflines_check_stop(lines, new_lines,grid_res,m_grid,streamlineId);//for display only, the streamline stops when gets too near to an existing
+		// MOD-BY-LEETEN 02/06/2010-FROM:
+			// combinehalflines_check_stop(lines, new_lines,grid_res,m_grid,streamlineId);//for display only, the streamline stops when gets too near to an existing
+		// TO:
+		combinehalflines(lines, new_lines,grid_res);
+		// MOD-BY-LEETEN 02/06/2010-END
+
 //		combinehalflines_check_stop_entropy(lines, new_lines,grid_res,entropies);//for display only, the streamline stops when gets too near to an existing
 //		streamlineId++;
 
@@ -2338,11 +2391,32 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 		
 		if(new_lines.size())
 		{
-			float epsilon=0.002;
+			// MOD-BY-LEETEN 02/05/2010-FROM:
+				// float epsilon = 0.002;
+			// TO:
+			float epsilon = PRUNING_THRESHOLD;
+			// MOD-BY-LEETEN 02/05/2010-END
+	
 			tmp_whole_set_lines=sl_list;
 			tmp_whole_set_lines.push_back(*new_lines.begin());
-			//bool discard=discardredundantstreamlines(cur_entropy,epsilon,tmp_whole_set_lines, vectors,new_vectors,grid_res);
-bool discard=false;
+			#if	0	// MOD-BY-LEETEN 02/05/2010-FROM:
+				//bool discard=discardredundantstreamlines(cur_entropy,epsilon,tmp_whole_set_lines, vectors,new_vectors,grid_res);
+				bool discard=false;
+			#else	// MOD-BY-LEETEN 02/05/2010-TO:
+			bool discard=discardredundantstreamlines(cur_entropy,epsilon,tmp_whole_set_lines, vectors,new_vectors,grid_res);
+			#endif	// MOD-BY-LEETEN 02/05/2010-END
+
+
+			// ADD-BY-LEETEN 02/06/2010-BEGIN
+			#if	DUMP_WHEN_ENTROPY_INCREASE
+			if( true == discard )
+			{
+				save_streamlines_to_file(sl_list,			"streamline_set.dat");
+				save_streamlines_to_file(new_lines,			"streamline_new.dat");
+			}
+			#endif	// #if	DUMP_WHEN_ENTROPY_INCREASE
+			// ADD-BY-LEETEN 02/06/2010-END
+
 			if(discard==false)
 			{
 				sl_list.push_back(*(new_lines.begin()));			
@@ -2615,7 +2689,7 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 	float M=maximum*1.01;
 
 	int i=0;
-	srand((unsigned)time(NULL));
+	// DEL-BY-LEETEN 02/05/2010 srand((unsigned)time(NULL));
 	while(i<sample_number_allowed)
 	{
 		int x = sample_from(px,grid_res[0]);
@@ -2743,7 +2817,7 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 	float M=(maximum/sum*grid_res[0]*grid_res[1])*1.1;
 
 	int i=0;
-	srand((unsigned)time(NULL));
+	// DEL-BY-LEETEN 02/05/2010 srand((unsigned)time(NULL));
 	while(i<sample_number_allowed)
 	{
 		float randx = ((float)rand()/(float)RAND_MAX);
@@ -2900,13 +2974,19 @@ void compute_streamlines()
 		new_vectors[3*idx+1]=vectors[3*idx+1];
 	}
 
+	// ADD-BY-LEETEN 02/05/2010-BEGIN
+	#if		USE_CUDA
+	_FlowDiffusionInit(grid_res[0], grid_res[1], grid_res[2]);
+	#endif	// #if	USE_CUDA
+	// ADD-BY-LEETEN 02/05/2010-END
+
 	int selected_line_num=0;
 	float old_entropy=9999;
 	float entropy=8888;
 	float firstentropy=1;
 	int first=1;
 	std::vector<VECTOR3> seedlist;
-	srand((unsigned)time(NULL));			// initialize random number generator
+	// DEL-BY-LEETEN 02/05/2010 srand((unsigned)time(NULL));			// initialize random number generator
 	import_pos.clear();
 	VECTOR3 oldseed;
 
@@ -2924,8 +3004,17 @@ void compute_streamlines()
 	float hx=calcEntropy( vectors,  grid_res, VECTOR3(0,0,0),VECTOR3(grid_res[0],grid_res[1],grid_res[2]));
 	printf("entropy=%f\n",hx);
 	int* output_bins=new int[grid_res[0]*grid_res[1]];
-	float error=0.01;//0.01;
-	float target=-error*log2(error)-(1-error)*log2(1-error)+error*log2(60-1);
+	// MOD-BY-LEETEN 02/05/2010-FROM:
+		// float error=0.01;//0.01;
+	// TO:
+	float error = TARGET_ERROR;//0.01;
+	// MOD-BY-LEETEN 02/05/2010-END
+
+	// MOD-BY-LEETEN 02/05/2010-FROM:
+		// float target=-error*log2(error)-(1-error)*log2(1-error)+error*log2(60-1);
+	// TO:
+	float target=-error*log2(error)-(1-error)*log2(1-error)+error*log2(60);
+	// MOD-BY-LEETEN 02/05/2010-END
 printf("p(e)=%f target entorpy=%f\n",error,target);
 	PointRef* m_grid = new PointRef[grid_res[0]*grid_res[1]];
 	for(int iFor = 0; iFor < (grid_res[0]*grid_res[1]); iFor++)
@@ -2936,7 +3025,16 @@ printf("p(e)=%f target entorpy=%f\n",error,target);
 	int selected_line_num_old=0;//want to select top line_num_thres lines
 	int round=0;
 	std::vector<float> entropy_list;
-	while(selected_line_num<line_num_thres )
+
+	// MOD-BY-LEETEN 02/05/2010-FROM:
+		// while(selected_line_num<line_num_thres )
+	// TO:
+	bool bIsConverged = false;
+	for(
+		bool bIsConverged = false;
+		entropy > target && false == bIsConverged;
+	)
+	// MOD-BY-LEETEN 02/05/2010-END
 //	while(entropy>target )
 	{
 		round++;
@@ -2975,7 +3073,16 @@ printf("p(e)=%f target entorpy=%f\n",error,target);
 		}
 		printf("%d seeds selected, entropy=%f/%f\n",selected_line_num, entropy,target);
 	
-	save_streamlines_to_file();
+		// ADD-BY-LEETEN 02/05/2010-BEGIN
+		bIsConverged = (0 == seeds.size())?true:false;
+		// ADD-BY-LEETEN 02/05/2010-END
+
+		// MOD-BY-LEETEN 02/06/2010-FROM:
+			// save_streamlines_to_file();
+		// TO:
+		save_streamlines_to_file(sl_list);
+		// MOD-BY-LEETEN 02/06/2010-END
+
 		//dumpEntropy(entropies,"entropy.bin");
 	//	dumpSeeds(seedlist,"myseeds.seed");//crtical points excluded
 	//	printf("halted, save files now\n");
@@ -2984,7 +3091,14 @@ printf("p(e)=%f target entorpy=%f\n",error,target);
 //	getchar();
 	}
 	
-	dumpEntropy(entropy_list,"entropy.bin");
+	// MOD-BY-LEETEN 02/05/2010-FROM:
+		// dumpEntropy(entropy_list,"entropy.bin");
+	// TO:
+	static char szFilename[1024+1];
+	sprintf(szFilename, "%s_entropy.bin", g_filename);
+	dumpEntropy(entropy_list, szFilename);
+	// MOD-BY-LEETEN 02/05/2010-END
+
 	//dumpReconstruedField("r.vec", new_vectors, grid_res);
 	//dumpSeeds(seedlist,"myseeds.seed");//crtical points excluded
 	delete [] new_vectors;
@@ -2992,6 +3106,12 @@ printf("p(e)=%f target entorpy=%f\n",error,target);
 	delete [] occupied;
 	delete [] output_bins;
 	delete [] m_grid;
+
+	// ADD-BY-LEETEN 02/05/2010-BEGIN
+	#if		USE_CUDA	
+	_FlowDiffusionFree();
+	#endif	// #if	USE_CUDA	
+	// ADD-BY-LEETEN 02/05/2010-END
 }
 
 /*
@@ -3068,7 +3188,7 @@ void compute_streamlines()
 	float firstentropy=1;
 	int first=1;
 	std::vector<VECTOR3> seedlist;
-	srand((unsigned)time(NULL));			// initialize random number generator
+	// DEL-BY-LEETEN 02/05/2010 srand((unsigned)time(NULL));			// initialize random number generator
 	import_pos.clear();
 	VECTOR3 oldseed;
 
@@ -3779,7 +3899,7 @@ void Streamline_entorpy_sorting()
 
 	int selected_line_num=0;
 	std::vector<VECTOR3> seedlist;
-	srand((unsigned)time(NULL));			// initialize random number generator
+	// DEL-BY-LEETEN 02/05/2010 srand((unsigned)time(NULL));			// initialize random number generator
 	VECTOR3 oldseed;
 
 	int x_min=0,x_max=0,y_min=0,y_max=0;
@@ -3968,7 +4088,7 @@ void Streamline_entorpy_calculation_loadfile()
 
 	int selected_line_num=0;
 	std::vector<VECTOR3> seedlist;
-	srand((unsigned)time(NULL));			// initialize random number generator
+	// DEL-BY-LEETEN 02/05/2010 srand((unsigned)time(NULL));			// initialize random number generator
 	VECTOR3 oldseed;
 
 	int x_min=0,x_max=0,y_min=0,y_max=0;
@@ -4491,5 +4611,10 @@ fclose(my);
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.1  2010/01/22 21:09:12  leeten
+
+[01/22/2010]
+1. [1ST] First time checkin.
+
 
 */
