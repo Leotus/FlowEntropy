@@ -1,6 +1,10 @@
 
 #include "entropy.h"
 
+// ADD-BY-LEETEN 02/05/2010-BEGIN
+#include "FlowDiffusion2DConfig.h"	
+// ADD-BY-LEETEN 02/05/2010-END
+
 #if	0	// DEL-BY-LEETEN 01/22/2010-BEGIN
 	#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 	#include <CGAL/Triangulation_2.h>
@@ -1111,16 +1115,34 @@ bool CheckValidness(VECTOR3 p, VECTOR3 pObj,PointRef* m_grid, float m_sepDist,fl
 	return true;			
 }
 
+// ADD-BY-LEETEN 02/06/2010-BEGIN
+void
+_SaveVectorField2D(int* grid_res, float *pf3Vectors, char szFilename[])
+{
+	FILE *fpFile = fopen(szFilename, "wb");
+	assert(fpFile);
+
+	fwrite(&grid_res[0], sizeof(grid_res[0]), 3, fpFile);
+	fwrite(pf3Vectors, sizeof(pf3Vectors), 3 * grid_res[0] * grid_res[1], fpFile);
+	fwrite(pf3Vectors, sizeof(pf3Vectors), 3 * grid_res[0] * grid_res[1], fpFile);
+	fclose(fpFile);
+}
+// ADD-BY-LEETEN 02/06/2010-END
+
 bool discardredundantstreamlines(float& cur_entropy,float eplison, list<vtListSeedTrace*> new_lines,
 								 float* vectors, float* new_vectors,int* grid_res)
 {
-
 	int* dummy=new int[grid_res[0]*grid_res[1]*grid_res[2]];
 	float* tmp_new_vectors=new float[grid_res[0]*grid_res[1]*grid_res[2]*3];
 	memcpy(tmp_new_vectors,new_vectors,sizeof(float)*grid_res[0]*grid_res[1]*grid_res[2]*3);
 	reconstruct_field_GVF_2D(new_vectors,vectors,grid_res,new_lines,dummy);
 	float entropy=calcRelativeEntropy6(  vectors, new_vectors,  grid_res, VECTOR3(0,0,0),VECTOR3(grid_res[0],grid_res[1],0),0);
-	printf(" entropy dif=%f\n",cur_entropy-entropy);
+	// MOD-BY-LEETEN 02/06/2010-FROM:
+		// printf(" entropy dif=%f\n",cur_entropy-entropy);
+	// TO:
+	printf("entropy dif=%+f\n",cur_entropy-entropy);
+	// MOD-BY-LEETEN 02/06/2010-END
+
 	if(cur_entropy-entropy>eplison)
 	{
 		cur_entropy=entropy;
@@ -1130,6 +1152,13 @@ bool discardredundantstreamlines(float& cur_entropy,float eplison, list<vtListSe
 	}
 	else
 	{
+		// ADD-BY-LEETEN 02/06/2010-BEGIN
+		#if		DUMP_WHEN_ENTROPY_INCREASE
+		_SaveVectorField2D(grid_res, tmp_new_vectors,	"tmp_vector.vec");
+		_SaveVectorField2D(grid_res, new_vectors,		"new_vector.vec");
+		#endif	// #if	DUMP_WHEN_ENTROPY_INCREASE
+		// ADD-BY-LEETEN 02/06/2010-END
+
 		memcpy(new_vectors,tmp_new_vectors,sizeof(float)*grid_res[0]*grid_res[1]*grid_res[2]*3);
 		delete [] tmp_new_vectors;
 		delete [] dummy;
@@ -1497,8 +1526,11 @@ void reconstruct_field_GVF_2D_tmp(float* new_vectors,float* vectors, int* grid_r
 void reconstruct_field_GVF_2D(float* new_vectors,float* vectors, int* grid_res,list<vtListSeedTrace*> l_list,
 							  int* donotchange)
 {
-
-	int iter=2*max(grid_res[0],grid_res[1]);
+	// MOD-BY-LEETEN 02/06/2010-FROM:
+		// int iter=2*max(grid_res[0],grid_res[1]);
+	// TO:
+	int iter = 4 * max(grid_res[0],grid_res[1]);
+	// MOD-BY-LEETEN 02/06/2010-END
 
 	//initial GVF, combine with input new_vectors
 	list<vtListSeedTrace*>::iterator pIter;
@@ -1508,6 +1540,10 @@ void reconstruct_field_GVF_2D(float* new_vectors,float* vectors, int* grid_res,l
 	float* b=new float[grid_res[0]*grid_res[1]];
 	float* c1=new float[grid_res[0]*grid_res[1]];
 	float* c2=new float[grid_res[0]*grid_res[1]];
+
+	// ADD-BY-LEETEN 02/06/2010-BEGIN
+	float* tmp_new_vectors=(float*)calloc(sizeof(float), grid_res[0]*grid_res[1]*3);
+	// ADD-BY-LEETEN 02/06/2010-END
 
 	for(int i=0; i<grid_res[0]*grid_res[1];i++)
 	{
@@ -1538,11 +1574,32 @@ void reconstruct_field_GVF_2D(float* new_vectors,float* vectors, int* grid_res,l
 			kx[idx]=vx;
 			ky[idx]=vy;
 			//initial GVF  to kx ky
-			new_vectors[idx*3+0]=kx[idx];
-			new_vectors[idx*3+1]=ky[idx];
+			// ADD-BY-LEETEN 02/06/2010-BEGIN
+			#if		IMPLEMENTED_BY_XUL	
+			// ADD-BY-LEETEN 02/06/2010-END
+				new_vectors[idx*3+0]=kx[idx];
+				new_vectors[idx*3+1]=ky[idx];
+				donotchange[idx]=1;
+			// ADD-BY-LEETEN 02/06/2010-BEGIN
+			#else	// #if	IMPLEMENTED_BY_XUL
+			tmp_new_vectors[idx*3+0]=kx[idx];
+			tmp_new_vectors[idx*3+1]=ky[idx];
 			donotchange[idx]=1;
+			#endif	// #if	IMPLEMENTED_BY_XUL
+			// ADD-BY-LEETEN 02/06/2010-END
 		}
 	}
+
+	// ADD-BY-LEETEN 02/08/2010-BEGIN
+	#if	INIT_BOUNDARY_AS_STREAMLINE	
+	// set the boundary
+	for(int		idx = 0,	y = 0; y < grid_res[1]; y++)
+		for(int				x = 0; x < grid_res[0]; x++, idx++)
+			if( 0 == x || grid_res[0]- 1 == x || 0 == y || grid_res[1]- 1 == y )
+				for(int j = 0; j < 2; j++)
+					new_vectors[3*idx + j] = tmp_new_vectors[3*idx+j] = vectors[3*idx+j];
+	#endif	// #if	INIT_BOUNDARY_AS_STREAMLINE	
+	// ADD-BY-LEETEN 02/08/2010-END
 
 	//other initials
 	for(int y=0; y<grid_res[1];y++)
@@ -1553,23 +1610,58 @@ void reconstruct_field_GVF_2D(float* new_vectors,float* vectors, int* grid_res,l
 			b[idx]=kx[idx]*kx[idx]+ky[idx]*ky[idx];
 			c1[idx]=b[idx]*kx[idx];
 			c2[idx]=b[idx]*ky[idx];
-	
-
 		}
 	}
 	
 	//update the GVF
-	float* tmp_new_vectors=new float[grid_res[0]*grid_res[1]*3];
-	for(int i=0; i<grid_res[0]*grid_res[1]*3;i++)
-		tmp_new_vectors[i]=new_vectors[i];
+	// ADD-BY-LEETEN 02/06/2010-BEGIN
+	#if		IMPLEMENTED_BY_XUL	
+	// ADD-BY-LEETEN 02/06/2010-END
+		// DEL-BY-LEETEN 02/06/2010-BEGIN
+			// float* tmp_new_vectors=new float[grid_res[0]*grid_res[1]*3];
+		// DEL-BY-LEETEN 02/06/2010-END
+		for(int i=0; i<grid_res[0]*grid_res[1]*3;i++)
+			tmp_new_vectors[i]=new_vectors[i];
+	// ADD-BY-LEETEN 02/06/2010-BEGIN
+	#endif	// #if		IMPLEMENTED_BY_XUL	
+	// ADD-BY-LEETEN 02/06/2010-END
+
+	#if	0	// TEST-DEBUG
+	#if		DUMP_WHEN_ENTROPY_INCREASE
+	_SaveVectorField2D(grid_res, new_vectors,		"vector_new.vec");
+	_SaveVectorField2D(grid_res, tmp_new_vectors,	"vector_init.vec");
+	#endif	// #if	DUMP_WHEN_ENTROPY_INCREASE
+	#endif
 
 	//parameter setting:
 	float mu=0.1;
+
+	// ADD-BY-LEETEN 02/05/2010-BEGIN
+	#if	DIFFUSION_ON_CUDA	
+	_FlowDiffusion(
+		mu, 
+		iter, 
+		grid_res[0], grid_res[1], grid_res[2],
+		16,					// iBlockZSize
+		b,					// float *pfWeightVolume,
+		c1,					// float *pfOffsetVolume,
+		c2,					// 
+		NULL,					//
+		tmp_new_vectors,	// float *pfSrcVolume,
+		new_vectors,		// float *pfDstVolume
+		NULL
+	);
+	#else	// #if	DIFFUSION_ON_CUDA	
+	// ADD-BY-LEETEN 02/05/2010-END
+
 	//iteration by iteration
 	for(int i=0; i<iter; i++)
 	{
 		//start iterations
 		//update the GVF
+		// ADD-BY-LEETEN 02/05/2010-BEGIN
+		#if	DONOT_APPLY_DIFFUSION_ON_BOUNDARY		
+		// ADD-BY-LEETEN 02/05/2010-END
 		for(int y=1; y<grid_res[1]-1;y++)
 		{
 			for(int x=1; x<grid_res[0]-1;x++)//cut boundary for now
@@ -1579,45 +1671,110 @@ void reconstruct_field_GVF_2D(float* new_vectors,float* vectors, int* grid_res,l
 				int idx_2=x+(y+1)*grid_res[0]; 
 				int idx_3=x-1+y*grid_res[0]; 
 				int idx_4=x+(y-1)*grid_res[0]; 
+		// ADD-BY-LEETEN 02/05/2010-BEGIN
+		#else	// #if	DONOT_APPLY_DIFFUSION_ON_BOUNDARY
+		for(int y=0; y<grid_res[1];y++)
+		{
+			for(int x=0; x<grid_res[0];x++)//cut boundary for now
+			{
+				int idx=x+y*grid_res[0]; 
+				int idx_1=min(x+1, grid_res[0]-1)+y*grid_res[0]; 
+				int idx_2=x+min(y+1, grid_res[1]-1)*grid_res[0]; 
+				int idx_3=max(x-1, 0)+y*grid_res[0]; 
+				int idx_4=x+max(y-1, 0)*grid_res[0]; 
+		#endif	// #if	DONOT_APPLY_DIFFUSION_ON_BOUNDARY
+		// ADD-BY-LEETEN 02/05/2010-END
 
-				tmp_new_vectors[idx*3+0]=	(1-b[idx])*new_vectors[idx*3+0]+
-											mu*(new_vectors[idx_1*3+0]+new_vectors[idx_2*3+0]+new_vectors[idx_3*3+0]+new_vectors[idx_4*3+0]-4*new_vectors[idx*3+0])+
+				// ADD-BY-LEETEN 02/06/2010-BEGIN
+				#if	IMPLEMENTED_BY_XUL	
+				// ADD-BY-LEETEN 02/06/2010-END
+					tmp_new_vectors[idx*3+0]=	(1-b[idx])*new_vectors[idx*3+0]+
+												mu*(new_vectors[idx_1*3+0]+new_vectors[idx_2*3+0]+new_vectors[idx_3*3+0]+new_vectors[idx_4*3+0]-4*new_vectors[idx*3+0])+
+												c1[idx];
+
+					tmp_new_vectors[idx*3+1]=	(1-b[idx])*new_vectors[idx*3+1]+
+												mu*(new_vectors[idx_1*3+1]+new_vectors[idx_2*3+1]+new_vectors[idx_3*3+1]+new_vectors[idx_4*3+1]-4*new_vectors[idx*3+1])+
+												c2[idx];
+				// ADD-BY-LEETEN 02/06/2010-BEGIN
+				#else	// #if	IMPLEMENTED_BY_XUL
+				new_vectors[idx*3+0]=	(1-b[idx])*tmp_new_vectors[idx*3+0]+
+											mu*(tmp_new_vectors[idx_1*3+0]+tmp_new_vectors[idx_2*3+0]+tmp_new_vectors[idx_3*3+0]+tmp_new_vectors[idx_4*3+0]-4*tmp_new_vectors[idx*3+0])+
 											c1[idx];
 
-				tmp_new_vectors[idx*3+1]=	(1-b[idx])*new_vectors[idx*3+1]+
-											mu*(new_vectors[idx_1*3+1]+new_vectors[idx_2*3+1]+new_vectors[idx_3*3+1]+new_vectors[idx_4*3+1]-4*new_vectors[idx*3+1])+
+				new_vectors[idx*3+1]=	(1-b[idx])*tmp_new_vectors[idx*3+1]+
+											mu*(tmp_new_vectors[idx_1*3+1]+tmp_new_vectors[idx_2*3+1]+tmp_new_vectors[idx_3*3+1]+tmp_new_vectors[idx_4*3+1]-4*tmp_new_vectors[idx*3+1])+
 											c2[idx];
-
+				#endif	// #if	IMPLEMENTED_BY_XUL
+				// ADD-BY-LEETEN 02/06/2010-END
 			}
 		}
 		
 		//update the GVF
-		for(int y=0; y<grid_res[1];y++)
-		{
-			for(int x=0; x<grid_res[0];x++)
+		#if		0	// MOD-BY-LEETEN 02/06/2010-FROM:
+			for(int y=0; y<grid_res[1];y++)
 			{
-				int idx=x+y*grid_res[0]; 
-				//only update when the value improves
-				float error_before, error_now;
-				VECTOR3 before,now,input,tmp;
-				before.Set(new_vectors[idx*3+0],new_vectors[idx*3+1],new_vectors[idx*3+2]);
-				now.Set(tmp_new_vectors[idx*3+0],tmp_new_vectors[idx*3+1],tmp_new_vectors[idx*3+2]);
-				input.Set(vectors[idx*3+0],vectors[idx*3+1],vectors[idx*3+2]);
-				before.Normalize(); now.Normalize();
-				tmp=before-input;
-				error_before=tmp.GetMag();
-				tmp=now-input;
-				error_now=tmp.GetMag();
-				//if((error_before>error_now))//&&(donotchange[idx]==0))
+				for(int x=0; x<grid_res[0];x++)
 				{
-				new_vectors[idx*3+0]=tmp_new_vectors[idx*3+0];
-				new_vectors[idx*3+1]=tmp_new_vectors[idx*3+1];
-				}
+					int idx=x+y*grid_res[0]; 
+					//only update when the value improves
+					float error_before, error_now;
+					VECTOR3 before,now,input,tmp;
+					before.Set(new_vectors[idx*3+0],new_vectors[idx*3+1],new_vectors[idx*3+2]);
+					now.Set(tmp_new_vectors[idx*3+0],tmp_new_vectors[idx*3+1],tmp_new_vectors[idx*3+2]);
+					input.Set(vectors[idx*3+0],vectors[idx*3+1],vectors[idx*3+2]);
+					before.Normalize(); now.Normalize();
+					tmp=before-input;
+					error_before=tmp.GetMag();
+					tmp=now-input;
+					error_now=tmp.GetMag();
+					//if((error_before>error_now))//&&(donotchange[idx]==0))
+					{
+					new_vectors[idx*3+0]=tmp_new_vectors[idx*3+0];
+					new_vectors[idx*3+1]=tmp_new_vectors[idx*3+1];
+					}
 
-	
+		
+				}
+			}
+		#else	// MOD-BY-LEETEN 02/06/2010-TO:
+		static double dPrevError;
+		double dError = 0.0;
+		for(int		idx = 0,	z=0; z<grid_res[2];z++)
+			for(int				y=0; y<grid_res[1];y++)
+				for(int			x=0; x<grid_res[0];x++, idx++)
+					for(int j = 0; j < 3; j++)
+					{
+						double dDiff = double(new_vectors[idx*3+j] - tmp_new_vectors[idx*3+j]);
+						dError += dDiff * dDiff;
+
+						#if		IMPLEMENTED_BY_XUL
+						new_vectors[idx*3+j] = tmp_new_vectors[idx*3+j];
+						#else	// #if		IMPLEMENTED_BY_XUL
+						tmp_new_vectors[idx*3+j] = new_vectors[idx*3+j];
+						#endif	// #if		IMPLEMENTED_BY_XUL
+					}
+
+		dError = sqrt(dError / (3 * grid_res[0] * grid_res[1] * grid_res[2]));
+		if( i > max(max(grid_res[0], grid_res[1]), grid_res[2]) )
+		{
+			double dErrorRate = dError / dPrevError;
+			if( DIFFUSION_CONVERGE_THRESHOLD < dErrorRate && dErrorRate <= 1.0 )
+			{
+				printf("Diffusion takes %d iterations to converge. ", i);
+				break;
 			}
 		}
+		#endif	// MOD-BY-LEETEN 02/06/2010-END
 	}
+	// ADD-BY-LEETEN 02/06/2010-BEGIN
+	#if		!IMPLEMENTED_BY_XUL	
+	memcpy(new_vectors, tmp_new_vectors, sizeof(new_vectors[0]) * grid_res[0] * grid_res[1] * 3);
+	#endif	// !IMPLEMENTED_BY_XUL	
+	// ADD-BY-LEETEN 02/06/2010-END
+
+	// ADD-BY-LEETEN 02/05/2010-BEGIN
+	#endif	// #if	DIFFUSION_ON_CUDA
+	// ADD-BY-LEETEN 02/05/2010-END
 	delete [] tmp_new_vectors;
 	delete [] kx;
 	delete [] ky;
@@ -2511,5 +2668,10 @@ void QuadTree::drawSelf()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.1  2010/01/22 21:09:12  leeten
+
+[01/22/2010]
+1. [1ST] First time checkin.
+
 
 */
