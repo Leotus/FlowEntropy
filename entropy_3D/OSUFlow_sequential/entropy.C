@@ -2321,7 +2321,11 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 	CLOCK_BEGIN(CLOCK_reconstruct_field_GVF_3D);
 	// ADD-BY-LEETEN 02/04/2010-END
 
-	int iter=max(grid_res[0],max(grid_res[1],grid_res[2]))*2;
+	// MOD-BY-LEETEN 02/06/2010-FROM:
+		// int iter=max(grid_res[0],max(grid_res[1],grid_res[2]))*2;
+	// TO:
+	int iter=max(grid_res[0],max(grid_res[1],grid_res[2])) * 3 * 3;
+	// MOD-BY-LEETEN 02/06/2010-END
 
 	//initial GVF, combine with input new_vectors
 	list<vtListSeedTrace*>::iterator pIter;
@@ -2389,8 +2393,12 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 	// TO:
 	MALLOC(tmp_new_vectors, float, grid_res[0]*grid_res[1]*grid_res[2]*3);
 	// MOD-BY-LEETEN 02/02/2010-END
-	for(int i=0; i<grid_res[0]*grid_res[1]*grid_res[2]*3;i++)
-		tmp_new_vectors[i]=new_vectors[i];
+	#if	0	// MOD-BY-LEETEN 02/06/2010-FROM:
+		for(int i=0; i<grid_res[0]*grid_res[1]*grid_res[2]*3;i++)
+			tmp_new_vectors[i]=new_vectors[i];
+	#else	// MOD-BY-LEETEN 02/06/2010-TO:
+	memset(tmp_new_vectors, 0 ,sizeof(tmp_new_vectors[0])*grid_res[0]*grid_res[1]*grid_res[2]*3);
+	#endif	// MOD-BY-LEETEN 02/06/2010-END
 
 	//parameter setting:
 	float mu=0.1;
@@ -2421,6 +2429,7 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 			donot_change		
 		);
 	#else	// MOD-BY-LEETEN 02/02/2010-TO:
+
 	_FlowDiffusion(
 		mu, 
 		iter, 
@@ -2490,54 +2499,101 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 					int idx_5=x+max(y-1, 0)*grid_res[0]+z*grid_res[0]*grid_res[1]; 
 					int idx_6=x+y*grid_res[0]+max(z-1, 0)*grid_res[0]*grid_res[1]; 
 		#endif	// MOD-BY-LEETEN 02/02/2010-END
-					tmp_new_vectors[idx*3+0]=	(1-b[idx])*new_vectors[idx*3+0]+
-												mu*(new_vectors[idx_1*3+0]+new_vectors[idx_2*3+0]+new_vectors[idx_3*3+0]+new_vectors[idx_4*3+0]+new_vectors[idx_5*3+0]+new_vectors[idx_6*3+0]
-													-6*new_vectors[idx*3+0])+
-												c1[idx];
 
-					tmp_new_vectors[idx*3+1]=	(1-b[idx])*new_vectors[idx*3+1]+
-												mu*(new_vectors[idx_1*3+1]+new_vectors[idx_2*3+1]+new_vectors[idx_3*3+1]+new_vectors[idx_4*3+1]+new_vectors[idx_5*3+1]+new_vectors[idx_6*3+1]
-													-6*new_vectors[idx*3+1])+
-												c2[idx];
+					#if	0	// MOD-BY-LEETEN 02/08/2010-FROM:
+						tmp_new_vectors[idx*3+0]=	(1-b[idx])*new_vectors[idx*3+0]+
+													mu*(new_vectors[idx_1*3+0]+new_vectors[idx_2*3+0]+new_vectors[idx_3*3+0]+new_vectors[idx_4*3+0]+new_vectors[idx_5*3+0]+new_vectors[idx_6*3+0]
+														-6*new_vectors[idx*3+0])+
+													c1[idx];
 
-					tmp_new_vectors[idx*3+2]=	(1-b[idx])*new_vectors[idx*3+2]+
-												mu*(new_vectors[idx_1*3+2]+new_vectors[idx_2*3+2]+new_vectors[idx_3*3+2]+new_vectors[idx_4*3+2]+new_vectors[idx_5*3+2]+new_vectors[idx_6*3+2]
-													-6*new_vectors[idx*3+2])+
-												c3[idx];
+						tmp_new_vectors[idx*3+1]=	(1-b[idx])*new_vectors[idx*3+1]+
+													mu*(new_vectors[idx_1*3+1]+new_vectors[idx_2*3+1]+new_vectors[idx_3*3+1]+new_vectors[idx_4*3+1]+new_vectors[idx_5*3+1]+new_vectors[idx_6*3+1]
+														-6*new_vectors[idx*3+1])+
+													c2[idx];
 
+						tmp_new_vectors[idx*3+2]=	(1-b[idx])*new_vectors[idx*3+2]+
+													mu*(new_vectors[idx_1*3+2]+new_vectors[idx_2*3+2]+new_vectors[idx_3*3+2]+new_vectors[idx_4*3+2]+new_vectors[idx_5*3+2]+new_vectors[idx_6*3+2]
+														-6*new_vectors[idx*3+2])+
+													c3[idx];
+					#else	// MOD-BY-LEETEN 02/08/2010-TO:
+					for(int j = 0; j < 3; j++)
+						new_vectors[idx*3+j]=	(1-b[idx])*tmp_new_vectors[idx*3+j]+
+							mu*(tmp_new_vectors[idx_1*3+j]+
+								tmp_new_vectors[idx_2*3+j]+
+								tmp_new_vectors[idx_3*3+j]+
+								tmp_new_vectors[idx_4*3+j]+
+								tmp_new_vectors[idx_5*3+j]+
+								tmp_new_vectors[idx_6*3+j]-6*tmp_new_vectors[idx*3+j]);
+					
+					new_vectors[idx*3+0] += c1[idx];
+					new_vectors[idx*3+1] += c2[idx];
+					new_vectors[idx*3+2] += c3[idx];
+					#endif	// MOD-BY-LEETEN 02/08/2010-END
 				}
 			}
 		}
 //double elapsedTime= GetTickCount() - dwStart;
 //printf("\n\n reconstruction time is %.3f milli-seconds.\n",elapsedTime); 	
 		
-		int zerocount=0;
-		//update the GVF
-		
-		for(int z=0; z<grid_res[2];z++)
-		{
-			for(int y=0; y<grid_res[1];y++)
+		#if	0	// MOD-BY-LEETEN 02/08/2010-FROM:
+			int zerocount=0;
+			//update the GVF
+			
+			for(int z=0; z<grid_res[2];z++)
 			{
-				for(int x=0; x<grid_res[0];x++)
+				for(int y=0; y<grid_res[1];y++)
 				{
-					int idx=x+y*grid_res[0]+z*grid_res[0]*grid_res[1]; 
-					// DEL-BY-LEETEN 01/22/2010-BEGIN
-						// if(donot_change[idx]==0)
-					// DEL-BY-LEETEN 01/22/2010-END
+					for(int x=0; x<grid_res[0];x++)
 					{
-					new_vectors[idx*3+0]=tmp_new_vectors[idx*3+0];
-					new_vectors[idx*3+1]=tmp_new_vectors[idx*3+1];
-					new_vectors[idx*3+2]=tmp_new_vectors[idx*3+2];
+						int idx=x+y*grid_res[0]+z*grid_res[0]*grid_res[1]; 
+						// DEL-BY-LEETEN 01/22/2010-BEGIN
+							// if(donot_change[idx]==0)
+						// DEL-BY-LEETEN 01/22/2010-END
+						{
+						new_vectors[idx*3+0]=tmp_new_vectors[idx*3+0];
+						new_vectors[idx*3+1]=tmp_new_vectors[idx*3+1];
+						new_vectors[idx*3+2]=tmp_new_vectors[idx*3+2];
+						}
 					}
 				}
 			}
+			
+			//memcpy(new_vectors,tmp_new_vectors,sizeof(float)*grid_res[0]*grid_res[1]*grid_res[2]*3);
+		#else	// MOD-BY-LEETEN 02/08/2010-TO:
+		static double dPrevError;
+		double dError = 0.0;
+		for(int		idx = 0,	z=0; z<grid_res[2];z++)
+			for(int				y=0; y<grid_res[1];y++)
+				for(int			x=0; x<grid_res[0];x++, idx++)
+					for(int j = 0; j < 3; j++)
+					{
+						double dDiff = double(new_vectors[idx*3+j] - tmp_new_vectors[idx*3+j]);
+						dError += dDiff * dDiff;
+
+						tmp_new_vectors[idx*3+j] = new_vectors[idx*3+j];
+					}
+
+		dError = sqrt(dError / (3 * grid_res[0] * grid_res[1] * grid_res[2]));
+		if( i > max(max(grid_res[0], grid_res[1]), grid_res[2]) )
+		{
+			double dErrorRate = dError / dPrevError;
+			if( DIFFUSION_CONVERGE_THRESHOLD < dErrorRate && dErrorRate <= 1.0 )
+			{
+				printf("Diffusion takes %d iterations to converge. ", i);
+				break;
+			}
 		}
-		
-		//memcpy(new_vectors,tmp_new_vectors,sizeof(float)*grid_res[0]*grid_res[1]*grid_res[2]*3);
+		dPrevError = dError;
+		#endif	// MOD-BY-LEETEN 02/08/2010-END
 	}
+
+	// ADD-BY-LEETEN 02/08/2010-BEGIN
+	memcpy(new_vectors, tmp_new_vectors, sizeof(tmp_new_vectors[0]) * 3 * grid_res[0] * grid_res[1] * grid_res[2]);
+	// ADD-BY-LEETEN 02/08/2010-END
 
 	// ADD-BY-LEETEN 2009/11/23-BEGIN
 	#endif	// DIFFUSION_ON_CUDA
+
 	// ADD-BY-LEETEN 2009/11/23-END
 	// ADD-BY-LEETEN 02/04/2010-BEGIN
 	CLOCK_END(CLOCK_reconstruct_field_GVF_3D, false);
@@ -2560,6 +2616,13 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.3  2010/02/05 01:31:23  leeten
+
+[02/02/2010]
+1. [ADD] Add macros to print timing for the function reconstruct_reconstruct_field_GVF_3D.
+2. [MOD] Change the preprocessors BIN_LOOKUP_ON_GPU, DIFFUSION_ON_GPU, ENTROPY_ON_GPU to BIN_LOOKUP_ON_CUDA, DIFFUSION_ON_CUDA, ENTROPY_ON_CUDA, respectively.
+3. [ADD] Call the function quit_reconstruct_reconstruct_field_GVF_3D at the end of the function reconstruct_reconstruct_field_GVF_3D.
+
 Revision 1.2  2010/02/02 23:47:07  leeten
 
 [02/02/2010]
