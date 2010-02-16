@@ -3877,21 +3877,23 @@ void compute_streamlines()
 	seed_list.clear();
 	
 	//set boundary condition
-	for(int z=0;z<grid_res[2];z++)
-	for(int y=0;y<grid_res[1];y++)
-	for(int x=0;x<grid_res[0];x++)
-	{
-		if( x==0||x==grid_res[0]-1||
-			y==0||y==grid_res[1]-1||
-			z==0||z==grid_res[2]-1)
+	#if	0	// DEL-BY-LEETEN 02/10/2010-BEGIN
+		for(int z=0;z<grid_res[2];z++)
+		for(int y=0;y<grid_res[1];y++)
+		for(int x=0;x<grid_res[0];x++)
 		{
-			int idx=x+y*grid_res[0]+z*grid_res[0]*grid_res[1];
-			new_vectors[idx*3+0]=vectors[idx*3+0];
-			new_vectors[idx*3+1]=vectors[idx*3+1];
-			new_vectors[idx*3+2]=vectors[idx*3+2];
-			// DEL-BY-LEETEN 02/02/2010		donot_change[idx]=1;
+			if( x==0||x==grid_res[0]-1||
+				y==0||y==grid_res[1]-1||
+				z==0||z==grid_res[2]-1)
+			{
+				int idx=x+y*grid_res[0]+z*grid_res[0]*grid_res[1];
+				new_vectors[idx*3+0]=vectors[idx*3+0];
+				new_vectors[idx*3+1]=vectors[idx*3+1];
+				new_vectors[idx*3+2]=vectors[idx*3+2];
+				// DEL-BY-LEETEN 02/02/2010		donot_change[idx]=1;
+			}
 		}
-	}
+	#endif	// DEL-BY-LEETEN 02/10/2010-END
 
 	int* old_bin, *new_bin;
 	old_bin=new int [grid_res[0]*grid_res[1]*grid_res[2]];
@@ -6448,6 +6450,13 @@ void Streamline_entorpy_calculation_loadfile()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.4  2010/02/09 00:50:08  leeten
+
+[02/08/2010]
+1. [ADD] Free the marginal histograms to reduce the memory requirement.
+2. [MOD] Call combinehalflines() instead of combinehalflines_check_stop_entropy().
+3. [ADD] Print the target entropy.
+
 Revision 1.3  2010/02/05 01:35:25  leeten
 
 [02/02/2010]
