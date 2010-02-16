@@ -28,6 +28,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Flow2Entropy", "..\Flow2Ent
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FlowDiffusionGLSLLib", "..\FlowDiffusionGLSLLib\FlowDiffusionGLSLLib.vcproj", "{139BEFCC-484B-4DA9-99EA-56E23951F71F}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "StreamlineEntropy", "..\StreamlineEntropy\StreamlineEntropy.vcproj", "{7B1FBDBC-E44E-4C75-9344-12B8916DB7BB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -92,6 +94,14 @@ Global
 		{139BEFCC-484B-4DA9-99EA-56E23951F71F}.EmuRelease|Win32.Build.0 = EmuRelease|Win32
 		{139BEFCC-484B-4DA9-99EA-56E23951F71F}.Release|Win32.ActiveCfg = Release|Win32
 		{139BEFCC-484B-4DA9-99EA-56E23951F71F}.Release|Win32.Build.0 = Release|Win32
+		{7B1FBDBC-E44E-4C75-9344-12B8916DB7BB}.Debug|Win32.ActiveCfg = Debug|Win32
+		{7B1FBDBC-E44E-4C75-9344-12B8916DB7BB}.Debug|Win32.Build.0 = Debug|Win32
+		{7B1FBDBC-E44E-4C75-9344-12B8916DB7BB}.EmuDebug|Win32.ActiveCfg = Debug|Win32
+		{7B1FBDBC-E44E-4C75-9344-12B8916DB7BB}.EmuDebug|Win32.Build.0 = Debug|Win32
+		{7B1FBDBC-E44E-4C75-9344-12B8916DB7BB}.EmuRelease|Win32.ActiveCfg = Release|Win32
+		{7B1FBDBC-E44E-4C75-9344-12B8916DB7BB}.EmuRelease|Win32.Build.0 = Release|Win32
+		{7B1FBDBC-E44E-4C75-9344-12B8916DB7BB}.Release|Win32.ActiveCfg = Release|Win32
+		{7B1FBDBC-E44E-4C75-9344-12B8916DB7BB}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
