@@ -1601,6 +1601,12 @@ void reconstruct_field_GVF_2D(float* new_vectors,float* vectors, int* grid_res,l
 	#endif	// #if	INIT_BOUNDARY_AS_STREAMLINE	
 	// ADD-BY-LEETEN 02/08/2010-END
 
+	// ADD-BY-LEETEN 02/16/2010-BEGIN
+	#if		!INIT_BOUNDARY_AS_STREAMLINE	
+	memset(new_vectors, 0, sizeof(new_vectors[0]) * 3 * grid_res[0] * grid_res[1]);
+	#endif
+	// ADD-BY-LEETEN 02/16/2010-END
+
 	//other initials
 	for(int y=0; y<grid_res[1];y++)
 	{
@@ -1625,13 +1631,6 @@ void reconstruct_field_GVF_2D(float* new_vectors,float* vectors, int* grid_res,l
 	// ADD-BY-LEETEN 02/06/2010-BEGIN
 	#endif	// #if		IMPLEMENTED_BY_XUL	
 	// ADD-BY-LEETEN 02/06/2010-END
-
-	#if	0	// TEST-DEBUG
-	#if		DUMP_WHEN_ENTROPY_INCREASE
-	_SaveVectorField2D(grid_res, new_vectors,		"vector_new.vec");
-	_SaveVectorField2D(grid_res, tmp_new_vectors,	"vector_init.vec");
-	#endif	// #if	DUMP_WHEN_ENTROPY_INCREASE
-	#endif
 
 	//parameter setting:
 	float mu=0.1;
@@ -1686,7 +1685,7 @@ void reconstruct_field_GVF_2D(float* new_vectors,float* vectors, int* grid_res,l
 		// ADD-BY-LEETEN 02/05/2010-END
 
 				// ADD-BY-LEETEN 02/06/2010-BEGIN
-				#if	IMPLEMENTED_BY_XUL	
+				#if		 IMPLEMENTED_BY_XUL	
 				// ADD-BY-LEETEN 02/06/2010-END
 					tmp_new_vectors[idx*3+0]=	(1-b[idx])*new_vectors[idx*3+0]+
 												mu*(new_vectors[idx_1*3+0]+new_vectors[idx_2*3+0]+new_vectors[idx_3*3+0]+new_vectors[idx_4*3+0]-4*new_vectors[idx*3+0])+
@@ -2668,6 +2667,16 @@ void QuadTree::drawSelf()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.2  2010/02/09 03:55:26  leeten
+
+[02/02/2010]
+1. [ADD] Include the header 'FlowDiffusion2DConfig.h.'
+2. [ADD] Define a new function _SaveVector2D to dump specified vector field into a file.
+3. [MOD] Change the #iterations for diffusion.
+4. [ADD] IF the preprocssor IMPLEMENTED_BY_XUL is 0, use tmp_new_vector as the result from previous iteration in the diffusion.
+5. [ADD] If the preprocessor DIFFUSION_ON_CUDA is not 0, run GPU-based diffusion.
+6. [MOD] Stop the diffusion when the error converges.
+
 Revision 1.1  2010/01/22 21:09:12  leeten
 
 [01/22/2010]
