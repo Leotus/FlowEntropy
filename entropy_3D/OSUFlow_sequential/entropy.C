@@ -2569,11 +2569,18 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 					{
 						double dDiff = double(new_vectors[idx*3+j] - tmp_new_vectors[idx*3+j]);
 						dError += dDiff * dDiff;
-
 						tmp_new_vectors[idx*3+j] = new_vectors[idx*3+j];
 					}
 
-		dError = sqrt(dError / (3 * grid_res[0] * grid_res[1] * grid_res[2]));
+		dError = sqrt(dError / (3.0 * grid_res[0] * grid_res[1] * grid_res[2]));
+		// ADD-BY-LEETEN 02/16/2010-BEGIN
+		printf("Error = %e", dError);
+		if( 0 == i )
+			printf("\n");
+		else
+			printf("\r");
+		// ADD-BY-LEETEN 02/16/2010-END
+
 		if( i > max(max(grid_res[0], grid_res[1]), grid_res[2]) )
 		{
 			double dErrorRate = dError / dPrevError;
@@ -2583,9 +2590,24 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 				break;
 			}
 		}
+		// ADD-BY-LEETEN 02/16/2010-BEGIN
+		else if( i > 0 )
+		{
+			double dErrorRate = dError / dPrevError;
+			if( dErrorRate > 1.0 )
+			{
+				printf("Warning: Diffusion error increases. Stop. " );
+				break;
+			}
+		}
+		// ADD-BY-LEETEN 02/16/2010-END
+
 		dPrevError = dError;
 		#endif	// MOD-BY-LEETEN 02/08/2010-END
 	}
+	// ADD-BY-LEETEN 02/16/2010-BEGIN
+	printf("\n");
+	// ADD-BY-LEETEN 02/16/2010-END
 
 	// ADD-BY-LEETEN 02/08/2010-BEGIN
 	memcpy(new_vectors, tmp_new_vectors, sizeof(tmp_new_vectors[0]) * 3 * grid_res[0] * grid_res[1] * grid_res[2]);
@@ -2616,6 +2638,14 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.4  2010/02/09 00:48:38  leeten
+
+[02/08/2010]
+1. [MOD] Change #iterations for CPU-based diffusion.
+2. [MOD] Reset the vector field tmp_new_vectors to 0 before diffusion.
+3. [MOD] Save the latest diffused vector field to new_vectors.
+4. [MOD] Stop diffusion when MSE is converged.
+
 Revision 1.3  2010/02/05 01:31:23  leeten
 
 [02/02/2010]
