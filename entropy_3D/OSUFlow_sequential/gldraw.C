@@ -2528,7 +2528,6 @@ void compute_streamlines_load_file() {
 }
 void dumpEntropies(std::vector<float> mylist)
 {
-	
 	FILE* fp=fopen("entropy_list.dat","wb");
 	int entrynum=mylist.size();
 	fwrite(&entrynum,sizeof(int),1,fp);
@@ -4064,9 +4063,15 @@ void compute_streamlines()
 		#endif	//	#if	!BIN_LOOKUP_ON_CUDA
 		// ADD-BY-LEETEN 02/02/2010-END
 
-		entropy=calcRelativeEntropy6_new(	vectors, new_vectors,  grid_res, VECTOR3(2,2,2),//do not count boundaries
-									VECTOR3(grid_res[0]-2,grid_res[1]-2,grid_res[2]-2),theta,phi,old_bin,new_bin,0,binnum,histo_puv,histo_pv,
+		#if	0	// MOD-BY-LEETEN 03/10/2010-FROM:
+			entropy=calcRelativeEntropy6_new(	vectors, new_vectors,  grid_res, VECTOR3(2,2,2),//do not count boundaries
+										VECTOR3(grid_res[0]-2,grid_res[1]-2,grid_res[2]-2),theta,phi,old_bin,new_bin,0,binnum,histo_puv,histo_pv,
+										pv,entropy_tmp);
+		#else	// MOD-BY-LEETEN 03/10/2010-TO:
+		entropy=calcRelativeEntropy6_new(	vectors, new_vectors,  grid_res, VECTOR3(0,0,0),//do not count boundaries
+									VECTOR3(grid_res[0],grid_res[1],grid_res[2]),theta,phi,old_bin,new_bin,0,binnum,histo_puv,histo_pv,
 									pv,entropy_tmp);
+		#endif	// MOD-BY-LEETEN 03/10/2010-END
 
 	//	entropy_list.push_back(entropy);
 		for(int i=0;i<seeds.size();i++)
@@ -4139,7 +4144,6 @@ void compute_streamlines()
 		// ADD-BY-LEETEN 02/06/2010-BEGIN
 		printf("seed %d selected, entropy=%f/%f \n",selected_line_num, entropy,target_entropy);
 		// ADD-BY-LEETEN 02/06/2010-END
-
 	}
 	
 
@@ -6201,9 +6205,16 @@ readPatches_region();
 	glewInit();
 	#endif	// #if	DIFFUSION_ON_GLSL
 	// ADD-BY-LEETEN 02/04/2010-END
-	
-	glutMainLoop(); 
 
+	// ADD-BY-LEETEN 03/10/2010-BEGIN
+	#if	ENTER_GLUT_LOOP	
+	// ADD-BY-LEETEN 03/10/2010-END
+	glutMainLoop();
+	// ADD-BY-LEETEN 03/10/2010-BEGIN
+	#else	
+	compute_streamlines();
+	#endif				
+	// ADD-BY-LEETEN 03/10/2010-END
 	return 0;
 }
 
@@ -6450,6 +6461,11 @@ void Streamline_entorpy_calculation_loadfile()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.5  2010/02/16 19:55:59  leeten
+
+[02/16/2010]
+1. [DEL] Do not initialize the vector along the boundary.
+
 Revision 1.4  2010/02/09 00:50:08  leeten
 
 [02/08/2010]

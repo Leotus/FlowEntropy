@@ -106,10 +106,17 @@ bool discardredundantstreamlines(float& cur_entropy,float eplison, list<vtListSe
 			//float dotv=dot(newf,orif);
 			new_bin[i]=get_bin_number_3D(newf,theta, phi,binnum);
 		}
-	entropy=calcRelativeEntropy6_new(vectors, new_vectors,  grid_res, VECTOR3(2,2,2),//do not count boundaries
-								VECTOR3(grid_res[0]-2,grid_res[1]-2,grid_res[2]-2),theta,phi,bin_my_vector,new_bin,0,binnum,
+	#if	0	// MOD-BY-LEETEN 03/10/2010-FROM:
+		entropy=calcRelativeEntropy6_new(vectors, new_vectors,  grid_res, VECTOR3(2,2,2),//do not count boundaries
+									VECTOR3(grid_res[0]-2,grid_res[1]-2,grid_res[2]-2),theta,phi,bin_my_vector,new_bin,0,binnum,
+									 histo_puv, histo_pv, pv,entropy_tmp,
+							  0,0);
+	#else	// MOD-BY-LEETEN 03/10/2010-TO:
+	entropy=calcRelativeEntropy6_new(vectors, new_vectors,  grid_res, VECTOR3(0,0,0),//do not count boundaries
+								VECTOR3(grid_res[0],grid_res[1],grid_res[2]),theta,phi,bin_my_vector,new_bin,0,binnum,
 								 histo_puv, histo_pv, pv,entropy_tmp,
 						  0,0);
+	#endif	// MOD-BY-LEETEN 03/10/2010-END
 	// MOD-BY-LEETEN 02/04/2010-FROM:
 		// printf(" entropy dif=%f\n",cur_entropy-entropy);
 	// TO:
@@ -1688,7 +1695,6 @@ float calcRelativeEntropy6_new( float* vectors,float* new_vectors, int* grid_res
 	
 
 	//H(x|y=a)
-
 	for(int y=0; y<binnum; y++)
 	{
 		entropy_tmp[y]=0;
@@ -1715,7 +1721,6 @@ float calcRelativeEntropy6_new( float* vectors,float* new_vectors, int* grid_res
 		pv[i]=(((float)histo_pv[i])/((float)vol));
 		entropy=entropy+pv[i]*entropy_tmp[i];
 	}
-
 
 	return entropy;
 
@@ -2638,6 +2643,12 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.5  2010/02/16 19:55:00  leeten
+
+[02/16/2010]
+1. [ADD] Output the diffusion error.
+2. [ADD] Stop the difffusion when the error debound,.
+
 Revision 1.4  2010/02/09 00:48:38  leeten
 
 [02/08/2010]
