@@ -3,6 +3,10 @@
 
 #include "FlowDiffusionCudaLib/FlowDiffusion.h"
 
+// ADD-BY-LEETEN 03/10/2010-BEGIN
+#define ENTER_GLUT_LOOP	1
+// ADD-BY-LEETEN 03/10/2010-END
+
 // ADD-BY-LEETEN 02/06/2010-BEGIN
 #define	DUMP_WHEN_ENTROPY_INCREASE	0
 #define	IMPLEMENTED_BY_XUL			0
@@ -31,14 +35,19 @@
 #endif
 // MOD-BY-LEETEN 02/08/2010-END
 
-#define	TARGET_ERROR		(1.0f / float(grid_res[0] * grid_res[1]))	// the target error to decide the threshold accroding to Fano's inequality
+#define	TARGET_ERROR		0.01	// (1.0f / float(grid_res[0] * grid_res[1]))	// the target error to decide the threshold accroding to Fano's inequality
 #define PRUNING_THRESHOLD	0.000
-#define	NR_OF_SAMPLES		((grid_res[0] * grid_res[1]) / 64)
+#define	NR_OF_SAMPLES		(max(grid_res[0], grid_res[1]))		// ((grid_res[0] * grid_res[1]) / 64)
 
 #endif	// __FLOW_DIFFUSION_CUDA_H__
 
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.1  2010/02/09 03:48:02  leeten
+
+[02/02/2010]
+1. [1ST] First time checkin.
+
 
 */
