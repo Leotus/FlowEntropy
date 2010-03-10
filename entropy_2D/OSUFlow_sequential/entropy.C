@@ -1763,6 +1763,14 @@ void reconstruct_field_GVF_2D(float* new_vectors,float* vectors, int* grid_res,l
 				break;
 			}
 		}
+		// ADD-BY-LEETEN 03/10/2010-BEGIN
+		if( i > 1 && dError > dPrevError )
+		{
+			printf("Error increase. Stop.");
+			break;
+		}
+		dPrevError = dError;
+		// ADD-BY-LEETEN 03/10/2010-END
 		#endif	// MOD-BY-LEETEN 02/06/2010-END
 	}
 	// ADD-BY-LEETEN 02/06/2010-BEGIN
@@ -2667,6 +2675,12 @@ void QuadTree::drawSelf()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.3  2010/02/16 19:58:55  leeten
+
+[02/16/2010]
+1. [ADD] Set the vector field new_vectors to 0 before diffusion if the preprocessor INIT_BOUNDARY_AS_STREAMLINE is 0.
+2. [ADD] Add code to dump the vecot field when debugging.
+
 Revision 1.2  2010/02/09 03:55:26  leeten
 
 [02/02/2010]

@@ -1501,6 +1501,13 @@ _FlowDiffusion(
 			printf("\t#iters = %d;", i);
 			break;
 		}
+		// ADD-BY-LEETEN 03/10/2010-BEGIN
+		if( fErrorRate > 1.0f )
+		{
+			printf("Error increase. Stop.");
+			break;
+		}
+		// ADD-BY-LEETEN 03/10/2010-END
 		fPrevError = fError;
 		#endif	// MOD-BY-LEETEN 2009/12/17-END
 
@@ -1564,6 +1571,12 @@ _FlowDiffusion(
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.11  2010/02/09 00:40:48  leeten
+
+[02/08/2010]
+1. [MOD] Change the #iterations to 1024 * max(max(iVolumeWidth, iVolumeHeight), iVolumeDepth) in order to gurantee the converge of the diffusion.
+2. [MOD] Change the checking of converge.
+
 Revision 1.10  2010/02/05 01:39:53  leeten
 
 [02/02/2010]
