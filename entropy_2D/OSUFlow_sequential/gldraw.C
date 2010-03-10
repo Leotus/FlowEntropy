@@ -4604,13 +4604,36 @@ fclose(my);
 	glutMouseFunc(mymouse); 
 	glutMotionFunc(mymotion);
 	glutKeyboardFunc(mykey); 
+	// ADD-BY-LEETEN 03/10/2010-BEGIN
+	#if	ENTER_GLUT_LOOP	
+	// ADD-BY-LEETEN 03/10/2010-END
 	glutMainLoop(); 
+	// ADD-BY-LEETEN 03/10/2010-BEGIN
+	#else
+	compute_streamlines();
+	#endif
+	// ADD-BY-LEETEN 03/10/2010-END
 	return 0;
 }
 
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.2  2010/02/09 04:15:02  leeten
+
+[02/02/2010]
+1. [ADD] Include the header 'FlowDiffusion2DConfig.h' and 'liblog.h.'
+2. [MOD] Modify the function save_streamlines_to_file in order to save the specify set of streamlines to a given file.
+3. [MOD] Control #sample by the preprocessor NR_OF_SAMPLES.
+4. [MOD] Specify the advent length to 200 if the preprocessor GENERATE_PRIMITIVE is GENERATE_PRIMITIVE_STREAMLINES.
+5. [MOD] Control the pruning threshold by the preprocessor PRUNING_THRESHOLD.
+6. [MOD] Call the function combinehalflines() instead.
+7. [ADD] Call the function discardredundantstreamlines().
+8. [DEL] Comment srand().
+9. [MOD] Specify the target error by the threshold TARGET_THRESHOLD.
+10. [ADD] Stop streamline generation if no more seeds can be generated.
+11. [MOD] Save the entropy to the folder of the input vector field,.
+
 Revision 1.1  2010/01/22 21:09:12  leeten
 
 [01/22/2010]
