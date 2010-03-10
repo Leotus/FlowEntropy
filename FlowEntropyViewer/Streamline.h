@@ -72,6 +72,10 @@ struct CStreamline
 	} cGlyph;
 	// ADD-BY-LEETEN 01/12/2010-END
 
+	// ADD-BY-LEETEN 03/10/2010-BEGIN
+	unsigned int uMinNrOfStreamlines;
+	// ADD-BY-LEETEN 03/10/2010-END
+
 	// ADD-BY-LEETEN 01/08/2010-BEGIN
 	unsigned int uMaxNrOfStreamlines;
 	// ADD-BY-LEETEN 01/08/2010-END
@@ -167,6 +171,11 @@ public:
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.9  2010/02/05 01:46:30  leeten
+
+[02/04/2010]
+1. [ADD] Add new field piNrOfLinesPerSlab, piLineOffsetPerSlab and pi2SlabTemp for bucket sort,
+
 Revision 1.8  2010/02/01 06:01:42  leeten
 
 [01/31/2010]

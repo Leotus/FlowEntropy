@@ -221,7 +221,11 @@ CStreamline::_SortSlab(
 
 		// ADD-BY-LEETEN 01/08/2010-BEGIN
 		// only consider the first uMaxNrOfStreamlines streamlines
-		if( iStreamline >= int(uMaxNrOfStreamlines) )
+		// MOD-BY-LEETEN 03/10/2010-FROM:
+			// if( iStreamline >= int(uMaxNrOfStreamlines) )
+		// TO:
+		if( iStreamline >= int(uMaxNrOfStreamlines) || iStreamline < int(uMinNrOfStreamlines) )
+		// MOD-BY-LEETEN 03/10/2010-END
 			continue;
 		// ADD-BY-LEETEN 01/08/2010-END
 
@@ -274,6 +278,9 @@ CStreamline::_Read(float fScaleX, float fScaleY, float fScaleZ, char *szStreamli
 	LOG_VAR(uNrOfVertices);
 	// ADD-BY-LEETEN 02/03/2010-END
 
+	// ADD-BY-LEETEN 03/10/2010-BEGIN
+	uMinNrOfStreamlines = 0;
+	// ADD-BY-LEETEN 03/10/2010-END
 	// ADD-BY-LEETEN 01/08/2010-BEGIN
 	uMaxNrOfStreamlines = uNrOfStreamlines;
 	// ADD-BY-LEETEN 01/08/2010-END
@@ -559,6 +566,11 @@ CStreamline::_AddGlui(GLUI* pcGlui)
 	GLUI_Spinner *pcSpinner_SamplingRate = pcGlui->add_spinner_to_panel(pcPanel_Streamlines, "Sampling Rate", GLUI_SPINNER_INT, &uSamplingRate);	
 	pcSpinner_SamplingRate->set_int_limits(1, 256);
 	// ADD-BY-LEETEN 01/02/2010-END
+
+	// ADD-BY-LEETEN 03/10/2010-BEGIN
+	GLUI_Spinner *pcSpinner_MinNrOfStreamlines = pcGlui->add_spinner_to_panel(pcPanel_Streamlines, "Min #Streamlines", GLUI_SPINNER_INT, &uMinNrOfStreamlines);	
+		pcSpinner_MinNrOfStreamlines->set_int_limits(0, uMaxNrOfStreamlines);
+	// ADD-BY-LEETEN 03/10/2010-END
 
 	// ADD-BY-LEETEN 01/08/2010-BEGIN
 	GLUI_Spinner *pcSpinner_MaxNrOfStreamlines = pcGlui->add_spinner_to_panel(pcPanel_Streamlines, "Max #Streamlines", GLUI_SPINNER_INT, &uMaxNrOfStreamlines);	
@@ -1045,6 +1057,12 @@ CStreamline::_RenderTubes()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.10  2010/02/05 01:44:56  leeten
+
+[02/04/2010]
+1. [ADD] Add a new preprocessor SORT_ON_CUDA. If it is 0, the sorting is done via CPU-side bucket sort.
+2. [MOD] Change the CPU-side sorting from quick sort to bucket sort.
+
 Revision 1.9  2010/02/02 03:51:23  leeten
 
 [02/01/2010]
