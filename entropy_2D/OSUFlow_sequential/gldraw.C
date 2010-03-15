@@ -450,13 +450,22 @@ void compute_entropy_point_by_point_load_file()
 	bin_vector=new int[grid_res[0]*grid_res[1]];
 	bin_newvectors=new int[grid_res[0]*grid_res[1]];
 
-	int binnum=60;
+	// MOD-BY-LEETEN 03/15/2010-FROM:
+		// int	binnum=60;
+	// TO:
+	int binnum = NR_OF_BINS;
+	// MOD-BY-LEETEN 03/15/2010-END
 	printf("calculate entropy...\n"); 
 
 	getbins(vectors,bin_vector,  grid_res, binnum);
 	getbins(new_vectors,bin_newvectors,  grid_res, binnum);
 
-	int  kernel_size= 8;
+	// MOD-BY-LEETEN 03/15/2010-FROM:
+		// int  kernel_size= 8;//conditional entropy kernel
+	// TO:
+	int  kernel_size = KERNEL_SIZE;//conditional entropy kernel
+	// MOD-BY-LEETEN 03/15/2010-END
+
 	for(int y=0;y<grid_res[1];y++)
 	{
 		for(int x=0;x<grid_res[0];x++)
@@ -1373,7 +1382,12 @@ VECTOR3	selectNextSeed3_local_maximum(float* vectors,float* new_vectors, int* gr
 	int width=abs((int)(ed.x()-st.x())); int height=abs((int)(ed.y()-st.y()));
 	float* entropy_point_by_point=new float[width*height];
 	memset(entropy_point_by_point,-1,sizeof(float));
-	int kernel_size=5; 
+	// MOD-BY-LEETEN 03/15/2010-FROM:
+		// int  kernel_size= 8;//conditional entropy kernel
+	// TO:
+	int  kernel_size = KERNEL_SIZE;//conditional entropy kernel
+	// MOD-BY-LEETEN 03/15/2010-END
+
 	double dwStart = GetTickCount();
 
 	//for(int z=z_min; z<z_max;z++)
@@ -2109,7 +2123,12 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 	// TO:
 	int sample_number_allowed=NR_OF_SAMPLES;
 	// MOD-BY-LEETEN 02/05/2010-END
-	int  kernel_size= 8;//conditional entropy kernel
+	// MOD-BY-LEETEN 03/15/2010-FROM:
+		// int  kernel_size= 8;//conditional entropy kernel
+	// TO:
+	int  kernel_size = KERNEL_SIZE;//conditional entropy kernel
+	// MOD-BY-LEETEN 03/15/2010-END
+
 	int radius=1;		//not using distance control
 	float* img_entropies=new float[grid_res[0]*grid_res[1]];
 	
@@ -2119,7 +2138,12 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 	bin_vector=new int[grid_res[0]*grid_res[1]];
 	bin_newvectors=new int[grid_res[0]*grid_res[1]];
 
-	int binnum=60;
+	// MOD-BY-LEETEN 03/15/2010-FROM:
+		// int	binnum=60;
+	// TO:
+	int binnum = NR_OF_BINS;
+	// MOD-BY-LEETEN 03/15/2010-END
+
 	printf("calculate entropy...\n"); 
 
 	getbins(vectors,bin_vector,  grid_res, binnum);
@@ -2230,7 +2254,9 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 				 grid_res,  startpt, endpt,histo_pxy,histo_py);
 			//float entropy=calcEntropy(vectors,  grid_res,  start, end);
 
-			entropy=entropy*entropy;//*entropy*entropy;
+			// DEL-BY-LEETEN 03/15/2010-BEGIN
+				// entropy=entropy*entropy;//*entropy*entropy;
+			// DEL-BY-LEETEN 03/15/2010-END
 			int idx=x+y*grid_res[0];
 			img_entropies[idx]=entropy;
 			if(entropy>maximum)
@@ -2288,6 +2314,11 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 		img_entropies[i]=img_entropies[i]/sum;
 
 	dwStart= GetTickCount();
+
+	// ADD-BY-LEETEN 03/15/2010-BEGIN
+	#if	IMPORTANCE_SAMPLING	== IMPORTANCE_SAMPLING_CHAIN_RULE
+	// ADD-BY-LEETEN 03/15/2010-END
+
 	float* qy=new float[grid_res[1]];
 	//get y marginal
 	for(int j=0;j<grid_res[1];j++)
@@ -2327,6 +2358,38 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 		sx[i] = sample_from(qx_normalized+sy[i]*grid_res[0],grid_res[0]);
 		i++;
 	}
+
+	// ADD-BY-LEETEN 03/15/2010-BEGIN
+	#elif IMPORTANCE_SAMPLING	== IMPORTANCE_SAMPLING_REJECTION_METHOD	
+
+	int* sx=new int[sample_number_allowed];
+	int* sy=new int[sample_number_allowed];
+	float* qy=new float[grid_res[1]];
+	float *qx_normalized=new float[grid_res[0]*grid_res[1]];
+
+	float fMaxProb = -(float)HUGE_VAL;
+	for(int p = 0,	j = 0; j < grid_res[1]; j++)
+		for(int		i = 0; i < grid_res[0]; i++, p++)
+			fMaxProb = max(fMaxProb, img_entropies[p]);
+
+	float fM = fMaxProb;
+	int i;
+	for(i = 0; i < sample_number_allowed; )
+	{
+		float fU = float(rand()) / float(RAND_MAX);
+		int iX = min(int(float(grid_res[0] * rand()) / float(RAND_MAX)), grid_res[0] - 1);
+		int iY = min(int(float(grid_res[1] * rand()) / float(RAND_MAX)), grid_res[1] - 1);
+		float fP =  img_entropies[iX + iY * grid_res[0]];
+		if( fU < fP / fM )
+		{
+			sx[i] = iX;
+			sy[i] = iY;
+			i++;
+		}
+	}
+	#endif	// #if IMPORTANCE_SAMPLING
+	// ADD-BY-LEETEN 03/15/2010-END
+
 	elapsedTime= GetTickCount() - dwStart;
 	printf("\n\n sampling time is %.3f milli-seconds.\n",elapsedTime); 	
 
@@ -3032,7 +3095,11 @@ printf("p(e)=%f target entorpy=%f\n",error,target);
 	bool bIsConverged = false;
 	for(
 		bool bIsConverged = false;
-		entropy > target && false == bIsConverged;
+		// MOD-BY-LEETEN 03/15/2010-FROM:
+			// entropy > target && false == bIsConverged;
+		// TO:
+		false == bIsConverged;
+		// MOD-BY-LEETEN 03/15/2010-TO:
 	)
 	// MOD-BY-LEETEN 02/05/2010-END
 //	while(entropy>target )
@@ -3074,13 +3141,32 @@ printf("p(e)=%f target entorpy=%f\n",error,target);
 		printf("%d seeds selected, entropy=%f/%f\n",selected_line_num, entropy,target);
 	
 		// ADD-BY-LEETEN 02/05/2010-BEGIN
-		bIsConverged = (0 == seeds.size())?true:false;
+		// MOD-BY-LEETEN 03/15/2010-FROM:
+			// bIsConverged = (0 == seeds.size())?true:false;
+		// TO:
+		static float fPrevEntropy;
+		bIsConverged = false;
+		if( round > 1 )
+		{
+			float fEntropyRate = entropy / fPrevEntropy;
+			if( 0.0f == entropy || 0.995 < fEntropyRate && fEntropyRate <= 1.0 )
+				bIsConverged = true;
+		}
+		fPrevEntropy = entropy;
+		// MOD-BY-LEETEN 03/15/2010-END
+
 		// ADD-BY-LEETEN 02/05/2010-END
 
 		// MOD-BY-LEETEN 02/06/2010-FROM:
 			// save_streamlines_to_file();
 		// TO:
-		save_streamlines_to_file(sl_list);
+		// MOD-BY-LEETEN 03/15/2010-FROM:
+			// save_streamlines_to_file(sl_list);
+		// TO:
+		char szFilename[1024];
+		sprintf(szFilename, "%s_streamlines%d.dat", g_filename, round);
+		save_streamlines_to_file(sl_list, szFilename);
+		// MOD-BY-LEETEN 03/15/2010-END
 		// MOD-BY-LEETEN 02/06/2010-END
 
 		//dumpEntropy(entropies,"entropy.bin");
@@ -4619,6 +4705,11 @@ fclose(my);
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.3  2010/03/10 20:24:39  leeten
+
+[03/10/2010]
+1. [ADD] If the preprocessor ENTER_GLUT_LOOP is zero, immediate call compute_streamlines().
+
 Revision 1.2  2010/02/09 04:15:02  leeten
 
 [02/02/2010]
