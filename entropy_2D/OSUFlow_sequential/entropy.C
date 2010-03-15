@@ -2146,7 +2146,12 @@ float calcRelativeEntropy6( float* vectors,float* new_vectors, int* grid_res, VE
 
 float calcEntropy( float* vectors, int* grid_res, VECTOR3 startpt,VECTOR3 endpt)
 {
-	int binnum=60;
+	// MOD-BY-LEETEN 03/15/2010-FROM:
+		// int	binnum=60;
+	// TO:
+	int binnum = NR_OF_BINS;
+	// MOD-BY-LEETEN 03/15/2010-END
+
 	int *histo_py=new int[binnum];
 	memset(histo_py,0,sizeof(int)*binnum);
 
@@ -2196,7 +2201,12 @@ float calcEntropy( float* vectors, int* grid_res, VECTOR3 startpt,VECTOR3 endpt)
 
 float calcRelativeEntropy6_load_bins(int* bin_vector, int* bin_newvectors,int* grid_res, VECTOR3 startpt,VECTOR3 endpt)
 {
-	int binnum=60;
+	// MOD-BY-LEETEN 03/15/2010-FROM:
+		// int	binnum=60;
+	// TO:
+	int binnum = NR_OF_BINS;
+	// MOD-BY-LEETEN 03/15/2010-END
+
 	int *histo_pxy=new int[binnum*binnum];
 	int *histo_py=new int[binnum];
 	memset(histo_pxy,0,sizeof(int)*binnum*binnum);
@@ -2281,7 +2291,11 @@ float calcRelativeEntropy6_load_bins(int* bin_vector, int* bin_newvectors,int* g
 float calcRelativeEntropy6_load_histograms(int* bin_vector, int* bin_newvectors,int* grid_res, VECTOR3 startpt,VECTOR3 endpt,
 										   int* histo_pxy,int *histo_py)
 {
-	int binnum=60;
+	// MOD-BY-LEETEN 03/15/2010-FROM:
+		// int	binnum=60;
+	// TO:
+	int binnum = NR_OF_BINS;
+	// MOD-BY-LEETEN 03/15/2010-END
 
 	int area=(endpt.y()-startpt.y())*(endpt.x()-startpt.x());
 	float pi=3.1415926;
@@ -2338,7 +2352,12 @@ float calcRelativeEntropy6_load_histograms(int* bin_vector, int* bin_newvectors,
 
 float calcRelativeEntropy6( float* vectors,float* new_vectors, int* grid_res, VECTOR3 startpt,VECTOR3 endpt,int* occupied)
 {
-	int binnum=60;
+	// MOD-BY-LEETEN 03/15/2010-FROM:
+		// int	binnum=60;
+	// TO:
+	int binnum = NR_OF_BINS;
+	// MOD-BY-LEETEN 03/15/2010-END
+
 	int *histo_pxy=new int[binnum*binnum];
 	int *histo_py=new int[binnum];
 	memset(histo_pxy,0,sizeof(int)*binnum*binnum);
@@ -2675,6 +2694,11 @@ void QuadTree::drawSelf()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.4  2010/03/10 20:23:53  leeten
+
+[03/10/2010]
+1. [ADD] Stop the iteration if the error increases.
+
 Revision 1.3  2010/02/16 19:58:55  leeten
 
 [02/16/2010]
