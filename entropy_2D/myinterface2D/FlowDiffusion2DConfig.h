@@ -12,7 +12,7 @@
 #define	IMPLEMENTED_BY_XUL			0
 // ADD-BY-LEETEN 02/06/2010-END
 
-#define	USE_CUDA	1
+#define	USE_CUDA	0
 #if	USE_CUDA
 	#define DIFFUSION_ON_CUDA	1
 #endif	// #if	USE_CUDA
@@ -39,11 +39,26 @@
 #define PRUNING_THRESHOLD	0.000
 #define	NR_OF_SAMPLES		(max(grid_res[0], grid_res[1]))		// ((grid_res[0] * grid_res[1]) / 64)
 
+// ADD-BY-LEETEN 03/15/2010-BEGIN
+#define NR_OF_BINS		60	// 60
+#define	KERNEL_SIZE		8		// 8
+
+#define	IMPORTANCE_SAMPLING_CHAIN_RULE			0x01
+#define	IMPORTANCE_SAMPLING_REJECTION_METHOD	0x02
+
+#define	IMPORTANCE_SAMPLING	IMPORTANCE_SAMPLING_CHAIN_RULE	
+// ADD-BY-LEETEN 03/15/2010-END
+
 #endif	// __FLOW_DIFFUSION_CUDA_H__
 
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.2  2010/03/10 20:25:24  leeten
+
+[03/10/2010]
+1. [ADD] Define a new preprocessor ENTER_GLUT_LOOP. If the preprocessor ENTER_GLUT_LOOP is zero, immediate call compute_streamlines().
+
 Revision 1.1  2010/02/09 03:48:02  leeten
 
 [02/02/2010]
