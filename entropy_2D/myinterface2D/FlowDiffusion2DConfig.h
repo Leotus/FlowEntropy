@@ -4,7 +4,7 @@
 #include "FlowDiffusionCudaLib/FlowDiffusion.h"
 
 // ADD-BY-LEETEN 03/10/2010-BEGIN
-#define ENTER_GLUT_LOOP	1
+#define ENTER_GLUT_LOOP	0
 // ADD-BY-LEETEN 03/10/2010-END
 
 // ADD-BY-LEETEN 02/06/2010-BEGIN
@@ -46,14 +46,32 @@
 #define	IMPORTANCE_SAMPLING_CHAIN_RULE			0x01
 #define	IMPORTANCE_SAMPLING_REJECTION_METHOD	0x02
 
-#define	IMPORTANCE_SAMPLING	IMPORTANCE_SAMPLING_CHAIN_RULE	
+#define	IMPORTANCE_SAMPLING	IMPORTANCE_SAMPLING_CHAIN_RULE	// IMPORTANCE_SAMPLING_REJECTION_METHOD
 // ADD-BY-LEETEN 03/15/2010-END
+
+// ADD-BY-LEETEN 03/16/2010-BEGIN
+#define WRAP_MODE_CLAMP				0x01
+#define WRAP_MODE_MIRROR			0x02
+#define	WRAP_MODE_REPEAT			0x03
+#define WRAP_MODE_CLAMP_TO_BORDER	0x04
+
+#define WRAP_MODE					WRAP_MODE_MIRROR
+
+#define	ENABLE_PRUNING				1	// 1 or 0
+// ADD-BY-LEETEN 03/16/2010-END
 
 #endif	// __FLOW_DIFFUSION_CUDA_H__
 
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.3  2010/03/15 19:12:51  leeten
+
+[03/15/2010]
+1. [ADD] Define a new preprocess KERNEL_SIZE to define the size of the neighborhood.
+2. [ADD] Define a the new preprocess NR_OF_BINS to define #histogram bins.
+3. [ADD] Define new preprocessors IMPORTANCE_SAMPLING, IMPORTANCE_SAMPLING_CHAIN_RULE, IMPORTANCE_SAMPLING_REJECTION_METHOD to specify the importance sampling algorithm.
+
 Revision 1.2  2010/03/10 20:25:24  leeten
 
 [03/10/2010]
