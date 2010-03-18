@@ -8,8 +8,8 @@
 
 #define CLOCK_reconstruct_field_GVF_3D	0
 
-#define USE_CUDA			1
-#define ENTER_GLUT_LOOP		1
+#define USE_CUDA			0
+#define ENTER_GLUT_LOOP		0
 #define BIN_LOOKUP			1
 
 
@@ -51,9 +51,32 @@
 // ADD-BY-LEETEN 12/14/2009-END
 
 // ADD-BY-LEETEN 02/04/2010-BEGIN
-#define PRUNING_THRESHOLD	0.001
-#define	NR_OF_SAMPLES		((grid_res[0] * grid_res[1] * grid_res[2]) / 512)
+#define PRUNING_THRESHOLD	0.000
+// MOD-BY-LEETEN 03/18/2010-FROM:
+	// #define	NR_OF_SAMPLES		((grid_res[0] * grid_res[1] * grid_res[2]) / 512)
+// TO:
+	#define	NR_OF_SAMPLES		(max(max(grid_res[0], grid_res[1]), grid_res[2]))
+// MOD-BY-LEETEN 03/18/2010-END
 // ADD-BY-LEETEN 02/04/2010-END
+
+// ADD-BY-LEETEN 03/18/2010-BEGIN
+#define NR_OF_BINS		360	
+
+//////////////////////////////////////////////////////
+#define WRAP_MODE_CLAMP				0x01
+#define WRAP_MODE_MIRROR			0x02
+#define	WRAP_MODE_REPEAT			0x03
+#define WRAP_MODE_CLAMP_TO_BORDER	0x04
+
+#define WRAP_MODE					WRAP_MODE_MIRROR
+
+//////////////////////////////////////////////////////
+#define PRUNING_MODE_NONE				0x00
+#define	PRUNING_MODE_COND_ENTROPY		0x01
+#define	PRUNING_MODE_KEEP_WHEN_DISTANT	0x02
+
+#define PRUNING_MODE					PRUNING_MODE_KEEP_WHEN_DISTANT	// PRUNING_MODE_COND_ENTROPY
+// ADD-BY-LEETEN 03/18/2010-END
 
 #define NR_OF_STREAMLINES	1
 
@@ -63,8 +86,6 @@
 #define SHOW_SELECT_NEXT_SEED_3_TIMING	0
 
 #if	0	// DEL-BY-LEETEN 12/07/2009-BEGIN
-	#pragma comment (lib, "cutil32.lib ")      // link with my own library libfps
-	#pragma comment (lib, "cudart.lib")      // link with my own library libfps
 #endif	// DEL-BY-LEETEN 12/07/2009-END
  
 // #if	USE_CUDA
@@ -72,24 +93,6 @@
 // #endif
 
 #if	0	// DEL-BY-LEETEN 12/07/2009-BEGIN
-	#define MALLOC(p, type, size)\
-		{	\
-			if( NULL == (p) )\
-			{\
-				(p) = (type*)calloc((size), sizeof(type));\
-			}\
-		}\
-
-
-	#define FREE(p)	\
-		{	\
-			if( NULL != (p) )	\
-			{\
-				free(p);\
-			}\
-			p = NULL;\
-		}\
-
 #endif	// DEL-BY-LEETEN 12/07/2009-END
 
 #endif	// __FLOW_DIFFUSION_CUDA_H__
@@ -97,6 +100,14 @@
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.2  2010/02/05 01:29:30  leeten
+
+[02/02/2010]
+1. [ADD] Add a new preprocessor DIFFUSION_ON_GLSL and include a header FlowDiffusionGLSLLib.h
+2. [MOD] Change the preprocessors BIN_LOOKUP_ON_GPU, DIFFUSION_ON_GPU, ENTROPY_ON_GPU to BIN_LOOKUP_ON_CUDA, DIFFUSION_ON_CUDA, ENTROPY_ON_CUDA, respectively.
+3. [ADD] Add a new preprocessor PRUNING_THRESHOLD.
+4. [ADD] Add a new preprocessor NR_OF_SAMPLES.
+
 Revision 1.1  2010/02/03 00:40:28  leeten
 
 [02/02/2010]
