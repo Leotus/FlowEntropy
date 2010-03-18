@@ -4,7 +4,7 @@
 #include "FlowDiffusionCudaLib/FlowDiffusion.h"
 
 // ADD-BY-LEETEN 03/10/2010-BEGIN
-#define ENTER_GLUT_LOOP	0
+#define ENTER_GLUT_LOOP				1
 // ADD-BY-LEETEN 03/10/2010-END
 
 // ADD-BY-LEETEN 02/06/2010-BEGIN
@@ -57,7 +57,16 @@
 
 #define WRAP_MODE					WRAP_MODE_MIRROR
 
-#define	ENABLE_PRUNING				1	// 1 or 0
+// MOD-BY-LEETEN 03/18/2010-FROM:
+	// #define	ENABLE_PRUNING				0	// 1 or 0
+// TO:
+#define PRUNING_MODE_NONE				0x00
+#define	PRUNING_MODE_COND_ENTROPY		0x01
+#define	PRUNING_MODE_KEEP_WHEN_DISTANT	0x02
+
+#define PRUNING_MODE	PRUNING_MODE_COND_ENTROPY	// PRUNING_MODE_COND_ENTROPY
+// MOD-BY-LEETEN 03/18/2010-END
+
 // ADD-BY-LEETEN 03/16/2010-END
 
 #endif	// __FLOW_DIFFUSION_CUDA_H__
@@ -65,6 +74,12 @@
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.4  2010/03/16 15:39:46  leeten
+
+[03/16/2010]
+1. [ADD] Add new preprocessor to define the wrapping for field boundary.
+2. [ADD] ADD a new preprocessor ENABLE_PRUNING to decide whether the pruning is on.
+
 Revision 1.3  2010/03/15 19:12:51  leeten
 
 [03/15/2010]
