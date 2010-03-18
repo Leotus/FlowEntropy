@@ -1224,7 +1224,11 @@ _FlowDiffusion(
 	// MOD-BY-LEETEN 02/06/2010-FROM:
 		// iNrOfIterations = 4 * max(max(iVolumeWidth, iVolumeHeight), iVolumeDepth);
 	// TO:
-	iNrOfIterations = 1024 * max(max(iVolumeWidth, iVolumeHeight), iVolumeDepth);
+	// MOD-BY-LEETEN 03/18/2010-FROM:
+		// iNrOfIterations = 1024 * max(max(iVolumeWidth, iVolumeHeight), iVolumeDepth);
+	// TO:
+	iNrOfIterations = 9 * max(max(iVolumeWidth, iVolumeHeight), iVolumeDepth);
+	// MOD-BY-LEETEN 03/18/2010-END
 	// MOD-BY-LEETEN 02/06/2010-END
 	// LOG(printf("Warning! iNrOfIterations is changed to %d", iNrOfIterations));
 	#endif
@@ -1502,7 +1506,11 @@ _FlowDiffusion(
 			break;
 		}
 		// ADD-BY-LEETEN 03/10/2010-BEGIN
-		if( fErrorRate > 1.0f )
+		// MOD-BY-LEETEN 03/18/2010-FROM:
+			// if( fErrorRate > 1.0f )
+		// TO: 
+		if( i > 1 && fErrorRate > 1.0f )
+		// MOD-BY-LEETEN 03/18/2010-END
 		{
 			printf("Error increase. Stop.");
 			break;
@@ -1571,6 +1579,11 @@ _FlowDiffusion(
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.12  2010/03/10 20:19:44  leeten
+
+[03/10/2010]
+1. [ADD] Stop the iteration if the error increases.
+
 Revision 1.11  2010/02/09 00:40:48  leeten
 
 [02/08/2010]
