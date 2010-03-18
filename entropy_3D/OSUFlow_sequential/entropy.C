@@ -1017,11 +1017,161 @@ void dumpReconstruedField(char*  filename,float* new_vector, int* grid_res)
 */
 }
 
+// ADD-BY-LEETEN 03/18/2010-BEGIN
+
+void _FindNeighbors3D(VECTOR3 pImage, int stride, int* neighbors, int* grid_res)
+{
+	int xidx=pImage.x();
+	int yidx=pImage.y();
+	int zidx=pImage.z();
+
+	// getting index to neighboring cells and itself
+	stride = (stride-1)/2;
+	for(int iV = 0, iZ = -stride; iZ <= stride; iZ++)
+		for(int		iY = -stride; iY <= stride; iY++)
+			for(int iX = -stride; iX <= stride; iX++, iV++)
+			{
+				int index = (zidx+iZ) * grid_res[0] * grid_res[1] + (yidx+iY) * grid_res[0] + (xidx+iX);
+				if( 
+					zidx+iZ < 0 || 
+					yidx+iY < 0 || 
+					xidx+iX < 0 || 
+					zidx+iZ >= grid_res[2] || 
+					yidx+iY >= grid_res[1] || 
+					xidx+iX >= grid_res[0]
+					)
+					neighbors[iV] = -1;
+				else
+					neighbors[iV] = index;
+			}	
+}
+
+
+bool 
+BIsDistantFromExistingStreamlines(
+	VECTOR3 p, 
+	VECTOR3 pObj,
+	/*
+	PointRef* m_grid, 
+	*/
+	int *occupied,
+	float m_sepDist,
+	// float m_sepMinDist,
+	int* grid_res)
+{
+	// deciding searching neighbors
+	int stride = (int)ceil(m_sepDist)*2 + 1;
+	int cellNum = stride * stride * stride;	// 3D
+	int* neighbors = new int[cellNum];
+	_FindNeighbors3D(p, stride, neighbors, grid_res);
+	
+	// checking current cell, and 8 neighboring cells
+	for(int iFor = 0; iFor < cellNum; iFor++)
+	{
+		if(neighbors[iFor] != -1)		// valid neighbor
+		{
+			if(occupied[neighbors[iFor]])
+			{
+				delete[] neighbors;
+				return false;			
+			}
+		}
+	}
+
+	delete[] neighbors;
+	return true;			
+}
+
+void 
+_CombineHalfLinesNotOccupied(
+	list<vtListSeedTrace*> lines, 
+	list<vtListSeedTrace*>& long_lines,
+	int *occupied,
+	int grid_res[3])
+{
+	vtListSeedTrace* newlist;
+	list<vtListSeedTrace*>::iterator pIter;
+	pIter =lines.begin(); 
+
+	bool *pbDiscardFlags = (bool*)calloc(lines.size(), sizeof(pbDiscardFlags[0]));
+
+	#if	PRUNING_MODE == PRUNING_MODE_KEEP_WHEN_DISTANT
+	pIter = lines.begin(); 
+	for (int iS = 0; pIter!=lines.end(); pIter++, iS++) 
+	{
+		std::list<VECTOR3*>::iterator pnIter; 
+		vtListSeedTrace *trace = *pIter; 
+		pnIter = trace->begin(); 
+		for (; pnIter!= trace->end(); pnIter++) 
+		{
+			VECTOR3 p = **pnIter; 
+			bool bIsDistant = BIsDistantFromExistingStreamlines(p, p, occupied, 2.0f, grid_res);
+			if(true == bIsDistant)
+				break;
+		}
+		if( trace->end() == pnIter )
+		{
+			if( 0 == iS % 2 )
+			{
+				pbDiscardFlags[iS] = true;
+				pbDiscardFlags[iS+1] = true;
+			}
+			else
+			{
+				pbDiscardFlags[iS] = true;
+				pbDiscardFlags[iS-1] = true;
+			}
+		}
+	}
+	#endif	// #if	PRUNING_MODE == PRUNING_MODE_KEEP_WHEN_DISTANT
+
+	int sou=0;
+	for (pIter = lines.begin(); pIter!=lines.end(); pIter++, sou++) 
+	{
+		if( true == pbDiscardFlags[sou])
+			continue;
+
+		if(sou%2==0)//create new list
+			newlist=new vtListSeedTrace();
+		vtListSeedTrace *trace = *pIter; 
+		std::list<VECTOR3*>::iterator pnIter; 
+		pnIter = trace->begin(); 
+
+		for (; pnIter!= trace->end(); pnIter++) 
+		{
+			VECTOR3 p = **pnIter; 
+			if(sou%2==0)
+			newlist->push_front(new VECTOR3(p.x(),p.y(),p.z()));
+			else
+			newlist->push_back(new VECTOR3(p.x(),p.y(),p.z()));
+		}
+		if(sou%2==1)//create new list
+			long_lines.push_back(newlist);
+	}
+	free(pbDiscardFlags);
+
+	//clear memory
+	pIter =lines.begin(); 
+	for (; pIter!=lines.end(); pIter++) 
+	{
+		vtListSeedTrace *trace = *pIter; 
+		std::list<VECTOR3*>::iterator pnIter; 
+		pnIter=trace->begin();
+	
+		for (; pnIter!=trace->end(); pnIter++) 
+		delete *pnIter;
+
+		delete  trace;
+	}
+}
+// ADD-BY-LEETEN 03/18/2010-END
+
 void combinehalflines(list<vtListSeedTrace*> lines, list<vtListSeedTrace*>& long_lines)
 {
 	vtListSeedTrace* newlist;
 	list<vtListSeedTrace*>::iterator pIter;
 	pIter =lines.begin(); 
+
 	int sou=0;
 	for (; pIter!=lines.end(); pIter++) 
 	{
@@ -2643,6 +2793,11 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.6  2010/03/10 20:27:53  leeten
+
+[03/10/2010]
+1. [MOD] Consider the voxels along the boundary when compute the entropy/cond. entropy.
+
 Revision 1.5  2010/02/16 19:55:00  leeten
 
 [02/16/2010]
