@@ -1115,6 +1115,47 @@ bool CheckValidness(VECTOR3 p, VECTOR3 pObj,PointRef* m_grid, float m_sepDist,fl
 	return true;			
 }
 
+// ADD-BY-LEETEN 03/18/2010-BEGIN
+bool BIsDistantFromExistingStreamlines(VECTOR3 p, VECTOR3 pObj,PointRef* m_grid, float m_sepDist,float m_sepMinDist,int* grid_res)
+{
+	//int xidx, yidx;
+	int iFor, jFor, cellNum, stride, count;
+	int* neighbors;
+	int xdim=grid_res[0];
+
+	// deciding searching neighbors
+	stride = (int)ceil(m_sepDist)*2 + 1;
+	cellNum = stride*stride;
+	neighbors = new int[cellNum];
+	FindNeighbors(p, stride, neighbors,grid_res);
+	
+	// checking current cell, and 8 neighboring cells
+	for(iFor = 0; iFor < cellNum; iFor++)
+	{
+		if(neighbors[iFor] != -1)		// valid neighbor
+		{
+			vector<GridPoint>::iterator pIter;
+			pIter = m_grid[neighbors[iFor]].begin();
+			pIter++;					// skip the first dummy vector
+			for(; pIter != m_grid[neighbors[iFor]].end(); pIter++)
+			{
+				VECTOR3 pPos;
+				bool bNeedDelete;
+				pPos = (*pIter).posImage;
+				if( !IsDistValid(p, pPos, m_sepDist * sqrtf(2.0f), bNeedDelete) )
+				{
+					delete[] neighbors;
+					return false;
+				}
+			}
+		}
+	}
+
+	delete[] neighbors;
+	return true;			
+}
+// ADD-BY-LEETEN 03/18/2010-END
+
 // ADD-BY-LEETEN 02/06/2010-BEGIN
 void
 _SaveVectorField2D(int* grid_res, float *pf3Vectors, char szFilename[])
@@ -1172,13 +1213,55 @@ void combinehalflines_check_stop(list<vtListSeedTrace*> lines, list<vtListSeedTr
 	m_sepDist=m_sepMinDist=1;
 	vtListSeedTrace* newlist;
 	list<vtListSeedTrace*>::iterator pIter;
+
+	// ADD-BY-LEETEN 03/18/2010-BEGIN
+	bool *pbDiscardFlags = new bool[lines.size()];
+	#if	PRUNING_MODE == PRUNING_MODE_KEEP_WHEN_DISTANT
+	pIter =lines.begin(); 
+	for (int iS = 0; pIter!=lines.end(); pIter++, iS++) 
+	{
+		std::list<VECTOR3*>::iterator pnIter; 
+		vtListSeedTrace *trace = *pIter; 
+		pnIter = trace->begin(); 
+		for (; pnIter!= trace->end(); pnIter++) 
+		{
+			VECTOR3 p = **pnIter; 
+			int idx=(int)(p.x())+((int)(p.y()))*grid_res[0];
+			bool bIsDistant = BIsDistantFromExistingStreamlines(p,p, m_grid, m_sepDist,m_sepMinDist, grid_res);
+			if(true == bIsDistant)
+				break;
+		}
+		if( trace->end() == pnIter )
+		{
+			if( 0 == iS % 2 )
+			{
+				pbDiscardFlags[iS] = true;
+				pbDiscardFlags[iS+1] = true;
+			}
+			else
+			{
+				pbDiscardFlags[iS] = true;
+				pbDiscardFlags[iS-1] = true;
+			}
+		}
+	}
+	#endif	// #if	PRUNING_MODE == PRUNING_MODE_KEEP_WHEN_DISTANT
+	// ADD-BY-LEETEN 03/18/2010-END
+
 	pIter =lines.begin(); 
 	int sou=0;
+
 	for (; pIter!=lines.end(); pIter++) 
 	{
 		std::list<VECTOR3*>::iterator pnIter; 
-		if(sou%2==0)//create new list
+		// ADD-BY-LEETEN 03/18/2010-BEGIN
+		if( true == pbDiscardFlags[sou])
+			continue;
+		// ADD-BY-LEETEN 03/18/2010-END
+
+		if(sou%2==0)//create new list	
 			newlist=new vtListSeedTrace();
+
 		vtListSeedTrace *trace = *pIter; 
 		pnIter = trace->begin(); 
 
@@ -1191,16 +1274,20 @@ void combinehalflines_check_stop(list<vtListSeedTrace*> lines, list<vtListSeedTr
 			newlist->push_front(new VECTOR3(p.x(),p.y(),0));
 			else
 			newlist->push_back(new VECTOR3(p.x(),p.y(),0));
-
-
-			bool valid=CheckValidness(p,p, m_grid, m_sepDist,m_sepMinDist, grid_res);
-			if(valid==false)
-				break;
+			#if	0	// DEL-BY-LEETEN 03/18/2010-BEGIN
+				bool valid=CheckValidness(p,p, m_grid, m_sepDist,m_sepMinDist, grid_res);
+				if(valid==false)
+					break;
+			#endif	// ADD-BY-LEETEN 03/18/2010-END
 		}
 		if((sou%2==1)&&newlist->size()>10)
 			long_lines.push_back(newlist);
 		sou++;
 	}
+	// ADD-BY-LEETEN 03/18/2010-BEGIN
+	delete [] pbDiscardFlags;
+	// ADD-BY-LEETEN 03/18/2010-END
+
 	int pntIdx=0;
 	pIter = long_lines.begin(); 
 	for (; pIter!=long_lines.end(); pIter++) 
@@ -2694,6 +2781,12 @@ void QuadTree::drawSelf()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.5  2010/03/15 18:55:18  leeten
+
+[03/15/2010]
+1. [MOD] Use the new preprocess KERNEL_SIZE to define the size of the neighborhood.
+2. [MOD] Use the new preprocess NR_OF_BINS to define #histogram bins.
+
 Revision 1.4  2010/03/10 20:23:53  leeten
 
 [03/10/2010]
