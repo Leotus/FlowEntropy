@@ -2215,7 +2215,11 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 	// ADD-BY-LEETEN 03/16/2010-BEGIN
 	float* pfErrorImage = NULL;
 	pfErrorImage = (float*)calloc(grid_res[0] * grid_res[1], sizeof(pfErrorImage[0]));
-	assert(fErrorImage);
+	// MOD-BY-LEETEN 03/18/2010-FROM:
+		// assert(fErrorImage);
+	// TO:
+	assert(pfErrorImage);
+	// MOD-BY-LEETEN 03/18/2010-END
 	// ADD-BY-LEETEN 03/16/2010-END
 
 	for(int y=0;y<grid_res[1];y++)
@@ -2610,7 +2614,15 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 		// MOD-BY-LEETEN 02/06/2010-FROM:
 			// combinehalflines_check_stop(lines, new_lines,grid_res,m_grid,streamlineId);//for display only, the streamline stops when gets too near to an existing
 		// TO:
+		// ADD-BY-LEETEN 03/18/2010-BEGIN
+		#if	PRUNING_MODE == PRUNING_MODE_KEEP_WHEN_DISTANT	
+		// ADD-BY-LEETEN 03/18/2010-END
+		combinehalflines_check_stop(lines, new_lines,grid_res,m_grid,streamlineId);//for display only, the streamline stops when gets too near to an existing
+		// ADD-BY-LEETEN 03/18/2010-BEGIN
+		#else	// #if	PRUNING_MODE == PRUNING_MODE_KEEP_WHEN_DISTANT	
 		combinehalflines(lines, new_lines,grid_res);
+		#endif	// #if	PRUNING_MODE == PRUNING_MODE_KEEP_WHEN_DISTANT	
+		// ADD-BY-LEETEN 03/18/2010-END
 		// MOD-BY-LEETEN 02/06/2010-END
 
 //		combinehalflines_check_stop_entropy(lines, new_lines,grid_res,entropies);//for display only, the streamline stops when gets too near to an existing
@@ -2634,7 +2646,11 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 			#else	// MOD-BY-LEETEN 02/05/2010-TO:
 
 			// ADD-BY-LEETEN 03/16/2010-BEGIN
-			#if	ENABLE_PRUNING	
+			// MOD-BY-LEETEN 03/18/2010-FROM:
+				// #if	ENABLE_PRUNING	
+			// TO:
+			#if	PRUNING_MODE == PRUNING_MODE_COND_ENTROPY
+			// MOD-BY-LEETEN 03/18/2010-END
 			// ADD-BY-LEETEN 03/16/2010-END
 			bool discard=discardredundantstreamlines(cur_entropy,epsilon,tmp_whole_set_lines, vectors,new_vectors,grid_res);
 
@@ -3147,6 +3163,9 @@ void	norm_entropy(float* entropies, int* grid_res)
 //allow select multiple seed in one pass
 void compute_streamlines() 
 {
+	// ADD-BY-LEETEN 03/18/2010-BEGIN
+	double dwComputeStreamlineBegin = GetTickCount();
+	// ADD-BY-LEETEN 03/18/2010-END
 
 	printf("generating seeds...\n"); 
 	int num=0;
@@ -3356,10 +3375,20 @@ printf("p(e)=%f target entorpy=%f\n",error,target);
 		FILE *fpFile;
 		sprintf(szFilename, "%s_streamlines.log", g_filename);
 		char szCommand[1024];
+		#if	0	// MOD-BY-LEETEN 03/18/2010-FROM:
+			if( 1 == round )
+				sprintf(szCommand, "echo %d > %s", sl_list.size(), szFilename);
+			else
+				sprintf(szCommand, "echo %d >> %s", sl_list.size(), szFilename);
+		#else	// MOD-BY-LEETEN 03/18/2010-TO:
 		if( 1 == round )
-			sprintf(szCommand, "echo %d > %s", sl_list.size(), szFilename);
-		else
-			sprintf(szCommand, "echo %d >> %s", sl_list.size(), szFilename);
+		{
+			sprintf(szCommand, "echo %d %f > %s", NR_OF_SAMPLES, hx, szFilename);
+			system(szCommand);
+		}
+		sprintf(szCommand, "echo %d %f >> %s", sl_list.size(), entropy, szFilename);
+		#endif	// MOD-BY-LEETEN 03/18/2010-END
+
 		system(szCommand);
 		// ADD-BY-LEETEN 03/16/2010-END
 
@@ -3392,6 +3421,12 @@ printf("p(e)=%f target entorpy=%f\n",error,target);
 	_FlowDiffusionFree();
 	#endif	// #if	USE_CUDA	
 	// ADD-BY-LEETEN 02/05/2010-END
+
+	// ADD-BY-LEETEN 03/18/2010-BEGIN
+	double dwComputeStreamlineEnd = GetTickCount();
+	double dwComputeStreamlineTime = dwComputeStreamlineEnd - dwComputeStreamlineBegin;
+	printf("\n\n Time for %s: %.3f milli-seconds.\n", __FUNCTION__, dwComputeStreamlineTime); 	
+	// ADD-BY-LEETEN 03/18/2010-END
 }
 
 /*
@@ -4899,6 +4934,18 @@ fclose(my);
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.5  2010/03/16 15:44:52  leeten
+
+[03/16/2010]
+1. [ADD] Define a new function IWrapCoord to wrapt the field around the boundary.
+2. [ADD] Disable the pruning when the preprocessor ENABLE_PRUNING is 0.
+3. [ADD] Define a new function _DumpField2D to dump the specified field to a file.
+4. [ADD] Dump the vector disaprity to files.
+5. [MOD] Dump the rcond. entropy as its raw format other than PPM images.
+6. [MOD] Change the max. of cond. entropy to log2(binnum).
+7. [MOD] When convert the entropy into image, change the condition if(data[i]<(255/2)) to if(data[i]<=(255/2)) to avoid discontinuity.
+8. [MOD] Output the streamlines to the same file, and output the accoumated numbers of streamlines to a log.
+
 Revision 1.4  2010/03/15 18:58:48  leeten
 
 [03/15/2010]
