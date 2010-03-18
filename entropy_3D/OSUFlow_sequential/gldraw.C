@@ -3187,6 +3187,44 @@ quit_selectStreamlines_by_distribution()
 }
 // ADD-BY-LEETEN 02/02/2010-END
 
+// ADD-BY-LEETEN 03/18/2010-BEGIN
+int IWrapCoord3D(int tx, int ty, int tz, int grid_res[3])
+{
+	int idx;
+	#if		WRAP_MODE==WRAP_MODE_CLAMP
+
+	if( tx < 0 || tx >= grid_res[0] ||
+		ty < 0 || ty >= grid_res[1] || 
+		tz < 0 || tz >= grid_res[2] || 
+		)
+	{
+		return -1;
+	}
+
+	#elif	WRAP_MODE==WRAP_MODE_MIRROR
+
+	tx = (tx<0)?(-tx):( (tx<grid_res[0])?tx:(grid_res[0]-1 - (tx-(grid_res[0]-1))) );
+	ty = (ty<0)?(-ty):( (ty<grid_res[1])?ty:(grid_res[1]-1 - (ty-(grid_res[1]-1))) );
+	tz = (tz<0)?(-tz):( (tz<grid_res[2])?tz:(grid_res[2]-1 - (tz-(grid_res[2]-1))) );
+
+	#elif	WRAP_MODE==WRAP_MODE_REPEAT
+
+	tx = tx % grid_res[0];
+	ty = ty % grid_res[1];
+	tz = tz % grid_res[2];
+
+	#elif	WRAP_MODE==WRAP_MODE_CLAMP_TO_BORDER
+
+	tx = min(max(tx, 0), grid_res[0] - 1);
+	ty = min(max(ty, 0), grid_res[1] - 1);
+	tz = min(max(tz, 0), grid_res[2] - 1);
+
+	#endif	// #if	WRAP_MODE
+	idx = tx + ty*grid_res[0] + tz*grid_res[0]*grid_res[1];
+	return idx;
+}
+// ADD-BY-LEETEN 03/18/2010-END
+
 //speed up by reusing histograms
 void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* grid_res, 
 									   int* occupied,
@@ -3273,11 +3311,14 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 			for(int z=0;z<grid_res[2];z++)
 			{
 				VECTOR3 startpt,endpt;
-				startpt.Set(max(0,x-kernel_size[0]),max(0,y-kernel_size[1]),max(0,z-kernel_size[2]));
-				endpt.Set(min(x+kernel_size[0],grid_res[0]-1),min(y+kernel_size[1],grid_res[1]-1),
-						min(z+kernel_size[2],grid_res[2]-1));
-
-
+				#if	0	// MOD-BY-LEETEN 03/18/2010-FROM:
+					startpt.Set(max(0,x-kernel_size[0]),max(0,y-kernel_size[1]),max(0,z-kernel_size[2]));
+					endpt.Set(min(x+kernel_size[0],grid_res[0]-1),min(y+kernel_size[1],grid_res[1]-1),
+							min(z+kernel_size[2],grid_res[2]-1));
+				#else	// MOD-BY-LEETEN 03/18/2010-TO:
+				startpt.Set(x-kernel_size[0], y-kernel_size[1], z-kernel_size[2]);
+				endpt.Set(	x+kernel_size[0], y+kernel_size[1],	z+kernel_size[2]);
+				#endif	// MOD-BY-LEETEN 03/18/2010-END
 				
 				if(z==0)//calculate the first histogram
 				{
@@ -3287,7 +3328,14 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 						{
 							for(int tx=(int)startpt.x(); tx<=(int)endpt.x();tx++)
 							{
-								int idx=tx+ty*grid_res[0]+tz*grid_res[0]*grid_res[1];
+								// MOD-BY-LEETEN 03/18/2010-FROM:
+									// int idx=tx+ty*grid_res[0]+tz*grid_res[0]*grid_res[1];
+								// TO:
+								int idx = IWrapCoord3D(tx, ty, tz, grid_res);
+								if( idx < 0 )
+									continue;
+								// MOD-BY-LEETEN 03/18/2010-END
+
 								int bin_no_ori=bin_vector[idx];
 								int bin_no_new=bin_newvectors[idx];
 
@@ -3310,10 +3358,18 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 					{
 						for(int tx=(int)startpt.x(); tx<=(int)endpt.x();tx++)
 						{
+#if	0	
 							if(z-kernel_size[2]>=0)
 							{
 								int tz=z-kernel_size[2];
 								int idx=tx+ty*grid_res[0]+tz*grid_res[0]*grid_res[1];
+#else
+						{
+							int tz = z - 1 - kernel_size[2];
+							int idx = IWrapCoord3D(tx, ty, tz, grid_res);
+							if( idx < 0 )
+								continue;
+#endif
 								int bin_no_ori=bin_vector[idx];
 								int bin_no_new=bin_newvectors[idx];
 
@@ -3323,15 +3379,25 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 									printf("sth wrong, bin id=%d  %d\n", bin_no_ori,bin_no_new);
 								}
 								idx=bin_no_ori+binnum*bin_no_new;
-								if(histo_puv[idx]<=0 ||histo_pv[bin_no_new]<=0 )
-									printf("something wrong x=%d y=%d z=%d\n",tx,ty,tz);
+								#if	0	// DEL-BY-LEETEN 03/18/2010-BEGIN
+									if(histo_puv[idx]<=0 ||histo_pv[bin_no_new]<=0 )
+										printf("something wrong x=%d y=%d z=%d\n",tx,ty,tz);
+								#endif	// DEL-BY-LEETEN 03/18/2010-END
 								histo_puv[idx]--;//p(x,y)
 								histo_pv[bin_no_new]--;							
 							}
-							if(z+kernel_size[2]<grid_res[2])
+							#if	0	// MOD-BY-LEETEN 03/18/2010-FROM:
+								if(z+kernel_size[2]<grid_res[2])
+								{
+									int tz=z+kernel_size[2];
+									int idx=tx+ty*grid_res[0]+tz*grid_res[0]*grid_res[1];
+							#else	// MOD-BY-LEETEN 03/18/2010-TO:
 							{
-								int tz=z+kernel_size[2];
-								int idx=tx+ty*grid_res[0]+tz*grid_res[0]*grid_res[1];
+								int tz = z + kernel_size[2];
+								int idx = IWrapCoord3D(tx, ty, tz, grid_res);
+								if( idx < 0 )
+									continue;
+							#endif	// MOD-BY-LEETEN 03/18/2010-END
 								int bin_no_ori=bin_vector[idx];
 								int bin_no_new=bin_newvectors[idx];
 
@@ -3359,7 +3425,9 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 							g_histo,g_histo_puv);
 
 				//if(round<=0 || round>=3)
-					entropy=entropy*entropy;//*entropy*entropy*entropy;//enhance
+				// DEL-BY-LEETEN 03/18/2010-BEGIN
+					// entropy=entropy*entropy;//*entropy*entropy*entropy;//enhance
+				// DEL-BY-LEETEN 03/18/2010-END
 
 				int idx=x+y*grid_res[0]+z*grid_res[0]*grid_res[1];
 				
@@ -3412,9 +3480,10 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 //	printf("halted\n");
 //	getchar();
 
-	
+	// ADD-BY-LEETEN 03/18/2010-BEGIN
+	maximum = log2(float(binnum));
+	// ADD-BY-LEETEN 03/18/2010-END
 
-	
 	//save result to file
 	#if	0	// DEL-BY-LEETEN 02/02/2010-BEGIN
 		unsigned char* data;
@@ -3617,7 +3686,12 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 		// MOD-BY-LEETEN 02/06/2010-FROM:
 			// combinehalflines_check_stop_entropy(lines, new_lines,grid_res,entropies);//for display only, the streamline stops when gets too near to an existing
 		// TO: 
+#if PRUNING_MODE==PRUNING_MODE_COND_ENTROPY
 		combinehalflines(lines, new_lines);	//for display only, the streamline stops when gets too near to an existing
+#else
+		void _CombineHalfLinesNotOccupied(list<vtListSeedTrace*> lines, list<vtListSeedTrace*>& long_lines, int *occupied, int grid_res[3]);
+		_CombineHalfLinesNotOccupied(lines, new_lines, occupied, grid_res);	//for display only, the streamline stops when gets too near to an existing
+#endif
 		// MOD-BY-LEETEN 02/06/2010-END
 		/*
 		if(new_lines.size())
@@ -3642,11 +3716,19 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 			// MOD-BY-LEETEN 02/04/2010-END
 			tmp_whole_set_lines=sl_list;
 			tmp_whole_set_lines.push_back(*new_lines.begin());
+			
+			// ADD-BY-LEETEN 03/18/2010-BEGIN
+			#if	PRUNING_MODE == PRUNING_MODE_COND_ENTROPY	
+			// ADD-BY-LEETEN 03/18/2010-END
 			bool discard=discardredundantstreamlines(cur_entropy,epsilon,tmp_whole_set_lines, vectors,new_vectors,grid_res,
 				bin_my_vector,bin_new_vector,binnum, theta,  phi, histo_puv, histo_pv, pv, entropy_tmp);
 
-			
-	
+			// ADD-BY-LEETEN 03/18/2010-BEGIN
+			#else	//	#if	PRUNING_MODE == PRUNING_MODE_COND_ENTROPY	
+			bool discard=false;
+			#endif	//	#if	PRUNING_MODE == PRUNING_MODE_COND_ENTROPY	
+			// ADD-BY-LEETEN 03/18/2010-END
+
 			if(discard==false)
 			{
 				sl_list.push_back(*(new_lines.begin()));			
@@ -3854,6 +3936,9 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 //allow select multiple seed in one pass
 void compute_streamlines() 
 {
+	// ADD-BY-LEETEN 03/18/2010-BEGIN
+	double dwComputeStreamlinesBegin = GetTickCount();
+	// ADD-BY-LEETEN 03/18/2010-END
 
 	printf("generating seeds...\n"); 
 	int num=0;
@@ -4027,7 +4112,11 @@ void compute_streamlines()
 		// for(int iIter = 0; entropy>target_entropy; iIter++)
 	// TO:
 	bool bIsConverged = false;
-	for(int iIter = 0; false == bIsConverged && entropy>target_entropy; iIter++)
+	// MOD-BY-LEETEN 03/18/2010-FROM:
+		// for(int iIter = 0; false == bIsConverged && entropy>target_entropy; iIter++)
+	// TO:
+	for(int iIter = 0; false == bIsConverged; iIter++)
+	// MOD-BY-LEETEN 03/18/2010-END
 	// MOD-BY-LEETEN 02/04/2010-END
 	// MOD-BY-LEETEN 02/02/2010-END
 	{
@@ -4130,15 +4219,45 @@ void compute_streamlines()
 			sprintf(filename,"streamlines%d.dat",round);
 		#else	// MOD-BY-LEETEN 02/04/2010-TO:
 		char filename[1024];
-		sprintf(filename,"%s_streamlines%d.dat",g_filename, round);
+		// MOD-BY-LEETEN 03/18/2010-FROM:
+			// sprintf(filename,"%s_streamlines%d.dat",g_filename, round);
+		// TO:
+		char *szFilename = filename;
+		sprintf(szFilename, "%s_streamlines.dat", g_filename);
+		// MOD-BY-LEETEN 03/18/2010-END
 		#endif	// MOD-BY-LEETEN 02/04/2010-END
 
 		save_streamlines_to_file_hand_tuning(filename,line_color,nSeeds);
 		dumpEntropies(line_importance);
+
+		// ADD-BY-LEETEN 03/18/2010-BEGIN
+		sprintf(szFilename, "%s_streamlines.log", g_filename);
+		char szCommand[1024];
+		if( 1 == round )
+		{
+			sprintf(szCommand, "echo %d %f > %s", NR_OF_SAMPLES, log2(binnum), szFilename);
+			system(szCommand);
+		}
+		sprintf(szCommand, "echo %d %f >> %s", sl_list.size(), entropy, szFilename);
+		system(szCommand);
+		// ADD-BY-LEETEN 03/18/2010-END
+
 		//	getchar();
 	//	printf("halted, save files now\n");
 		// ADD-BY-LEETEN 02/04/2010-BEGIN
-		bIsConverged = (0 == seeds.size())?true:false;
+		// MOD-BY-LEETEN 03/18/2010-FROM:
+			// bIsConverged = (0 == seeds.size())?true:false;
+		// TO:
+		static float fPrevEntropy;
+		bIsConverged = false;
+		if( round > 1 )
+		{
+			float fEntropyRate = entropy / fPrevEntropy;
+			if( 0.0f == entropy || 0.995 < fEntropyRate && fEntropyRate <= 1.0 )
+				bIsConverged = true;
+		}
+		fPrevEntropy = entropy;
+		// MOD-BY-LEETEN 03/18/2010-END
 		// ADD-BY-LEETEN 02/04/2010-END
 
 		// ADD-BY-LEETEN 02/06/2010-BEGIN
@@ -4179,6 +4298,11 @@ void compute_streamlines()
 	#endif	// #if	USE_CUDA	
 	#endif	// MOD-BY-LEETEN 02/02/2010-END
 	// ADD-BY-LEETEN 2009/11/10-END
+
+	// ADD-BY-LEETEN 03/18/2010-BEGIN
+	double dwComputeStreamlinesEnd = GetTickCount();
+	printf("\n\n %s takes %.3f milli-seconds.\n", __FUNCTION__, dwComputeStreamlinesEnd - dwComputeStreamlinesBegin); 	
+	// ADD-BY-LEETEN 03/18/2010-END
 }
 /*
 //not distribution based seeding
@@ -5590,6 +5714,12 @@ void mymotion(int x, int y)
 void mykey(unsigned char key, int x, int y)
 {
 	switch(key) {
+		// ADD-BY-LEETEN 03/18/2010-BEGIN
+		case 27:
+			exit(0);
+			break;
+		// ADD-BY-LEETEN 03/18/2010-END
+
 	case 'Q': 
 	case 'q': 
 		compute_streamlines_by_click_cleanup();
@@ -6461,6 +6591,11 @@ void Streamline_entorpy_calculation_loadfile()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.6  2010/03/10 20:29:13  leeten
+
+[03/10/2010]
+1. [MOD] Consider the voxels along the boundary when compute the entropy/cond. entropy.
+
 Revision 1.5  2010/02/16 19:55:59  leeten
 
 [02/16/2010]
