@@ -41,7 +41,11 @@ int press_x, press_y;
 int release_x, release_y; 
 float x_angle = 0.0; 
 float y_angle = 0.0; 
-float scale_size = 1; 
+// MOD-BY-LEETEN 03/19/2010-FROM:
+	// float scale_size = 1; 
+// TO:
+float scale_size = 5; 
+// MOD-BY-LEETEN 03/19/2010-END
 float* entropies=0;
 
 int xform_mode = 0; 
@@ -2181,6 +2185,13 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 		// int sample_number_allowed=100;
 	// TO:
 	int sample_number_allowed=NR_OF_SAMPLES;
+	// ADD-BY-LEETEN 03/19/2010-BEGIN
+	#if	SAMPLE_LOCAL_MAX_SAMPLED_FIRST
+		// extend the pool in order to store the extrat seeds arond the critical points
+		sample_number_allowed *= 9;
+	#endif	// #if	SAMPLE_LOCAL_MAX_SAMPLED_FIRST
+	// ADD-BY-LEETEN 03/19/2010-END
+
 	// MOD-BY-LEETEN 02/05/2010-END
 	// MOD-BY-LEETEN 03/15/2010-FROM:
 		// int  kernel_size= 8;//conditional entropy kernel
@@ -2485,6 +2496,75 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 
 	dwStart= GetTickCount();
 
+	// ADD-BY-LEETEN 03/19/2010-BEGIN
+	int* sx=new int[sample_number_allowed];
+	int* sy=new int[sample_number_allowed];
+	int iNrOfSampledPoints = 0;
+
+	#if	SAMPLE_LOCAL_MAX_SAMPLED_FIRST
+
+	float fMaxProb = -(float)HUGE_VAL;
+	for(int p = 0,	j = 0; j < grid_res[1]; j++)
+		for(int		i = 0; i < grid_res[0]; i++, p++)
+			fMaxProb = max(fMaxProb, img_entropies[p]);
+	float fM = fMaxProb;
+
+	for(int	p = 0,	y=0; y < grid_res[1]; y++)
+	{
+		for(int		x=0; x < grid_res[0]; x++, p++)
+		{
+			float fU = float(rand()) / float(RAND_MAX);
+			if( 0 == y || 0 == x || grid_res[1] - 1 == y || grid_res[0] - 1 == x )
+				continue;
+
+			bool bLocalMax = true;
+			for(int j = -1; j <= 1; j++)
+			{
+				for(int i = -1; i <= 1; i++)
+				{
+					if( 0 == i && 0 == j )
+						continue;
+
+					if( img_entropies[p] <= img_entropies[(x+i) + (y+j) * grid_res[0]])
+					{
+						bLocalMax = false;
+						break;
+					}
+				}
+				if( false == bLocalMax )
+					break;
+			}
+
+			if( true == bLocalMax )
+			{
+				float fP = img_entropies[p];
+				if( fU >= fP / fM )
+					continue;
+
+				if( iNrOfSampledPoints + 9 >= sample_number_allowed )
+					continue;
+
+				for(int		j = -1; j <= 1; j++)
+					for(int i = -1; i <= 1; i++)
+					{
+						sx[iNrOfSampledPoints] = x + i;
+						sy[iNrOfSampledPoints] = y + j;
+						iNrOfSampledPoints++;
+					}
+
+			}
+		}
+	}
+	LOG_VAR( iNrOfSampledPoints );
+	if( iNrOfSampledPoints >= sample_number_allowed )
+		LOG(printf("Warning! All points have been sampled!"));
+
+	// if not so many seeds are needed, shrink the pool back to the original size
+	sample_number_allowed = sample_number_allowed / 9 + iNrOfSampledPoints;
+	#endif	// 	#if	SAMPLE_LOCAL_MAX_SAMPLED_FIRST
+
+	// ADD-BY-LEETEN 03/19/2010-END
+
 	// ADD-BY-LEETEN 03/15/2010-BEGIN
 	#if	IMPORTANCE_SAMPLING	== IMPORTANCE_SAMPLING_CHAIN_RULE
 	// ADD-BY-LEETEN 03/15/2010-END
@@ -2517,23 +2597,33 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 				qx_normalized[idx]=0;
 		}
 	}
-	int* sx=new int[sample_number_allowed];
-	int* sy=new int[sample_number_allowed];
-	int i=0;
-	while(i<sample_number_allowed)
-		sy[i++] = sample_from(qy,grid_res[1]);
-	i=0;
-	while(i<sample_number_allowed)
-	{
+	#if	0	// MOD-BY-LEETEN 03/19/2010-FROM:
+		int* sx=new int[sample_number_allowed];
+		int* sy=new int[sample_number_allowed];
+		int i=0;
+		while(i<sample_number_allowed)
+			sy[i++] = sample_from(qy,grid_res[1]);
+		i=0;
+		while(i<sample_number_allowed)
+		{
+			sx[i] = sample_from(qx_normalized+sy[i]*grid_res[0],grid_res[0]);
+			i++;
+		}
+	#else	// MOD-BY-LEETEN 03/19/2010-TO:
+	for(int i = iNrOfSampledPoints; i<sample_number_allowed; i++)
+		sy[i] = sample_from(qy,grid_res[1]);
+	for(int i = iNrOfSampledPoints; i<sample_number_allowed; i++)
 		sx[i] = sample_from(qx_normalized+sy[i]*grid_res[0],grid_res[0]);
-		i++;
-	}
+	#endif	// MOD-BY-LEETEN 03/19/2010-END
 
 	// ADD-BY-LEETEN 03/15/2010-BEGIN
 	#elif IMPORTANCE_SAMPLING	== IMPORTANCE_SAMPLING_REJECTION_METHOD	
 
+	#if	0	// DEL-BY-LEETEN 03/19/2010-BEGIN
 	int* sx=new int[sample_number_allowed];
 	int* sy=new int[sample_number_allowed];
+	#endif	// DEL-BY-LEETEN 03/19/2010-END
+
 	float* qy=new float[grid_res[1]];
 	float *qx_normalized=new float[grid_res[0]*grid_res[1]];
 
@@ -2563,7 +2653,11 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 	elapsedTime= GetTickCount() - dwStart;
 	printf("\n\n sampling time is %.3f milli-seconds.\n",elapsedTime); 	
 
-	for( i=0;i<sample_number_allowed;i++)
+	// MOD-BY-LEETEN 03/19/2010-FROM:
+		// for( i=0;i<sample_number_allowed;i++)
+	// TO:
+	for(int i=0;i<sample_number_allowed;i++)
+	// MOD-BY-LEETEN 03/19/2010-END
 	{
 		data[sx[i]+sy[i]*grid_res[0]]=125;
 		
@@ -2573,7 +2667,11 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 	//scan and get the distributions out
 	int streamlineId=0;
 	list<vtListSeedTrace*> lines,new_lines,tmp_whole_set_lines; 
-	for(i=0;i<sample_number_allowed;i++)//start pruning
+	// MOD-BY-LEETEN 03/19/2010-FROM:
+		// for(i=0;i<sample_number_allowed;i++)//start pruning
+	// TO:
+	for(int i=0;i<sample_number_allowed;i++)//start pruning
+	// MOD-BY-LEETEN 03/19/2010-END
 	{
 		lines.clear();
 		new_lines.clear();
@@ -2615,14 +2713,32 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 			// combinehalflines_check_stop(lines, new_lines,grid_res,m_grid,streamlineId);//for display only, the streamline stops when gets too near to an existing
 		// TO:
 		// ADD-BY-LEETEN 03/18/2010-BEGIN
-		#if	PRUNING_MODE == PRUNING_MODE_KEEP_WHEN_DISTANT	
+
+		// DEL-BY-LEETEN 03/19/2010-BEGIN
+		// #if	PRUNING_MODE == PRUNING_MODE_KEEP_WHEN_DISTANT	
+		// DEL-BY-LEETEN 03/19/2010-END
 		// ADD-BY-LEETEN 03/18/2010-END
-		combinehalflines_check_stop(lines, new_lines,grid_res,m_grid,streamlineId);//for display only, the streamline stops when gets too near to an existing
+		// MOD-BY-LEETEN 03/19/2010-FROM:
+			// combinehalflines_check_stop(lines, new_lines,grid_res,m_grid,streamlineId);//for display only, the streamline stops when gets too near to an existing
+		// TO:
+		combinehalflines_check_stop(
+			lines, 
+			new_lines,
+			grid_res,
+			m_grid,
+			streamlineId,
+			img_entropies);
+		// MOD-BY-LEETEN 03/19/2010-END
+
+		// DEL-BY-LEETEN 03/19/2010-BEGIN
+		/*
 		// ADD-BY-LEETEN 03/18/2010-BEGIN
 		#else	// #if	PRUNING_MODE == PRUNING_MODE_KEEP_WHEN_DISTANT	
 		combinehalflines(lines, new_lines,grid_res);
 		#endif	// #if	PRUNING_MODE == PRUNING_MODE_KEEP_WHEN_DISTANT	
 		// ADD-BY-LEETEN 03/18/2010-END
+		*/
+		// DEL-BY-LEETEN 03/19/2010-END
 		// MOD-BY-LEETEN 02/06/2010-END
 
 //		combinehalflines_check_stop_entropy(lines, new_lines,grid_res,entropies);//for display only, the streamline stops when gets too near to an existing
@@ -4934,6 +5050,15 @@ fclose(my);
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.6  2010/03/18 16:13:50  leeten
+
+[03/18/2010]
+1. [MOD] Fix the variable name fErrorImage to pfErrorImage.
+2. [ADD] When the preprocessor PRUNING_MODE is PRUNING_MODE_KEEP_WHEN_DISTANT, call the function combinehalflines_check_stop().
+3. [MOD] Change the preprocessor ENABLE_PRUNING to PRUNING_MODE_COND_ENTROPY.
+4. [ADD] Compute the timing for compute_streamlines().
+5. [ADD] Output #seeds.round and initial entriopy to the 1st line of the log.
+
 Revision 1.5  2010/03/16 15:44:52  leeten
 
 [03/16/2010]
