@@ -8,7 +8,7 @@
 
 #define CLOCK_reconstruct_field_GVF_3D	0
 
-#define USE_CUDA			0
+#define USE_CUDA			1
 #define ENTER_GLUT_LOOP		0
 #define BIN_LOOKUP			1
 
@@ -78,6 +78,13 @@
 #define PRUNING_MODE					PRUNING_MODE_KEEP_WHEN_DISTANT	// PRUNING_MODE_COND_ENTROPY
 // ADD-BY-LEETEN 03/18/2010-END
 
+// ADD-BY-LEETEN 03/19/2010-BEGIN
+#define SEPARATION_DISTANCE			(ceilf(float(min(min(grid_res[0], grid_res[1]), grid_res[2])) * 0.02f))
+#define SAMPLE_LOCAL_MAX_SAMPLED_FIRST					1	// 1 or 0
+#define	STOP_ADVENTION_WHEN_TOO_CLOSE_AND_LOW_ENTROPY	0	// 1 or 0
+// ADD-BY-LEETEN 03/19/2010-BEGIN
+
+
 #define NR_OF_STREAMLINES	1
 
 #define SCALE_SIZE			3.0
@@ -100,6 +107,15 @@
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.3  2010/03/18 16:26:29  leeten
+
+[03/18/2010]
+1. [MOD] Change NR_OF_SAMPLES to the max. dim. of the data.
+2. [ADD] Define a new preprocessor NR_OF_BINS as #bins. of the histogram.
+3. [ADD] Define new preprocessors WRAP_MODE_CLAMP, WRAP_MODE_MIRROR, WRAP_MODE_REPEAT and WRAP_MODE_CLAMP_TO_BORDER to control the wrapping (decided by WRAP_MODE).
+4. [ADD] Define new preprocessors PRUNING_MODE_NONE, PRUNING_MODE_COND_ENTROPY, and PRUNING_MODE_KEEP_WHEN_DISTANT to control the wrapping (decided by PRUNING_MODE).
+5. [DEL] Remove useless old code segments.
+
 Revision 1.2  2010/02/05 01:29:30  leeten
 
 [02/02/2010]
