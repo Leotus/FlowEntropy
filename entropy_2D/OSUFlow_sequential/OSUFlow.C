@@ -74,7 +74,12 @@ void OSUFlow::InitStaticFlowField(void)
 	pData = new float[totalNum * 3];
 	fread(pData, sizeof(float), totalNum*3, fIn);
 	fclose(fIn);
-	
+
+	// ADD-BY-LEETEN 03/19/2010-BEGIN
+	for(int i = 0; i < totalNum; i++)
+		pData[3 * i + 2] = 0.0f;
+	// ADD-BY-LEETEN 03/19/2010-END
+
 	// create field object
 	Solution* pSolution;
 	RegularCartesianGrid* pRegularCGrid;
