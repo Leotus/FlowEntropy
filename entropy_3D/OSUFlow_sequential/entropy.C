@@ -1105,7 +1105,11 @@ _CombineHalfLinesNotOccupied(
 		for (; pnIter!= trace->end(); pnIter++) 
 		{
 			VECTOR3 p = **pnIter; 
-			bool bIsDistant = BIsDistantFromExistingStreamlines(p, p, occupied, 2.0f, grid_res);
+			// MOD-BY-LEETEN 03/19/2010-FROM:
+				// bool bIsDistant = BIsDistantFromExistingStreamlines(p, p, occupied, 2.0f, grid_res);
+			// TO:
+			bool bIsDistant = BIsDistantFromExistingStreamlines(p, p, occupied, SEPARATION_DISTANCE, grid_res);
+			// MOD-BY-LEETEN 03/19/2010-END
 			if(true == bIsDistant)
 				break;
 		}
@@ -2793,6 +2797,13 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.7  2010/03/18 16:19:02  leeten
+
+[03/18/2010]
+1. [ADD] Define a new function _FindNeighbors3D() to get the index of the neighobring cells of a given voxel.
+2. [ADD] Define a new function BIsDistantFromExistingStreamlines to see whether a point is too closed to the existing streamlines.
+3. [ADD] Define a new function _CombineHalfLinesNotOccupied which will discard a streamline if all of its points are too closed to the other streamlines.
+
 Revision 1.6  2010/03/10 20:27:53  leeten
 
 [03/10/2010]
