@@ -40,7 +40,7 @@
 #define	NR_OF_SAMPLES		(max(grid_res[0], grid_res[1]))		// ((grid_res[0] * grid_res[1]) / 64)
 
 // ADD-BY-LEETEN 03/15/2010-BEGIN
-#define NR_OF_BINS		60	// 60
+#define NR_OF_BINS		60		// 60
 #define	KERNEL_SIZE		8		// 8
 
 #define	IMPORTANCE_SAMPLING_CHAIN_RULE			0x01
@@ -64,8 +64,16 @@
 #define	PRUNING_MODE_COND_ENTROPY		0x01
 #define	PRUNING_MODE_KEEP_WHEN_DISTANT	0x02
 
-#define PRUNING_MODE	PRUNING_MODE_COND_ENTROPY	// PRUNING_MODE_COND_ENTROPY
+#define PRUNING_MODE	PRUNING_MODE_KEEP_WHEN_DISTANT	// PRUNING_MODE_COND_ENTROPY
 // MOD-BY-LEETEN 03/18/2010-END
+
+// ADD-BY-LEETEN 03/19/2010-BEGIN
+
+#define SEPARATION_DISTANCE			(ceilf(float(max(grid_res[0], grid_res[1])) * 0.02f))
+#define SAMPLE_LOCAL_MAX_SAMPLED_FIRST					1	// 1 or 0
+#define	STOP_ADVENTION_WHEN_TOO_CLOSE_AND_LOW_ENTROPY	0	// 1 or 0
+
+// ADD-BY-LEETEN 03/19/2010-END
 
 // ADD-BY-LEETEN 03/16/2010-END
 
@@ -74,6 +82,11 @@
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.5  2010/03/18 16:15:42  leeten
+
+[03/18/2010]
+1. [ADD] Remvoe the preprocessor ENABLE_PRUNING and define new ones: PRUNING_MODE_NONE, PRUNING_MODE_COND_ENTROPY, PRUNING_MODE_KEEP_WHEN_DISTANT and PRUNING_MODE.
+
 Revision 1.4  2010/03/16 15:39:46  leeten
 
 [03/16/2010]
