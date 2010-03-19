@@ -1207,10 +1207,28 @@ bool discardredundantstreamlines(float& cur_entropy,float eplison, list<vtListSe
 	}
 }
 
-void combinehalflines_check_stop(list<vtListSeedTrace*> lines, list<vtListSeedTrace*>& long_lines,int* grid_res,PointRef* m_grid,int streamlineId)
+// MOD-BY-LEETEN 03/19/2010-FROM:
+	// void combinehalflines_check_stop(list<vtListSeedTrace*> lines, list<vtListSeedTrace*>& long_lines,int* grid_res,PointRef* m_grid,int streamlineId)
+// TO:
+void 
+combinehalflines_check_stop(
+	list<vtListSeedTrace*> lines, 
+	list<vtListSeedTrace*>& long_lines,
+	int* grid_res,
+	PointRef* m_grid,
+	int streamlineId,
+	float img_entropies[]
+	)
+// MOD-BY-LEETEN 03/19/2010-END
 {
 	float m_sepDist, m_sepMinDist;
-	m_sepDist=m_sepMinDist=1;
+	// MOD-BY-LEETEN 03/19/2010-FROM:
+		// m_sepDist=m_sepMinDist=1;
+	// TO:
+	m_sepMinDist=1;
+	m_sepDist=SEPARATION_DISTANCE;
+	// MOD-BY-LEETEN 03/19/2010-END
+
 	vtListSeedTrace* newlist;
 	list<vtListSeedTrace*>::iterator pIter;
 
@@ -1248,6 +1266,16 @@ void combinehalflines_check_stop(list<vtListSeedTrace*> lines, list<vtListSeedTr
 	#endif	// #if	PRUNING_MODE == PRUNING_MODE_KEEP_WHEN_DISTANT
 	// ADD-BY-LEETEN 03/18/2010-END
 
+	// ADD-BY-LEETEN 03/19/2010-BEGIN
+	#if		STOP_ADVENTION_WHEN_TOO_CLOSE_AND_LOW_ENTROPY	
+	float fEntropyThreshold = -(float)HUGE_VAL;
+	for(int p = 0,	y = 0; y < grid_res[1]; y++)
+		for(int		x = 0; x < grid_res[0]; x++, p++)
+			fEntropyThreshold = max(fEntropyThreshold, img_entropies[p]);
+	fEntropyThreshold *= 0.7f;
+	#endif	// #if	STOP_ADVENTION_WHEN_TOO_CLOSE_AND_LOW_ENTROPY	
+	// ADD-BY-LEETEN 03/19/2010-END
+
 	pIter =lines.begin(); 
 	int sou=0;
 
@@ -1278,7 +1306,18 @@ void combinehalflines_check_stop(list<vtListSeedTrace*> lines, list<vtListSeedTr
 				bool valid=CheckValidness(p,p, m_grid, m_sepDist,m_sepMinDist, grid_res);
 				if(valid==false)
 					break;
-			#endif	// ADD-BY-LEETEN 03/18/2010-END
+			#endif	// DEL-BY-LEETEN 03/18/2010-END
+
+			// ADD-BY-LEETEN 03/19/2010-BEGIN
+			#if	STOP_ADVENTION_WHEN_TOO_CLOSE_AND_LOW_ENTROPY	
+			if( img_entropies[idx] < fEntropyThreshold )
+			{
+				bool valid=CheckValidness(p,p, m_grid, 0.5, 0.5, grid_res);
+				if(valid==false)
+					break;
+			}
+			#endif	// #if	STOP_ADVENTION_WHEN_TOO_CLOSE_AND_LOW_ENTROPY	
+			// ADD-BY-LEETEN 03/19/2010-END
 		}
 		if((sou%2==1)&&newlist->size()>10)
 			long_lines.push_back(newlist);
@@ -2781,6 +2820,13 @@ void QuadTree::drawSelf()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.6  2010/03/18 16:10:57  leeten
+
+[03/18/2010]
+1. [ADD] Define a new function BIsDistantFromExistingStreamlines to check whether a point is too closed to existing streamlines.
+2. [ADD] When the preprocessor PRUNING_MODE is equal to PRUNING_MODE_KEEP_WHEN_DISTANT, discard a streamline when all points are too closed to the existing one.
+3. [DEL] Remove the code to stop the advenction of streamline when the distance is too closed to the existing one.
+
 Revision 1.5  2010/03/15 18:55:18  leeten
 
 [03/15/2010]
