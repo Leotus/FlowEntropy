@@ -218,7 +218,18 @@ typedef struct GridPoint
 typedef vector<GridPoint> PointRef;
 void PutPointInGrid(VECTOR3 p, int streamlineId, int index, int pntIdx,int* grid_res,PointRef* m_grid);
 bool CheckValidness(VECTOR3 p, VECTOR3 pObj,PointRef* m_grid, float m_sepDist,float m_sepMinDist,int* grid_res);
-void combinehalflines_check_stop(list<vtListSeedTrace*> lines, list<vtListSeedTrace*>& long_lines,int* grid_res,PointRef* m_grid,int streamlineId);
+// MOD-BY-LEETEN 03/19/2010-FROM:
+	// void combinehalflines_check_stop(list<vtListSeedTrace*> lines, list<vtListSeedTrace*>& long_lines,int* grid_res,PointRef* m_grid,int streamlineId);
+// TO:
+void 
+combinehalflines_check_stop(
+	list<vtListSeedTrace*> lines, 
+	list<vtListSeedTrace*>& long_lines,
+	int* grid_res,
+	PointRef* m_grid,
+	int streamlineId,
+	float img_entropies[]);
+// MOD-BY-LEETEN 03/19/2010-END
 void combinehalflines_check_stop_entropy(list<vtListSeedTrace*> lines, list<vtListSeedTrace*>& long_lines,int* grid_res,
 										 float* entropies);
 bool discardredundantstreamlines(float& cur_entropy,float eplison,list<vtListSeedTrace*> new_lines,
@@ -230,5 +241,10 @@ bool discardredundantstreamlines(float& cur_entropy,float eplison,list<vtListSee
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.1  2010/01/22 21:09:12  leeten
+
+[01/22/2010]
+1. [1ST] First time checkin.
+
 
 */
