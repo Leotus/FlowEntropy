@@ -4,7 +4,7 @@
 #include "FlowDiffusionCudaLib/FlowDiffusion.h"
 
 // ADD-BY-LEETEN 03/10/2010-BEGIN
-#define ENTER_GLUT_LOOP				1
+#define ENTER_GLUT_LOOP				0
 // ADD-BY-LEETEN 03/10/2010-END
 
 // ADD-BY-LEETEN 02/06/2010-BEGIN
@@ -40,8 +40,8 @@
 #define	NR_OF_SAMPLES		(max(grid_res[0], grid_res[1]))		// ((grid_res[0] * grid_res[1]) / 64)
 
 // ADD-BY-LEETEN 03/15/2010-BEGIN
-#define NR_OF_BINS		60		// 60
-#define	KERNEL_SIZE		8		// 8
+#define NR_OF_BINS		60	// 60		// 60
+#define	KERNEL_SIZE		8	// 8		// 8
 
 #define	IMPORTANCE_SAMPLING_CHAIN_RULE			0x01
 #define	IMPORTANCE_SAMPLING_REJECTION_METHOD	0x02
@@ -69,9 +69,22 @@
 
 // ADD-BY-LEETEN 03/19/2010-BEGIN
 
-#define SEPARATION_DISTANCE			(ceilf(float(max(grid_res[0], grid_res[1])) * 0.02f))
+// MOD-BY-LEETEN 03/22/2010-FROM:
+	// #define SEPARATION_DISTANCE			(ceilf(float(max(grid_res[0], grid_res[1])) * 0.02f))
+// TO:
+#define SEPARATION_DISTANCE			(ceilf(float(min(grid_res[0], grid_res[1])) * 0.02f))
+// MOD-BY-LEETEN 03/22/2010-END
+
 #define SAMPLE_LOCAL_MAX_SAMPLED_FIRST					1	// 1 or 0
 #define	STOP_ADVENTION_WHEN_TOO_CLOSE_AND_LOW_ENTROPY	0	// 1 or 0
+
+// ADD-BY-LEETEN 03/22/2010-BEGIN
+#define	LOCAL_MAX_THRESHOLD		0.5f
+
+#define	KERNEL_RADIUS_AROUND_CRITICAL_POINT		2
+#define KERNEL_LENGTH_AROUND_CRITICAL_POINT		(2 * KERNEL_RADIUS_AROUND_CRITICAL_POINT	 + 1)
+#define KERNEL_SIZE_AROUND_CRITICAL_POINT		(KERNEL_LENGTH_AROUND_CRITICAL_POINT * KERNEL_LENGTH_AROUND_CRITICAL_POINT)
+// ADD-BY-LEETEN 03/22/2010-END
 
 // ADD-BY-LEETEN 03/19/2010-END
 
@@ -82,6 +95,13 @@
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.6  2010/03/19 19:48:24  leeten
+
+[03/19/2010]
+1. [ADD] Define a new preprocessor SEPARATION_DISTANCE to specify the separation distance btw the streamlines.
+2. [ADD] Define a new preprocessor SAMPLE_LOCAL_MAX_SAMPLED_FIRST to decide whether the local max should be sampled first.
+3. [ADD] Define a new preprocessor STOP_ADVENTION_WHEN_TOO_CLOSE_AND_LOW_ENTROPY to decide whether the line advention should stop when it is too closed to existing streamlines and the local entropy is lower than a threshold.
+
 Revision 1.5  2010/03/18 16:15:42  leeten
 
 [03/18/2010]
