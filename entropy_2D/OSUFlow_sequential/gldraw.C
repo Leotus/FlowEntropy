@@ -2188,7 +2188,11 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 	// ADD-BY-LEETEN 03/19/2010-BEGIN
 	#if	SAMPLE_LOCAL_MAX_SAMPLED_FIRST
 		// extend the pool in order to store the extrat seeds arond the critical points
-		sample_number_allowed *= 9;
+	// MOD-BY-LEETEN 03/22/2010-FROM:
+		// sample_number_allowed *= 9;
+	// TO:
+	sample_number_allowed *= KERNEL_SIZE_AROUND_CRITICAL_POINT;
+	// MOD-BY-LEETEN 03/22/2010-END
 	#endif	// #if	SAMPLE_LOCAL_MAX_SAMPLED_FIRST
 	// ADD-BY-LEETEN 03/19/2010-END
 
@@ -2494,6 +2498,13 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 	for(int i=0;i<grid_res[0]*grid_res[1];i++)
 		img_entropies[i]=img_entropies[i]/sum;
 
+	// ADD-BY-LEETEN 03/22/2010-BEGIN
+	float fMaxProb = -(float)HUGE_VAL;
+	for(int p = 0,	j = 0; j < grid_res[1]; j++)
+		for(int		i = 0; i < grid_res[0]; i++, p++)
+			fMaxProb = max(fMaxProb, img_entropies[p]);
+	// ADD-BY-LEETEN 03/22/2010-END
+
 	dwStart= GetTickCount();
 
 	// ADD-BY-LEETEN 03/19/2010-BEGIN
@@ -2503,10 +2514,12 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 
 	#if	SAMPLE_LOCAL_MAX_SAMPLED_FIRST
 
+	#if	0	// DEL-BY-LEETEN 03/22/2010-BEGIN
 	float fMaxProb = -(float)HUGE_VAL;
 	for(int p = 0,	j = 0; j < grid_res[1]; j++)
 		for(int		i = 0; i < grid_res[0]; i++, p++)
 			fMaxProb = max(fMaxProb, img_entropies[p]);
+	#endif	// DEL-BY-LEETEN 03/22/2010-END
 	float fM = fMaxProb;
 
 	for(int	p = 0,	y=0; y < grid_res[1]; y++)
@@ -2516,6 +2529,11 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 			float fU = float(rand()) / float(RAND_MAX);
 			if( 0 == y || 0 == x || grid_res[1] - 1 == y || grid_res[0] - 1 == x )
 				continue;
+
+			// ADD-BY-LEETEN 03/22/2010-BEGIN
+			if( img_entropies[p] < fMaxProb * LOCAL_MAX_THRESHOLD )
+				continue;
+			// ADD-BY-LEETEN 03/22/2010-END
 
 			bool bLocalMax = true;
 			for(int j = -1; j <= 1; j++)
@@ -2537,21 +2555,42 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 
 			if( true == bLocalMax )
 			{
-				float fP = img_entropies[p];
-				if( fU >= fP / fM )
+				#if	0	// DEL-BY-LEETEN 03/22/2010-BEGIN
+					float fP = img_entropies[p];
+					if( fU >= fP / fM )
+						continue;
+				#endif	// DEL-BY-LEETEN 03/22/2010-END
+
+				#if	0	// MOD-BY-LEETEN 03/22/2010-FROM:
+					if( iNrOfSampledPoints + 9 >= sample_number_allowed )
+						continue;
+
+					for(int		j = -1; j <= 1; j++)
+						for(int i = -1; i <= 1; i++)
+						{
+							sx[iNrOfSampledPoints] = x + i;
+							sy[iNrOfSampledPoints] = y + j;
+							iNrOfSampledPoints++;
+						}
+				#else	// MOD-BY-LEETEN 03/22/2010-TO:
+				if( iNrOfSampledPoints + KERNEL_SIZE_AROUND_CRITICAL_POINT >= sample_number_allowed )
 					continue;
 
-				if( iNrOfSampledPoints + 9 >= sample_number_allowed )
-					continue;
+				for(int r = 0; r <= KERNEL_RADIUS_AROUND_CRITICAL_POINT; r++) 
+					for(int		j = -r; j <= r; j++)
+						for(int i = -r; i <= r; i++)
+						{
+							if( r > 0 && -r < i < r && -r < j < r )
+								continue;
 
-				for(int		j = -1; j <= 1; j++)
-					for(int i = -1; i <= 1; i++)
-					{
-						sx[iNrOfSampledPoints] = x + i;
-						sy[iNrOfSampledPoints] = y + j;
-						iNrOfSampledPoints++;
-					}
+							if( x + i < 0 || x + i >= grid_res[0] || y + j < 0 || y + j >= grid_res[1] )
+								continue;
 
+							sx[iNrOfSampledPoints] = x + i;
+							sy[iNrOfSampledPoints] = y + j;
+							iNrOfSampledPoints++;
+						}
+				#endif	// MOD-BY-LEETEN 03/22/2010-END
 			}
 		}
 	}
@@ -2560,7 +2599,11 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 		LOG(printf("Warning! All points have been sampled!"));
 
 	// if not so many seeds are needed, shrink the pool back to the original size
-	sample_number_allowed = sample_number_allowed / 9 + iNrOfSampledPoints;
+	// DEL-BY-LEETEN 03/22/2010-BEGIN
+		// sample_number_allowed = sample_number_allowed / 9 + iNrOfSampledPoints;
+	// TO:
+	sample_number_allowed = min(sample_number_allowed, sample_number_allowed / KERNEL_SIZE_AROUND_CRITICAL_POINT + iNrOfSampledPoints);
+	// DEL-BY-LEETEN 03/22/2010-END
 	#endif	// 	#if	SAMPLE_LOCAL_MAX_SAMPLED_FIRST
 
 	// ADD-BY-LEETEN 03/19/2010-END
@@ -5050,6 +5093,12 @@ fclose(my);
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.7  2010/03/19 19:45:27  leeten
+
+[03/19/2010]
+1. [ADD] Place 9 seeds around the critical point before importance sampling.
+2. [MOD] Pass the normalized entropy field as one parameter to the function combinehalflines_check_stop().
+
 Revision 1.6  2010/03/18 16:13:50  leeten
 
 [03/18/2010]
