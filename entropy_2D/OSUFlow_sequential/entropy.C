@@ -2528,22 +2528,30 @@ float calcRelativeEntropy6( float* vectors,float* new_vectors, int* grid_res, VE
 			else
 				scalar[1]=pi+(atan2(newf.y(),newf.x()));
 
-			if(fabs(scalar[1]-scalar[0])<3.1415926/((float)binnum)*2)
-				scalar[1]=scalar[0];
+			#if	0	// MOD-BY-LEETEN 03/22/2010-FROM:
+				if(fabs(scalar[1]-scalar[0])<3.1415926/((float)binnum)*2)
+					scalar[1]=scalar[0];
 
-			int bin_no_ori=(binnum-1)*scalar[0]/(2*3.1415926);
-			int bin_no_new=(binnum-1)*scalar[1]/(2*3.1415926);
+				int bin_no_ori=(binnum-1)*scalar[0]/(2*3.1415926);
+				int bin_no_new=(binnum-1)*scalar[1]/(2*3.1415926);
 
-			//if the point is on boundary, do not consider
-			if( (x<=0) || x>=grid_res[0]-1 ||
-				 y<=0  || y>=grid_res[1]-1)
-				 bin_no_ori=bin_no_new;
+				//if the point is on boundary, do not consider
+				if( (x<=0) || x>=grid_res[0]-1 ||
+					 y<=0  || y>=grid_res[1]-1)
+					 bin_no_ori=bin_no_new;
 
-			if(bin_no_ori<0 || bin_no_ori>=binnum||
-				bin_no_new<0 || bin_no_new>=binnum)
-			{
-				printf("sth wrong, bin id=%d  %d\n", bin_no_ori,bin_no_new);
-			}
+				if(bin_no_ori<0 || bin_no_ori>=binnum||
+					bin_no_new<0 || bin_no_new>=binnum)
+				{
+					printf("sth wrong, bin id=%d  %d\n", bin_no_ori,bin_no_new);
+				}
+			#else	// MOD-BY-LEETEN 03/22/2010-TO:
+			int bin_no_ori = int(float(binnum) * scalar[0]/float(2.0 * M_PI));
+			bin_no_ori = min(max(bin_no_ori, 0), binnum - 1);
+			int bin_no_new = int(float(binnum) * scalar[1]/float(2.0 * M_PI));
+			bin_no_new = min(max(bin_no_new, 0), binnum - 1);
+			#endif	// MOD-BY-LEETEN 03/22/2010-END
+
 			idx=bin_no_ori+binnum*bin_no_new;
 			histo_pxy[idx]++;//p(x,y)
 			//p(y)
@@ -2820,6 +2828,13 @@ void QuadTree::drawSelf()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.7  2010/03/19 19:44:05  leeten
+
+[03/19/2010]
+1. [MOD] Pass the normalized entropy field as one parameter to the function combinehalflines_check_stop().
+2. [MOD] Specify the separation distance by the preprocessor SEPARATION_DISTANCE.
+3. [ADD] If the preprocessor STOP_ADVENTION_WHEN_TOO_CLOSE_AND_LOW_ENTROPY is 1, stopr the line advention when it is too closed to existing streamlines and the local entropy is lower than a threshold. (The threshold is hardcoded now).
+
 Revision 1.6  2010/03/18 16:10:57  leeten
 
 [03/18/2010]
