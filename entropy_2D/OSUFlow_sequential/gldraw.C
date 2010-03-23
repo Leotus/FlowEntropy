@@ -2084,7 +2084,6 @@ float * cumsum(float * p, int num)
          if (num<=0)
              return NULL;
 
-
          float * a=new float [num];
          a[0] = p[0];
          for ( int i=1; i<num; i++)
@@ -2095,6 +2094,49 @@ float * cumsum(float * p, int num)
 }
 
 
+// ADD-BY-LEETEN 03/23/2010-BEGIN
+float FSampleFrom(float* p,int num)
+{
+     float * a=cumsum(p,num);
+
+	 float fI;
+     float u = ((float )rand()/( float )RAND_MAX);
+	 if( 0.0f == u )
+		 fI = 0.0f;
+	 else
+	 {
+		 int i ;
+		 for(i = 0; i < num; i++)
+			 if( u < a[i] )
+			 {
+				 break;
+			 }
+
+		 if( num == i )
+			 fI = float(num);
+		 else
+		 {
+			 float fMin, fMax;
+			 if( 0 == i )
+			 {
+				 fMin = 0.0f;
+				 fMax = a[i];
+			 }
+			 else
+			 {
+				 fMin = a[i - 1];
+				 fMax = a[i];
+			 }
+
+			 fI = float(i) + (u - fMin)/(fMax - fMin);
+
+			 // TEST-DEBUG	LOG(printf("%f in (%f, %f)", u, fMin, fMax));
+		 }
+	}
+	delete [] a;
+	return fI;
+}
+// ADD-BY-LEETEN 03/23/2010-END
 
 int sample_from( float* p,int num)
 {
@@ -2186,14 +2228,14 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 	// TO:
 	int sample_number_allowed=NR_OF_SAMPLES;
 	// ADD-BY-LEETEN 03/19/2010-BEGIN
-	#if	SAMPLE_LOCAL_MAX_SAMPLED_FIRST
+	#if	SAMPLE_LOCAL_MAX_FIRST
 		// extend the pool in order to store the extrat seeds arond the critical points
 	// MOD-BY-LEETEN 03/22/2010-FROM:
 		// sample_number_allowed *= 9;
 	// TO:
 	sample_number_allowed *= KERNEL_SIZE_AROUND_CRITICAL_POINT;
 	// MOD-BY-LEETEN 03/22/2010-END
-	#endif	// #if	SAMPLE_LOCAL_MAX_SAMPLED_FIRST
+	#endif	// #if	SAMPLE_LOCAL_MAX_FIRST
 	// ADD-BY-LEETEN 03/19/2010-END
 
 	// MOD-BY-LEETEN 02/05/2010-END
@@ -2508,11 +2550,16 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 	dwStart= GetTickCount();
 
 	// ADD-BY-LEETEN 03/19/2010-BEGIN
-	int* sx=new int[sample_number_allowed];
-	int* sy=new int[sample_number_allowed];
+	#if	0	// MOD-BY-LEETEN 03/23/2010-FROM:
+		int* sx=new int[sample_number_allowed];
+		int* sy=new int[sample_number_allowed];
+	#else	// MOD-BY-LEETEN 03/23/2010-TO:
+	float* sx=new float[sample_number_allowed];
+	float* sy=new float[sample_number_allowed];
+	#endif	// MOD-BY-LEETEN 03/23/2010-END
 	int iNrOfSampledPoints = 0;
 
-	#if	SAMPLE_LOCAL_MAX_SAMPLED_FIRST
+	#if	SAMPLE_LOCAL_MAX_FIRST
 
 	#if	0	// DEL-BY-LEETEN 03/22/2010-BEGIN
 	float fMaxProb = -(float)HUGE_VAL;
@@ -2521,6 +2568,24 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 			fMaxProb = max(fMaxProb, img_entropies[p]);
 	#endif	// DEL-BY-LEETEN 03/22/2010-END
 	float fM = fMaxProb;
+
+	// ADD-BY-LEETEN 03/23/2010-BEGIN
+	double dRadius = M_SQRT2 * double(KERNEL_SIZE + 1);
+	double ppdCircularMask[KERNEL_SIZE_AROUND_CRITICAL_POINT][2];
+	for(int b = 0; b < KERNEL_SIZE_AROUND_CRITICAL_POINT; b++)
+	{
+		double dAngle = 2.0 * M_PI * double(b) / double(KERNEL_SIZE_AROUND_CRITICAL_POINT);
+		double dI = cos(dAngle);
+		double dJ = sin(dAngle);
+		ppdCircularMask[b][0] = dI * dRadius;
+		ppdCircularMask[b][1] = dJ * dRadius;
+	}
+	// ADD-BY-LEETEN 03/23/2010-END
+
+	// ADD-BY-LEETEN 03/23/2010-BEGIN
+	// only sample the local max in the 1st round
+	if( 1 == iRound )
+	// ADD-BY-LEETEN 03/23/2010-END
 
 	for(int	p = 0,	y=0; y < grid_res[1]; y++)
 	{
@@ -2576,13 +2641,30 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 				if( iNrOfSampledPoints + KERNEL_SIZE_AROUND_CRITICAL_POINT >= sample_number_allowed )
 					continue;
 
-				for(int r = 0; r <= KERNEL_RADIUS_AROUND_CRITICAL_POINT; r++) 
+				#if	0	// MOD-BY-LEETEN 03/22/2010-FROM:
+					for(int r = 0; r <= KERNEL_RADIUS_AROUND_CRITICAL_POINT; r++) 
+					{
+						for(int		j = -r; j <= r; j++)
+							for(int i = -r; i <= r; i++)
+							{
+								if( r > 0 && -r < i < r && -r < j < r )
+									continue;
+
+								if( x + i < 0 || x + i >= grid_res[0] || y + j < 0 || y + j >= grid_res[1] )
+									continue;
+
+								sx[iNrOfSampledPoints] = x + i;
+								sy[iNrOfSampledPoints] = y + j;
+								iNrOfSampledPoints++;
+							}
+					}
+				#else	// MOD-BY-LEETEN 03/22/2010-TO:
+
+				#if	0	// MOD-BY-LEETEN 03/23/2010-FROM:
+					int r = KERNEL_RADIUS_AROUND_CRITICAL_POINT;
 					for(int		j = -r; j <= r; j++)
 						for(int i = -r; i <= r; i++)
 						{
-							if( r > 0 && -r < i < r && -r < j < r )
-								continue;
-
 							if( x + i < 0 || x + i >= grid_res[0] || y + j < 0 || y + j >= grid_res[1] )
 								continue;
 
@@ -2590,6 +2672,33 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 							sy[iNrOfSampledPoints] = y + j;
 							iNrOfSampledPoints++;
 						}
+				#else	// MOD-BY-LEETEN 03/23/2010-TO:
+
+				#if	KERNEL_SHAPE	== KERNEL_SHAPE_SQUARE		
+
+				for(int r = 0; r <= KERNEL_RADIUS_AROUND_CRITICAL_POINT; r++) 
+					for(int		j = -r; j <= r; j++)
+						for(int i = -r; i <= r; i++)
+							if( -r == i || +r == i || -r == j || +r == j )
+							{
+								sx[iNrOfSampledPoints] = min(max(double(x + M_SQRT2 * SEPARATION_DISTANCE * i), 0.0), double(grid_res[0]-1));
+								sy[iNrOfSampledPoints] = min(max(double(y + M_SQRT2 * SEPARATION_DISTANCE * j), 0.0), double(grid_res[1]-1));
+								iNrOfSampledPoints++;
+							}
+
+				#elif	KERNEL_SHAPE	== KERNEL_SHAPE_CIRCLE
+
+				for(int b = 0; b < KERNEL_SIZE_AROUND_CRITICAL_POINT; b++)
+				{
+					sx[iNrOfSampledPoints] = min(max(double(x) + ppdCircularMask[b][0], 0.0), double(grid_res[0]-1));
+					sy[iNrOfSampledPoints] = min(max(double(y) + ppdCircularMask[b][1], 0.0), double(grid_res[1]-1));
+					iNrOfSampledPoints++;
+				}
+
+				#endif	// #if	KERNEL_SHAPE	
+
+				#endif	// MOD-BY-LEETEN 03/23/2010-END
+				#endif	// MOD-BY-LEETEN 03/22/2010-END
 				#endif	// MOD-BY-LEETEN 03/22/2010-END
 			}
 		}
@@ -2599,12 +2708,19 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 		LOG(printf("Warning! All points have been sampled!"));
 
 	// if not so many seeds are needed, shrink the pool back to the original size
-	// DEL-BY-LEETEN 03/22/2010-BEGIN
+	// MOD-BY-LEETEN 03/22/2010-FROM:
 		// sample_number_allowed = sample_number_allowed / 9 + iNrOfSampledPoints;
 	// TO:
-	sample_number_allowed = min(sample_number_allowed, sample_number_allowed / KERNEL_SIZE_AROUND_CRITICAL_POINT + iNrOfSampledPoints);
-	// DEL-BY-LEETEN 03/22/2010-END
-	#endif	// 	#if	SAMPLE_LOCAL_MAX_SAMPLED_FIRST
+	// MOD-BY-LEETEN 03/23/2010-FROM:
+		// sample_number_allowed = min(sample_number_allowed, sample_number_allowed / KERNEL_SIZE_AROUND_CRITICAL_POINT + iNrOfSampledPoints);
+	// TO:
+	if( 1 == iRound )
+		sample_number_allowed = min(sample_number_allowed, iNrOfSampledPoints);
+	else
+		sample_number_allowed = sample_number_allowed / KERNEL_SIZE_AROUND_CRITICAL_POINT;
+	// MOD-BY-LEETEN 03/23/2010-END
+	// MOD-BY-LEETEN 03/22/2010-END
+	#endif	// 	#if	SAMPLE_LOCAL_MAX_FIRST
 
 	// ADD-BY-LEETEN 03/19/2010-END
 
@@ -2653,10 +2769,17 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 			i++;
 		}
 	#else	// MOD-BY-LEETEN 03/19/2010-TO:
+	#if	0	// MOD-BY-LEETEN 03/23/2010-FROM:
+		for(int i = iNrOfSampledPoints; i<sample_number_allowed; i++)
+			sy[i] = sample_from(qy,grid_res[1]);
+		for(int i = iNrOfSampledPoints; i<sample_number_allowed; i++)
+			sx[i] = sample_from(qx_normalized+sy[i]*grid_res[0],grid_res[0]);
+	#else	// MOD-BY-LEETEN 03/23/2010-TO:
 	for(int i = iNrOfSampledPoints; i<sample_number_allowed; i++)
-		sy[i] = sample_from(qy,grid_res[1]);
+		sy[i] = FSampleFrom(qy, grid_res[1]);
 	for(int i = iNrOfSampledPoints; i<sample_number_allowed; i++)
-		sx[i] = sample_from(qx_normalized+sy[i]*grid_res[0],grid_res[0]);
+		sx[i] = FSampleFrom(&qx_normalized[int(sy[i])*grid_res[0]], grid_res[0]);
+	#endif	// MOD-BY-LEETEN 03/23/2010-END
 	#endif	// MOD-BY-LEETEN 03/19/2010-END
 
 	// ADD-BY-LEETEN 03/15/2010-BEGIN
@@ -2670,25 +2793,40 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 	float* qy=new float[grid_res[1]];
 	float *qx_normalized=new float[grid_res[0]*grid_res[1]];
 
-	float fMaxProb = -(float)HUGE_VAL;
-	for(int p = 0,	j = 0; j < grid_res[1]; j++)
-		for(int		i = 0; i < grid_res[0]; i++, p++)
-			fMaxProb = max(fMaxProb, img_entropies[p]);
+	#if	0	// DEL-BY-LEETEN 03/23/2010-BEGIN
+		float fMaxProb = -(float)HUGE_VAL;
+		for(int p = 0,	j = 0; j < grid_res[1]; j++)
+			for(int		i = 0; i < grid_res[0]; i++, p++)
+				fMaxProb = max(fMaxProb, img_entropies[p]);
+		float fM = fMaxProb;
+	#endif	// DEL-BY-LEETEN 03/23/2010-END
 
-	float fM = fMaxProb;
 	int i;
 	for(i = 0; i < sample_number_allowed; )
 	{
 		float fU = float(rand()) / float(RAND_MAX);
-		int iX = min(int(float(grid_res[0] * rand()) / float(RAND_MAX)), grid_res[0] - 1);
-		int iY = min(int(float(grid_res[1] * rand()) / float(RAND_MAX)), grid_res[1] - 1);
-		float fP =  img_entropies[iX + iY * grid_res[0]];
+		#if	0	// MOD-BY-LEETEN 03/23/2010-FROM:
+			int iX = min(int(float(grid_res[0] * rand()) / float(RAND_MAX)), grid_res[0] - 1);
+			int iY = min(int(float(grid_res[1] * rand()) / float(RAND_MAX)), grid_res[1] - 1);
+			float fP =  img_entropies[iX + iY * grid_res[0]];
+			if( fU < fP / fM )
+			{
+				sx[i] = iX;
+				sy[i] = iY;
+				i++;
+			}
+		#else	// MOD-BY-LEETEN 03/23/2010-TO:
+		float fX = min(float(grid_res[0] * rand()) / float(RAND_MAX), grid_res[0] - 1);
+		float fY = min(float(grid_res[1] * rand()) / float(RAND_MAX), grid_res[1] - 1);
+		float fP =  img_entropies[int(fX) + int(fY) * grid_res[0]];
+
 		if( fU < fP / fM )
 		{
-			sx[i] = iX;
-			sy[i] = iY;
+			sx[i] = fX;
+			sy[i] = fY;
 			i++;
 		}
+		#endif	// MOD-BY-LEETEN 03/23/2010-END
 	}
 	#endif	// #if IMPORTANCE_SAMPLING
 	// ADD-BY-LEETEN 03/15/2010-END
@@ -2696,13 +2834,35 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 	elapsedTime= GetTickCount() - dwStart;
 	printf("\n\n sampling time is %.3f milli-seconds.\n",elapsedTime); 	
 
+	// ADD-BY-LEETEN 03/23/2010-BEGIN
+	// dump the coordinates of the seeds
+	sprintf(szFilename, "%s_seeds.bin", g_filename);
+	{
+		FILE *fpSeeds;
+		if( 1 == iRound )
+			fpSeeds = fopen(szFilename, "wb");
+		else
+			fpSeeds = fopen(szFilename, "ab");
+
+		fwrite(&sample_number_allowed, sizeof(sample_number_allowed), 1, fpSeeds);
+		fwrite(sx, sizeof(sx[0]), sample_number_allowed, fpSeeds);
+		fwrite(sy, sizeof(sy[0]), sample_number_allowed, fpSeeds);
+
+		fclose(fpSeeds);
+	}
+	// ADD-BY-LEETEN 03/23/2010-END
+
 	// MOD-BY-LEETEN 03/19/2010-FROM:
 		// for( i=0;i<sample_number_allowed;i++)
 	// TO:
 	for(int i=0;i<sample_number_allowed;i++)
 	// MOD-BY-LEETEN 03/19/2010-END
 	{
-		data[sx[i]+sy[i]*grid_res[0]]=125;
+		// MOD-BY-LEETEN 03/23/2010-FROM:
+			// data[sx[i]+sy[i]*grid_res[0]]=125;
+		// TO:
+		data[int(sx[i])+int(sy[i])*grid_res[0]]=125;
+		// MOD-BY-LEETEN 03/23/2010-END
 		
 	}
 
@@ -5093,6 +5253,13 @@ fclose(my);
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.8  2010/03/22 13:50:30  leeten
+
+[03/22/2010]
+1. [MOD] Use the new preprocessor KERNEL_SIZE_AROUND_CRITICAL_POINT to decide the kernel size.
+2. [ADD] Only consider the local max. whose prob is larger than LOCAL_MAX_THRESHOLD times max. prob.
+3. [MOD] Do not make the pool of seeds exceed the allocated buffer.
+
 Revision 1.7  2010/03/19 19:45:27  leeten
 
 [03/19/2010]
