@@ -23,7 +23,13 @@
 	TBuffer<float[3]>	pf3Coords;
 	TBuffer<uint2>		pu2IndicesToVerticesEachStreamline;
 
-	const int iNrOfBins = 360;
+// MOD-BY-LEETEN 03/22/2010-FROM:
+	// const int iNrOfBins = 360;
+// TO:
+	#define	MAX_NR_OF_BINS	360
+	int iNrOfBins = 360;
+// MOD-BY-LEETEN 03/22/2010-END
+
 	TBuffer<float2>		pf2Thetas;
 	TBuffer<float2>		pf2Phis;
 	#if	0	// MOD-BY-LEETEN 03/10/2010-FROM:
@@ -35,9 +41,17 @@
 		int piOutputMarginalHistogram[iNrOfBins];
 		// MOD-BY-LEETEN 02/19/2010-END
 	#else	// MOD-BY-LEETEN 03/10/2010-TO:
-	int ppiJointHistogram[iNrOfBins+1][iNrOfBins+1];
-	int piInputMarginalHistogram[iNrOfBins+1];
-	int piOutputMarginalHistogram[iNrOfBins+1];
+
+	#if	0	// MOD-BY-LEETEN 03/22/2010-FROM:
+		int ppiJointHistogram[iNrOfBins+1][iNrOfBins+1];
+		int piInputMarginalHistogram[iNrOfBins+1];
+		int piOutputMarginalHistogram[iNrOfBins+1];
+	#else	// MOD-BY-LEETEN 03/22/2010-TO:
+	int ppiJointHistogram[MAX_NR_OF_BINS+1][MAX_NR_OF_BINS+1];
+	int piInputMarginalHistogram[MAX_NR_OF_BINS+1];
+	int piOutputMarginalHistogram[MAX_NR_OF_BINS+1];
+	#endif	// MOD-BY-LEETEN 03/22/2010-END
+
 	#endif	// MOD-BY-LEETEN 03/10/2010-END
 
 	const int iNrOfThetas = 720;
@@ -54,11 +68,21 @@ _ReadVectorField(char *szVectorFieldFilename)
 	fread(&p3Df3VectorField.iWidth,	sizeof(p3Df3VectorField.iWidth),	1, fpFile);
 	fread(&p3Df3VectorField.iHeight,	sizeof(p3Df3VectorField.iHeight),	1, fpFile);
 	fread(&p3Df3VectorField.iDepth,	sizeof(p3Df3VectorField.iDepth),	1, fpFile);
+	// ADD-BY-LEETEN 03/22/2010-BEGIN
+	if( 2 >= p3Df3VectorField.iDepth )
+		p3Df3VectorField.iDepth = 1;
+	// ADD-BY-LEETEN 03/22/2010-END
 	p3Df3VectorField.alloc(p3Df3VectorField.iWidth, p3Df3VectorField.iHeight, p3Df3VectorField.iDepth);
 	assert( p3Df3VectorField.BIsAllocated() );
 	fread(&p3Df3VectorField[0],		sizeof(p3Df3VectorField[0]),		p3Df3VectorField.USize(), fpFile);
 	fclose(fpFile);
 
+	// ADD-BY-LEETEN 03/22/2010-BEGIN
+	if( 1 == p3Df3VectorField.iDepth )
+		for(int p = 0,	y = 0; y < p3Df3VectorField.iHeight;	y++)
+			for(int		x = 0; x < p3Df3VectorField.iWidth;		x++, p++)
+				p3Df3VectorField[p][2] = 0.0f;
+	// ADD-BY-LEETEN 03/22/2010-END
 	LOG_VAR(szVectorFieldFilename);
 }
 
@@ -185,7 +209,11 @@ _BuildLookupTable()
 				// MOD-BY-LEETEN 03/10/2010-FROM:
 					// ppiAngleMap[t][p] = iBin;
 				// TO:
-				ppiAngleMap[t][p] = iBin + 1;	// bin zero is preserved
+				// MOD-BY-LEETEN 03/22/2010-FROM:
+					// ppiAngleMap[t][p] = iBin + 1;	// bin zero is preserved
+				// TO:#else
+				ppiAngleMap[t][p] = iBin;		// to be consistent with Lijie's implementation, the zero-length vector is classified into bin 0.
+				// MOD-BY-LEETEN 03/22/2010-END
 				// MOD-BY-LEETEN 03/10/2010-END
 		}
 }
@@ -210,6 +238,24 @@ double DGetAngle2(double x, double y)
 	}
 }
 
+// ADD-BY-LEETEN 03/22/2010-BEGIN
+int 
+IGetBin2D(double dX, double dY)
+{
+	double dLength = dX * dX + dY * dY;
+
+	if( 0.0 == dLength  )
+		return 0;
+
+	double dAngle = atan2(dY, dX);
+	int iBin = int(double(iNrOfBins) * (dAngle+ M_PI) / (2.0 * M_PI));
+	// MOD-BY-LEETEN 03/22/2010-FROM:
+		// return min(max(iBin, 0), iNrOfBins - 1) + 1;	// + 1;
+	// TO:
+	return min(max(iBin, 0), iNrOfBins - 1);	// + 1;
+	// MOD-BY-LEETEN 03/22/2010-END
+}
+// ADD-BY-LEETEN 03/22/2010-END
 
 int 
 IGetBin(double dX, double dY, double dZ)
@@ -254,7 +300,7 @@ main(int argn, char* argv[])
 		&szStreamlineFilename, NULL);
 	_OPTAddComment(
 		"--streamline-filename", 
-		"Specify the file that contains the streamlines.");
+		"Specify the file that contains the streamlines.");	
 
 	// ADD-BY-LEETEN 03/10/2010-BEGIN
 	int iMaxNrOfStreamlines;
@@ -266,6 +312,16 @@ main(int argn, char* argv[])
 		"Specify the max. #streamlines to be tested.");
 	// ADD-BY-LEETEN 03/10/2010-END
 
+	// ADD-BY-LEETEN 03/23/2010-BEGIN
+	int iNrOf2DBins = 60;
+	_OPTAddIntegerVector(
+		"--nr-of-2d-bins", 1,
+		&iNrOf2DBins, iNrOf2DBins);
+	_OPTAddComment(
+		"--nr-of-2d-bins", 
+		"Specify the #bins for 2D vector field.");
+	// ADD-BY-LEETEN 03/23/2010-END
+
 	assert( BOPTParse(argv, argn, 1) );
 
 	assert(szStreamlineFilename);
@@ -275,8 +331,24 @@ main(int argn, char* argv[])
 	_ReadStreamlines(szStreamlineFilename);
 	_ReadVectorField(szVectorFieldFilename);
 
+	// ADD-BY-LEETEN 03/22/2010-BEGIN
+	if( 1 == p3Df3VectorField.iDepth )
+	{
+		// MOD-BY-LEETEN 03/23/2010-FROM:
+			// iNrOfBins = 60;
+		// TO:
+		iNrOfBins = iNrOf2DBins;
+		// MOD-BY-LEETEN 03/23/2010-END
+	}
+	else
+	{
+	// ADD-BY-LEETEN 03/22/2010-END
 	_ReadPatches();
 	_BuildLookupTable();
+
+	// ADD-BY-LEETEN 03/22/2010-BEGIN
+	}
+	// ADD-BY-LEETEN 03/22/2010-END
 
 	int iMaxNrOfIterations = 9 * max(max(p3Df3VectorField.iWidth, p3Df3VectorField.iHeight), p3Df3VectorField.iDepth);
 	float fMu = 0.1f;
@@ -347,6 +419,26 @@ main(int argn, char* argv[])
 				for(int			iY = 0; iY < p3Df3VectorField.iHeight;	iY++)
 					for(int		iX = 0; iX < p3Df3VectorField.iWidth;	iX++, iVoxel++)
 					{
+						// ADD-BY-LEETEN 03/22/2010-BEGIN
+						if( 1 == p3Df3VectorField.iDepth )
+						{
+							int iLeft =		max(iX-1, 0)							+ iY * p3Df3VectorField.iWidth + iZ * p3Df3VectorField.iWidth * p3Df3VectorField.iHeight;
+							int iRight =	min(iX+1, p3Df3VectorField.iWidth - 1)	+ iY * p3Df3VectorField.iWidth + iZ * p3Df3VectorField.iWidth * p3Df3VectorField.iHeight;
+							int iBottom =	iX + max(iY-1, 0)								* p3Df3VectorField.iWidth + iZ * p3Df3VectorField.iWidth * p3Df3VectorField.iHeight;
+							int iTop =		iX + min(iY+1, p3Df3VectorField.iHeight - 1)	* p3Df3VectorField.iWidth + iZ * p3Df3VectorField.iWidth * p3Df3VectorField.iHeight;
+							for(int j = 0; j < 3; j++)
+								p3Df3ResultVectorField[iVoxel][j] =	
+									(1.0f - p3Df4OffsetWeight[iVoxel].w) * p3Df3TempVectorField[iVoxel][j] + 
+									fMu *(	
+											p3Df3TempVectorField[iLeft][j]
+										+	p3Df3TempVectorField[iRight][j]
+										+	p3Df3TempVectorField[iBottom][j]
+										+	p3Df3TempVectorField[iTop][j]
+										-	4.0f * p3Df3TempVectorField[iVoxel][j]);
+						}
+						else
+						{
+						// ADD-BY-LEETEN 03/22/2010-END
 						int iLeft =		max(iX-1, 0)							+ iY * p3Df3VectorField.iWidth + iZ * p3Df3VectorField.iWidth * p3Df3VectorField.iHeight;
 						int iRight =	min(iX+1, p3Df3VectorField.iWidth - 1)	+ iY * p3Df3VectorField.iWidth + iZ * p3Df3VectorField.iWidth * p3Df3VectorField.iHeight;
 						int iBottom =	iX + max(iY-1, 0)								* p3Df3VectorField.iWidth + iZ * p3Df3VectorField.iWidth * p3Df3VectorField.iHeight;
@@ -364,6 +456,9 @@ main(int argn, char* argv[])
 									+	p3Df3TempVectorField[iFront][j]
 									+	p3Df3TempVectorField[iBack][j]
 									-	6.0f * p3Df3TempVectorField[iVoxel][j]);
+						// ADD-BY-LEETEN 03/22/2010-BEGIN
+						}
+						// ADD-BY-LEETEN 03/22/2010-END
 
 						p3Df3ResultVectorField[iVoxel][0] += p3Df4OffsetWeight[iVoxel].x;
 						p3Df3ResultVectorField[iVoxel][1] += p3Df4OffsetWeight[iVoxel].y;
@@ -381,6 +476,11 @@ main(int argn, char* argv[])
 						}
 
 
+			// ADD-BY-LEETEN 03/22/2010-BEGIN
+			if( 1 == p3Df3VectorField.iDepth )
+				dDiffusionError = sqrt(dDiffusionError / double(2 * p3Df3VectorField.USize()));
+			else
+			// ADD-BY-LEETEN 03/22/2010-END
 			dDiffusionError = sqrt(dDiffusionError / double(3 * p3Df3VectorField.USize()));
 
 			// LOG_VAR(dDiffusionError);	
@@ -402,7 +502,12 @@ main(int argn, char* argv[])
 			// ADD-BY-LEETEN 03/10/2010-BEGIN
 			if( iIter > 0 && dPrevDiffusionError < dDiffusionError)
 			{
-				fprintf(stderr, "Error increases. Stop. \n");
+				// MOD-BY-LEETEN 03/22/2010-FROM:
+					// fprintf(stderr, "Error increases. Stop. \n");
+				// TO: 
+				LOG_ERROR(fprintf(stderr, "Error increases. "));
+				// MOD-BY-LEETEN 03/22/2010-END
+
 				break;
 			}
 			// ADD-BY-LEETEN 03/10/2010-END
@@ -463,14 +568,38 @@ main(int argn, char* argv[])
 					}
 					// ADD-BY-LEETEN 03/10/2010-END
 
-					int iBin = IGetBin(
-						p3Df3VectorField[iVoxel][0], 
-						p3Df3VectorField[iVoxel][1], 
-						p3Df3VectorField[iVoxel][2]);
-					int iNewBin = IGetBin(
-						p3Df3ResultVectorField[iVoxel][0], 
-						p3Df3ResultVectorField[iVoxel][1], 
-						p3Df3ResultVectorField[iVoxel][2]);
+					#if	0	// MOD-BY-LEETEN 03/22/2010-FROM:
+						int iBin = IGetBin(
+							p3Df3VectorField[iVoxel][0], 
+							p3Df3VectorField[iVoxel][1], 
+							p3Df3VectorField[iVoxel][2]);
+						int iNewBin = IGetBin(
+							p3Df3ResultVectorField[iVoxel][0], 
+							p3Df3ResultVectorField[iVoxel][1], 
+							p3Df3ResultVectorField[iVoxel][2]);
+					#else	// MOD-BY-LEETEN 03/22/2010-TO:
+					int iBin, iNewBin;
+					if( 1 == p3Df3VectorField.iDepth )
+					{
+						iBin = IGetBin2D(
+							p3Df3VectorField[iVoxel][0], 
+							p3Df3VectorField[iVoxel][1]);
+						iNewBin = IGetBin2D(
+							p3Df3ResultVectorField[iVoxel][0], 
+							p3Df3ResultVectorField[iVoxel][1]);
+					}
+					else
+					{
+						iBin = IGetBin(
+							p3Df3VectorField[iVoxel][0], 
+							p3Df3VectorField[iVoxel][1], 
+							p3Df3VectorField[iVoxel][2]);
+						iNewBin = IGetBin(
+							p3Df3ResultVectorField[iVoxel][0], 
+							p3Df3ResultVectorField[iVoxel][1], 
+							p3Df3ResultVectorField[iVoxel][2]);
+					}
+					#endif	// MOD-BY-LEETEN 03/22/2010-END
 
 					ppiJointHistogram[iNewBin][iBin]++;
 					// MOD-BY-LEETEN 02/19/2010-FROM:
@@ -497,7 +626,11 @@ main(int argn, char* argv[])
 		double dCondEntropy;
 		double dNrOfVoxels = double(p3Df3VectorField.USize());
 
-		for(int h = 0; h < iNrOfBins; h++)
+		// MOD-BY-LEETEN 03/22/2010-FROM:
+			// for(int h = 0; h < iNrOfBins; h++)
+		// TO: 
+		for(int h = 0; h <= iNrOfBins; h++)
+		// MOD-BY-LEETEN 03/22/2010-END
 		{
 			#if	0	// MOD-BY-LEETEN 02/19/2010-FROM:
 				if( 0 == piMarginalHistogram[h] )
@@ -527,7 +660,11 @@ main(int argn, char* argv[])
 
 			#endif	// MOD-BY-LEETEN 02/19/2010-END
 
-			for(int w = 0; w < iNrOfBins; w++)
+			// MOD-BY-LEETEN 03/22/2010-FROM:
+				//	for(int w = 0; w < iNrOfBins; w++)
+			// TO:
+			for(int w = 0; w <= iNrOfBins; w++)
+			// MOD-BY-LEETEN 03/22/2010-END
 			{
 				if( 0 == ppiJointHistogram[h][w] )
 					continue;
@@ -542,6 +679,11 @@ main(int argn, char* argv[])
 		// ADD-BY-LEETEN 03/10/2010-END
 
 		// ADD-BY-LEETEN 03/10/2010-BEGIN
+		// ADD-BY-LEETEN 03/22/2010-BEGIN
+		if( 1 == p3Df3VectorField.iDepth )
+			dRMSE /= double(2 * p3Df3VectorField.USize());
+		else
+		// ADD-BY-LEETEN 03/22/2010-END
 		dRMSE /= double(3 * p3Df3VectorField.USize());
 		dRMSE = sqrt(dRMSE);
 		LOG_VAR(dRMSE);
@@ -591,6 +733,13 @@ main(int argn, char* argv[])
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.2  2010/03/10 20:32:40  leeten
+
+[03/10/2010]
+1. [MOD] When compute the histogram, bin 0 is reserved for vector with zero length.
+2. [ADD] Compute the RMSE and error rate too.
+3. [ADD] Add a new switch '--max-nr-of-streamlines' to specify the variable iMaxNrOfStreamlines, which is used to specify the max. #streamlines to be tested.
+
 Revision 1.1  2010/02/16 19:51:27  leeten
 
 [02/16/2010]
