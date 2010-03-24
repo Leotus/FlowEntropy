@@ -2216,6 +2216,19 @@ int IWrapCoord(int tx, int ty, int grid_res[2])
 }
 // ADD-BY-LEETEN 03/16/2010-END
 
+// ADD-BY-LEETEN 03/24/2010-BEGIN
+int IQSortImportances(const void *p0, const void *p1)
+{
+	float4 *pf4P0 = (float4*)p0;
+	float4 *pf4P1 = (float4*)p1;
+	if( pf4P0->w > pf4P1->w )
+		return +1;
+	if( pf4P0->w < pf4P1->w )
+		return -1;
+	return 0;
+}
+// ADD-BY-LEETEN 03/24/2010-END
+
 //speed up by reusing histogram partially
 void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* grid_res, 
 									   int x_min,int x_max,int y_min,int y_max,int* occupied,float hx,
@@ -2569,16 +2582,40 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 	#endif	// DEL-BY-LEETEN 03/22/2010-END
 	float fM = fMaxProb;
 
+	// ADD-BY-LEETEN 03/24/2010-BEGIN
+	// an array to store the importances and indices of selected seeds
+	float4 *pf4SeedImportances;
+	pf4SeedImportances = (float4*)calloc(sample_number_allowed, sizeof(pf4SeedImportances[0]));
+	assert(pf4SeedImportances);
+	// ADD-BY-LEETEN 03/24/2010-END
+
 	// ADD-BY-LEETEN 03/23/2010-BEGIN
-	double dRadius = M_SQRT2 * double(KERNEL_SIZE + 1);
+	// MOD-BY-LEETEN 03/24/2010-FROM:
+		// double dRadius = M_SQRT2 * double(KERNEL_SIZE + 1);
+	// TO:
+	double dRadius = M_SQRT2 * double(SEPARATION_DISTANCE + 1);
+	// MOD-BY-LEETEN 03/24/2010-END
 	double ppdCircularMask[KERNEL_SIZE_AROUND_CRITICAL_POINT][2];
 	for(int b = 0; b < KERNEL_SIZE_AROUND_CRITICAL_POINT; b++)
 	{
-		double dAngle = 2.0 * M_PI * double(b) / double(KERNEL_SIZE_AROUND_CRITICAL_POINT);
+		// MOD-BY-LEETEN 03/24/2010-FROM:
+			// double dAngle = 2.0 * M_PI * double(b) / double(KERNEL_SIZE_AROUND_CRITICAL_POINT);
+		// TO:
+		double dAngle = 2.0 * M_PI * double(b) / double(KERNEL_SIZE_AROUND_CRITICAL_POINT - 1);
+		// MOD-BY-LEETEN 03/24/2010-END
+
 		double dI = cos(dAngle);
 		double dJ = sin(dAngle);
 		ppdCircularMask[b][0] = dI * dRadius;
 		ppdCircularMask[b][1] = dJ * dRadius;
+	
+		// ADD-BY-LEETEN 03/24/2010-BEGIN
+		if( 0 == b )
+		{
+			ppdCircularMask[b][0] = 0.0;
+			ppdCircularMask[b][1] = 0.0;
+		}
+		// ADD-BY-LEETEN 03/24/2010-END
 	}
 	// ADD-BY-LEETEN 03/23/2010-END
 
@@ -2831,6 +2868,24 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 	#endif	// #if IMPORTANCE_SAMPLING
 	// ADD-BY-LEETEN 03/15/2010-END
 
+	// ADD-BY-LEETEN 03/24/2010-BEGIN
+	for(int s = 0; s < sample_number_allowed; s++)
+	{
+		int i = int(sx[s]) + int(sy[s]) * grid_res[0];
+		pf4SeedImportances[s].x = sx[s];
+		pf4SeedImportances[s].y = sy[s];
+		pf4SeedImportances[s].w = img_entropies[i];
+	}
+	// sort the seeds in descent order of importances
+	qsort(pf4SeedImportances, sample_number_allowed, sizeof(pf4SeedImportances[0]), IQSortImportances);
+	for(int s = 0; s < sample_number_allowed; s++)
+	{
+		sx[s] = pf4SeedImportances[sample_number_allowed - 1 - s].x;
+		sy[s] = pf4SeedImportances[sample_number_allowed - 1 - s].y;
+	}
+	free(pf4SeedImportances);
+	// ADD-BY-LEETEN 03/24/2010-END
+
 	elapsedTime= GetTickCount() - dwStart;
 	printf("\n\n sampling time is %.3f milli-seconds.\n",elapsedTime); 	
 
@@ -2896,7 +2951,11 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 		
 		
 		osuflow->SetEntropySeedPoints( &newseed,1);
-		osuflow->SetIntegrationParams(.1, .5);							//small and large step size
+		// MOD-BY-LEETEN 03/24/2010-FROM:
+			// osuflow->SetIntegrationParams(.1, .5);							//small and large step size
+		// TO:
+		osuflow->SetIntegrationParams(STREAMLINE_INIT_STEP_SIZE, STREAMLINE_MAX_STEP_SIZE);							//small and large step size
+		// MOD-BY-LEETEN 03/24/2010-END
 		// MOD-BY-LEETEN 02/05/2010-FROM:
 			// osuflow->GenStreamLines(lines , BACKWARD_AND_FORWARD, 10,0);	 //maxi steps
 		// TO:
@@ -5253,6 +5312,14 @@ fclose(my);
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.9  2010/03/23 19:39:21  leeten
+
+[03/23/2010]
+1. [MOD] Change the type of the seed coordinate from integers to floating points.
+2. [MOD] Change the sampling so if the local max will be only detected in the first round of the sampling, and there is no importance sampling in the 1st round.
+3. [MOD] Specify the kernel near the local max by the preprocessor KERNEL_SHAPE(KERNEL_SHAPE_SQUARE or KERNEL_SHAPE_CIRCLE).
+4. [ADD] Dump the seed location into a file.
+
 Revision 1.8  2010/03/22 13:50:30  leeten
 
 [03/22/2010]
