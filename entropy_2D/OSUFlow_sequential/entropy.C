@@ -1217,6 +1217,9 @@ combinehalflines_check_stop(
 	int* grid_res,
 	PointRef* m_grid,
 	int streamlineId,
+	// ADD-BY-LEETEN 03/26/2010-BEGIN
+	float fMaxEntropy,
+	// ADD-BY-LEETEN 03/26/2010-END
 	float img_entropies[]
 	)
 // MOD-BY-LEETEN 03/19/2010-END
@@ -1245,7 +1248,27 @@ combinehalflines_check_stop(
 		{
 			VECTOR3 p = **pnIter; 
 			int idx=(int)(p.x())+((int)(p.y()))*grid_res[0];
-			bool bIsDistant = BIsDistantFromExistingStreamlines(p,p, m_grid, m_sepDist,m_sepMinDist, grid_res);
+			// ADD-BY-LEETEN 03/26/2010-BEGIN
+			#if	!ENTROPY_SEPARATION_DISTANCE
+			// ADD-BY-LEETEN 03/26/2010-END
+				bool bIsDistant = BIsDistantFromExistingStreamlines(p,p, m_grid, m_sepDist,m_sepMinDist, grid_res);
+
+			// ADD-BY-LEETEN 03/26/2010-BEGIN
+			#else	// #if	!ENTROPY_SEPARATION_DISTANCE
+
+			bool bIsDistant = false;
+			float fEntropyThreshold = fMaxEntropy * LOCAL_MAX_THRESHOLD;
+			if( img_entropies[idx] < fEntropyThreshold )
+			{
+				float fEntropy = img_entropies[idx];
+				float fMinSeparateDistance = m_sepDist * LOCAL_MAX_THRESHOLD;	// * (1.0f - LOCAL_MAX_THRESHOLD));	// 1.0;
+				float fSeparateDistance = (fEntropy / fMaxEntropy) * (fMinSeparateDistance - m_sepDist) + m_sepDist;
+				bIsDistant = BIsDistantFromExistingStreamlines(p,p, m_grid, fSeparateDistance,m_sepMinDist, grid_res);
+			}
+
+			#endif	// #if	!ENTROPY_SEPARATION_DISTANCE
+			// ADD-BY-LEETEN 03/26/2010-END
+
 			if(true == bIsDistant)
 				break;
 		}
@@ -2828,6 +2851,11 @@ void QuadTree::drawSelf()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.8  2010/03/23 19:33:50  leeten
+
+[03/23/2010]
+1. [MOD] Change the computation of cond. entropy: before the ori. and rec. vectors along the boundary are treated the same, now I fix it.
+
 Revision 1.7  2010/03/19 19:44:05  leeten
 
 [03/19/2010]
