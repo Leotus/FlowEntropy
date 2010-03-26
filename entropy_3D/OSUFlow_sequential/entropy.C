@@ -334,10 +334,19 @@ void calc_entropy( int* bins,int* grid_res, int binnum,float* entropies)
 			for(int x=0;x<grid_res[0];x++)
 			{
 				float sx,sy,sz,ex,ey,ez;
-				sx=max(0,x-radius[0]);	sy=max(0,y-radius[1]);	sz=max(0,z-radius[2]);
-				ex=min(x+radius[0],grid_res[0]-1);
-				ey=min(y+radius[1],grid_res[1]-1);
-				ez=min(z+radius[2],grid_res[2]-1);
+				#if	0	// MOD-BY-LEETEN 03/25/2010-FROM:
+					sx=max(0,x-radius[0]);	sy=max(0,y-radius[1]);	sz=max(0,z-radius[2]);
+					ex=min(x+radius[0],grid_res[0]-1);
+					ey=min(y+radius[1],grid_res[1]-1);
+					ez=min(z+radius[2],grid_res[2]-1);
+				#else	// MOD-BY-LEETEN 03/25/2010-TO:
+				sx=x-radius[0];	
+				sy=y-radius[1];
+				sz=z-radius[2];
+				ex=x+radius[0];
+				ey=y+radius[1];
+				ez=z+radius[2];
+				#endif	// MOD-BY-LEETEN 03/25/2010-END
 
 				startpt.Set(sx,sy,sz);
 				endpt.Set(ex,ey,ez);
@@ -1518,22 +1527,32 @@ float log2(float v)
 }
 float calcEntropy_known_bins( int* bins,int* grid_res, VECTOR3 startpt,VECTOR3 endpt,int binnum)
 {
-
-
 	//start calc p(u|v)
 	int *histo_pv=new int[binnum];
 	memset(histo_pv,0,sizeof(int)*binnum);
 
 	int vol=(endpt.y()-startpt.y())*(endpt.x()-startpt.x())*(endpt.z()-startpt.z());
 
-	for(int z=(int)startpt.z(); z<(int)endpt.z();z++)
-	{
-		for(int y=(int)startpt.y(); y<(int)endpt.y();y++)
+	#if	0	// MOD-BY-LEETEN 03/25/2010-FROM:
+		for(int z=(int)startpt.z(); z<(int)endpt.z();z++)
 		{
-			for(int x=(int)startpt.x(); x<(int)endpt.x();x++)
+			for(int y=(int)startpt.y(); y<(int)endpt.y();y++)
 			{
-				VECTOR3 orif;
-				int idx=x+y*grid_res[0]+z*grid_res[0]*grid_res[1];
+				for(int x=(int)startpt.x(); x<(int)endpt.x();x++)
+				{
+					VECTOR3 orif;
+					int idx=x+y*grid_res[0]+z*grid_res[0]*grid_res[1];
+	#else	// MOD-BY-LEETEN 03/25/2010-TO:
+	for(int			z =(int)startpt.z(); z<=(int)endpt.z(); z++)
+	{
+		for(int		y =(int)startpt.y(); y<=(int)endpt.y(); y++)
+		{
+			for(int x =(int)startpt.x(); x<=(int)endpt.x(); x++)
+			{
+				int IWrapCoord3D(int tx, int ty, int tz, int grid_res[3]);	// declaration of IWrapCoord3D
+				int idx = IWrapCoord3D(x, y, z, grid_res);
+	#endif	// MOD-BY-LEETEN 03/25/2010-END
+
 				int bin_no_ori,bin_no_new;
 				bin_no_ori=bins[idx];
 				histo_pv[bin_no_ori]++;//p(v)
@@ -1547,9 +1566,11 @@ float calcEntropy_known_bins( int* bins,int* grid_res, VECTOR3 startpt,VECTOR3 e
 	for(int i=0; i<binnum; i++)
 	{
 		pv[i]=(((float)histo_pv[i])/((float)vol));
-		entropy=entropy+pv[i];
+		// DEL-BY-LEETEN 03/25/2010-BEGIN
+			// entropy=entropy+pv[i];
+		// DEL-BY-LEETEN 03/25/2010-END
 		if(pv[i]>0)
-		entropy-=(pv[i]*log2(pv[i]));
+			entropy-=(pv[i]*log2(pv[i]));
 	}
 
 	delete [] pv;
@@ -1597,7 +1618,9 @@ float calcEntropy1( float* vectors,int* grid_res, VECTOR3 startpt,VECTOR3 endpt,
 	for(int i=0; i<binnum; i++)
 	{
 		pv[i]=(((float)histo_pv[i])/((float)vol));
-		entropy=entropy+pv[i];
+		// DEL-BY-LEETEN 03/25/2010-BEGIN
+			// entropy=entropy+pv[i];
+		// DEL-BY-LEETEN 03/25/2010-END
 		if(pv[i]>0)
 		entropy-=(pv[i]*log2(pv[i]));
 	}
@@ -2797,6 +2820,11 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.8  2010/03/19 19:49:59  leeten
+
+[03/19/2010]
+1. [MOD] Specify the separation distance by the preprocessor SEPARATION_DISTANCE.
+
 Revision 1.7  2010/03/18 16:19:02  leeten
 
 [03/18/2010]
