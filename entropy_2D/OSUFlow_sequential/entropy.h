@@ -228,6 +228,9 @@ combinehalflines_check_stop(
 	int* grid_res,
 	PointRef* m_grid,
 	int streamlineId,
+	// ADD-BY-LEETEN 03/26/2010-BEGIN
+	float fMaxEntropy,	// the max. normalized entropy 
+	// ADD-BY-LEETEN 03/26/2010-END
 	float img_entropies[]);
 // MOD-BY-LEETEN 03/19/2010-END
 void combinehalflines_check_stop_entropy(list<vtListSeedTrace*> lines, list<vtListSeedTrace*>& long_lines,int* grid_res,
@@ -241,6 +244,11 @@ bool discardredundantstreamlines(float& cur_entropy,float eplison,list<vtListSee
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.2  2010/03/19 19:42:19  leeten
+
+[03/19/2010]
+1. [MOD] Pass the normalized entropy field as one parameter to the function combinehalflines_check_stop().
+
 Revision 1.1  2010/01/22 21:09:12  leeten
 
 [01/22/2010]
