@@ -40,9 +40,9 @@
 // ADD-BY-LEETEN 02/04/2010-END
 
 // ADD-BY-LEETEN 02/02/2010-BEGIN
-#define KERNEL_HALF_WIDTH	8	
-#define KERNEL_HALF_HEIGHT	8	
-#define KERNEL_HALF_DEPTH	8	
+#define KERNEL_HALF_WIDTH	6
+#define KERNEL_HALF_HEIGHT	6
+#define KERNEL_HALF_DEPTH	6
 // ADD-BY-LEETEN 02/02/2010-END
 
 // ADD-BY-LEETEN 12/14/2009-BEGIN
@@ -55,7 +55,11 @@
 // MOD-BY-LEETEN 03/18/2010-FROM:
 	// #define	NR_OF_SAMPLES		((grid_res[0] * grid_res[1] * grid_res[2]) / 512)
 // TO:
-	#define	NR_OF_SAMPLES		(max(max(grid_res[0], grid_res[1]), grid_res[2]))
+// MOD-BY-LEETEN 03/25/2010-FROM:
+	// #define	NR_OF_SAMPLES		(max(max(grid_res[0], grid_res[1]), grid_res[2]))
+// TO:
+#define	NR_OF_SAMPLES		(int((pow(double(max(max(grid_res[0], grid_res[1]), grid_res[2])), 1.5))))
+// MOD-BY-LEETEN 03/25/2010-END
 // MOD-BY-LEETEN 03/18/2010-END
 // ADD-BY-LEETEN 02/04/2010-END
 
@@ -68,7 +72,7 @@
 #define	WRAP_MODE_REPEAT			0x03
 #define WRAP_MODE_CLAMP_TO_BORDER	0x04
 
-#define WRAP_MODE					WRAP_MODE_MIRROR
+#define WRAP_MODE					WRAP_MODE_MIRROR	// WRAP_MODE_MIRROR
 
 //////////////////////////////////////////////////////
 #define PRUNING_MODE_NONE				0x00
@@ -80,10 +84,38 @@
 
 // ADD-BY-LEETEN 03/19/2010-BEGIN
 #define SEPARATION_DISTANCE			(ceilf(float(min(min(grid_res[0], grid_res[1]), grid_res[2])) * 0.02f))
-#define SAMPLE_LOCAL_MAX_SAMPLED_FIRST					1	// 1 or 0
+#define SAMPLE_LOCAL_MAX_FIRST							1	// 1 or 0
 #define	STOP_ADVENTION_WHEN_TOO_CLOSE_AND_LOW_ENTROPY	0	// 1 or 0
 // ADD-BY-LEETEN 03/19/2010-BEGIN
 
+// ADD-BY-LEETEN 03/25/2010-BEGIN
+// threshold of ratio to detect the salient local max.
+#define	LOCAL_MAX_THRESHOLD		0.7f		// 0.7f
+
+#define	KERNEL_RADIUS_AROUND_CRITICAL_POINT		1
+#define KERNEL_LENGTH_AROUND_CRITICAL_POINT		(2 * KERNEL_RADIUS_AROUND_CRITICAL_POINT	 + 1)
+
+// not supported in 3D		#define KERNEL_SHAPE_CIRCLE		0x01
+// not supported in 3D		#define KERNEL_SHAPE_SQUARE		0x02
+#define KERNEL_SHAPE_DIAMOND	0x03
+#define KERNEL_SHAPE_CUBE		0x04
+
+#define KERNEL_SHAPE	KERNEL_SHAPE_DIAMOND	// KERNEL_SHAPE_CUBE	
+
+#if	KERNEL_SHAPE	== KERNEL_SHAPE_DIAMOND
+
+	#define KERNEL_SIZE_AROUND_CRITICAL_POINT		(KERNEL_RADIUS_AROUND_CRITICAL_POINT * 27)
+
+#elif	KERNEL_SHAPE	== KERNEL_SHAPE_CUBE		
+
+	#define KERNEL_SIZE_AROUND_CRITICAL_POINT		(KERNEL_LENGTH_AROUND_CRITICAL_POINT * KERNEL_LENGTH_AROUND_CRITICAL_POINT * KERNEL_LENGTH_AROUND_CRITICAL_POINT)
+
+#else
+
+	#define KERNEL_SIZE_AROUND_CRITICAL_POINT		1
+
+#endif	// #if	KERNEL_SHAPE	
+// ADD-BY-LEETEN 03/25/2010-END
 
 #define NR_OF_STREAMLINES	1
 
@@ -107,6 +139,12 @@
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.4  2010/03/19 19:53:03  leeten
+
+[03/19/2010]
+1. [ADD] Define a new preprocessor SEPARATION_DISTANCE to specify the separation distance.
+2. [ADD] Defien new preprocessors SAMPLE_LOCAL_MAX_SAMPLED_FIRSTand STOP_ADVENTION_WHEN_TOO_CLOSE_AND_LOW_ENTROPY. (They are not used now).
+
 Revision 1.3  2010/03/18 16:26:29  leeten
 
 [03/18/2010]
