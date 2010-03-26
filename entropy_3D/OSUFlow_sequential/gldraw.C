@@ -3158,13 +3158,58 @@ int sample_from( float* p,int num)
          return i+1;
 }
 
+// ADD-BY-LEETEN 03/25/2010-BEGIN
+float FSampleFrom(float* p,int num)
+{
+	// return sample_from(p, num);
+	float u = float(rand())/ float(RAND_MAX - 1);
+	float fI = float(num - 1);
+	float fMin = 0.0f;
+	float fMax = 0.0f;
+	for(int i = 0; i < num; i++)
+	{
+		fMax += p[i];
+		if( fMin <= u && u < fMax )
+		{
+			fI = float(i) + (u - fMin)/(fMax - fMin);
+			break;
+		}
+		fMin = fMax;
+	}
+	fI = max(min(fI, float(num-1)), 0.0f);
+	return fI;
+}
+
+void 
+_DumpField3D(int grid_res[3], float *pfField2D, char *szFilename)
+{
+	// open the file
+	FILE *fpFile;
+	fpFile = fopen(szFilename, "wb");
+	assert(fpFile);
+
+	// write the res.
+	fwrite(grid_res, sizeof(grid_res[0]), 3, fpFile);
+
+	// write the data
+	fwrite(pfField2D, sizeof(pfField2D[0]), grid_res[0] * grid_res[1] * grid_res[2], fpFile);
+
+	// close the file
+	fclose(fpFile);
+}
+// ADD-BY-LEETEN 03/25/2010-END
+
 // ADD-BY-LEETEN 02/02/2010-BEGIN
 int* bin_my_vector,*bin_new_vector;
 int *histo_puv;
 int *histo_pv;
 float* pv;
 float* entropy_tmp;
-int* selX, *selY,*selZ;
+// MOD-BY-LEETEN 03/25/2010-FROM:
+	// int* selX, *selY,*selZ;
+// TO:
+float* selX, *selY,*selZ;
+// MOD-BY-LEETEN 03/25/2010-END
 float* qx;
 float* qy;
 float* qz;
@@ -3195,8 +3240,7 @@ int IWrapCoord3D(int tx, int ty, int tz, int grid_res[3])
 
 	if( tx < 0 || tx >= grid_res[0] ||
 		ty < 0 || ty >= grid_res[1] || 
-		tz < 0 || tz >= grid_res[2] || 
-		)
+		tz < 0 || tz >= grid_res[2] )
 	{
 		return -1;
 	}
@@ -3225,6 +3269,19 @@ int IWrapCoord3D(int tx, int ty, int tz, int grid_res[3])
 }
 // ADD-BY-LEETEN 03/18/2010-END
 
+// ADD-BY-LEETEN 03/25/2010-BEGIN
+int IQSortImportances(const void *p0, const void *p1)
+{
+	float4 *pf4P0 = (float4*)p0;
+	float4 *pf4P1 = (float4*)p1;
+	if( pf4P0->w > pf4P1->w )
+		return +1;
+	if( pf4P0->w < pf4P1->w )
+		return -1;
+	return 0;
+}
+// ADD-BY-LEETEN 03/25/2010-END
+
 //speed up by reusing histograms
 void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* grid_res, 
 									   int* occupied,
@@ -3234,6 +3291,13 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 										int* g_histo,int* g_histo_puv,int round,
 											std::vector<float>& line_importance, float in_entropy)
 {
+	// ADD-BY-LEETEN 03/25/2010-BEGIN
+	static int iRound = 0;
+	iRound++;
+
+	float fMaxProb = 0.0f;	// the max. prob.
+	// ADD-BY-LEETEN 03/25/2010-END
+
 	#if	0	// DEL-BY-LEETEN 02/04/2010-BEGIN
 		// ADD-BY-LEETEN 02/02/2010-BEGIN
 		static bool bIsInitialized = false;
@@ -3249,6 +3313,12 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 		// int sample_number_allowed=50;
 	// TO:
 	int sample_number_allowed = NR_OF_SAMPLES;
+	// ADD-BY-LEETEN 03/25/2010-BEGIN
+	int iNrOfSampledPoints = 0;
+	#if	SAMPLE_LOCAL_MAX_FIRST
+	sample_number_allowed *= KERNEL_SIZE_AROUND_CRITICAL_POINT;
+	#endif
+	// ADD-BY-LEETEN 03/25/2010-END
 	// DEL-BY-LEETEN 02/04/2010-END
 	int  kernel_size[3];
 	#if	0	// MOD-BY-LEETEN 02/02/2010-FROM:
@@ -3440,7 +3510,6 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 //		double elapsedTime= GetTickCount() - dwStart;
 //		printf("\n\n entorpy for each point time is %.3f milli-seconds.\n",elapsedTime); 	
 		printf("y=%d/%d\r",y,grid_res[1]);
-
 	}
 	// ADD-BY-LEETEN 02/02/2010-BEGIN
 	#else	// #if	!ENTROPY_ON_CUDA	
@@ -3504,6 +3573,12 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 		dumpImportanceField(szname,importance, grid_res);
 	#endif	// DEL-BY-LEETEN 02/02/2010-END
 
+	// ADD-BY-LEETEN 03/25/2010-BEGIN
+	char szFilename[1024];
+	sprintf(szFilename, "%s_entropy%d.bin", g_filename, iRound);
+	_DumpField3D(grid_res, img_entropies, szFilename);
+	// ADD-BY-LEETEN 03/25/2010-END
+
 	//normalized it to (0~1)
 	for(int i=0;i<grid_res[0]*grid_res[1]*grid_res[2];i++)
 	{
@@ -3512,6 +3587,12 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 		//else
 //				img_entropies[i]=1-img_entropies[i]/sum;
 	}
+
+	// ADD-BY-LEETEN 03/25/2010-BEGIN
+	fMaxProb = 0.0f;
+	for(int v = 0; v < grid_res[0] * grid_res[1] * grid_res[2]; v++)
+		fMaxProb = max(img_entropies[v], fMaxProb);
+	// ADD-BY-LEETEN 03/25/2010-END
 
 	//start the importance sampling, acceptance-rejection method
 //	dwStart= GetTickCount();
@@ -3558,11 +3639,97 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 		selZ=new int[sample_number_allowed];
 		float* qz=new float[grid_res[2]];
 	#else	// MOD-BY-LEETEN 02/02/2010-TO:
-	MALLOC(selX,	int,	sample_number_allowed);
-	MALLOC(selY,	int,	sample_number_allowed);
-	MALLOC(selZ,	int,	sample_number_allowed);
+	#if	0	// MOD-BY-LEETEN 03/25/2010-FROM:
+		MALLOC(selX,	int,	sample_number_allowed);
+		MALLOC(selY,	int,	sample_number_allowed);
+		MALLOC(selZ,	int,	sample_number_allowed);
+	#else	// MOD-BY-LEETEN 03/25/2010-TO:
+	MALLOC(selX,	float,	sample_number_allowed);
+	MALLOC(selY,	float,	sample_number_allowed);
+	MALLOC(selZ,	float,	sample_number_allowed);
+	#endif	// MOD-BY-LEETEN 03/25/2010-END
 	MALLOC(qz,		float,	grid_res[2]);
 	#endif	// MOD-BY-LEETEN 02/02/2010-END
+
+	// ADD-BY-LEETEN 03/25/2010-BEGIN
+	#if	SAMPLE_LOCAL_MAX_FIRST
+
+	if( 1 == iRound )
+	{
+		for(int			z = 1; z < grid_res[2]-1; z++)
+			for(int		y = 1; y < grid_res[1]-1; y++)
+				for(int x = 1; x < grid_res[0]-1; x++)
+				{
+					int v = x + y * grid_res[0] + z * grid_res[0] * grid_res[1];
+					if( img_entropies[v] <= fMaxProb * LOCAL_MAX_THRESHOLD )
+						continue;
+
+					// search for the 27 neighbors to see whether this point is a local max
+					bool bIsLocalMax = true;
+					for(int			k = -1; k <= 1; k++)
+						for(int		j = -1; j <= 1; j++)
+							for(int i = -1; i <= 1; i++)
+							{
+								if( 0 == i && 0 == j && 0 == k )
+									continue;
+
+								if( img_entropies[v] <= img_entropies[(x+i) + (y+j) * grid_res[0] + (z+k) * grid_res[0] * grid_res[1]])
+									bIsLocalMax = false;
+							}
+
+					if( true == bIsLocalMax )
+					{
+						if( iNrOfSampledPoints + KERNEL_SIZE_AROUND_CRITICAL_POINT >= sample_number_allowed )
+						{
+							LOG_ERROR(cerr<<"Buffer is full.");
+							continue;
+						}
+
+						#if		KERNEL_SHAPE	== KERNEL_SHAPE_DIAMOND
+
+						for(int r = 0; r <= KERNEL_RADIUS_AROUND_CRITICAL_POINT; r++)
+							for(int			k = -1; k <= 1; k++)
+								for(int		j = -1; j <= 1; j++)
+									for(int i = -1; i <= 1; i++)
+								{
+									int iManhattanDist = abs(i) + abs(j) + abs(k);
+									int iWeight = (3 + 1 - iManhattanDist) * r;
+
+									double dWeight = double(iWeight) * sqrt(3.0) * SEPARATION_DISTANCE;
+
+									selX[iNrOfSampledPoints] = min(max(double(x) + dWeight * double(i), 0.0), double(grid_res[0]-1));
+									selY[iNrOfSampledPoints] = min(max(double(y) + dWeight * double(j), 0.0), double(grid_res[1]-1));
+									selZ[iNrOfSampledPoints] = min(max(double(z) + dWeight * double(k), 0.0), double(grid_res[2]-1));
+									iNrOfSampledPoints++;
+								}
+
+
+						#elif	KERNEL_SHAPE	== KERNEL_SHAPE_CUBE		
+
+						double dWeight = sqrt(3.0) * SEPARATION_DISTANCE;
+						int r = KERNEL_RADIUS_AROUND_CRITICAL_POINT;
+						for(int			k = -r; k <= r; k++)
+							for(int		j = -r; j <= r; j++)
+								for(int i = -r; i <= r; i++)
+								{
+									selX[iNrOfSampledPoints] = min(max(double(x) + dWeight * double(i), 0.0), double(grid_res[0]-1));
+									selY[iNrOfSampledPoints] = min(max(double(y) + dWeight * double(j), 0.0), double(grid_res[1]-1));
+									selZ[iNrOfSampledPoints] = min(max(double(z) + dWeight * double(k), 0.0), double(grid_res[2]-1));
+									iNrOfSampledPoints++;
+					 			}
+						#endif
+					} // if
+				} // for 
+		sample_number_allowed = min(sample_number_allowed, iNrOfSampledPoints);
+		iNrOfSampledPoints = sample_number_allowed;
+	} // if ( 1 == iRound )
+	else
+		sample_number_allowed = sample_number_allowed / KERNEL_SIZE_AROUND_CRITICAL_POINT;
+	#endif	// #if	SAMPLE_LOCAL_MAX_FIRST
+
+	LOG_VAR_TO_ERROR(iNrOfSampledPoints);
+	// ADD-BY-LEETEN 03/25/2010-END
+
 	//get z marginal
 	for(int k=0;k<grid_res[2];k++)
 	{
@@ -3633,24 +3800,83 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 		}
 	}
 
-	int i=0;
-	while(i<sample_number_allowed)
+	#if	0	// MOD-BY-LEETEN 03/25/2010-FROM:
+		int i=0;
+		while(i<sample_number_allowed)
+		{
+			selZ[i] = sample_from(qz,grid_res[2]);
+			i++;
+		}
+		i=0;
+		while(i<sample_number_allowed)
+		{
+			selY[i] = sample_from(qy+selZ[i]*grid_res[1],grid_res[1]);
+			i++;
+		}
+		i=0;
+		while(i<sample_number_allowed)
+		{
+			selX[i] = sample_from(qx+selZ[i]*grid_res[0]*grid_res[1]+selY[i]*grid_res[0],grid_res[0]);
+			i++;
+		}
+	#else	// MOD-BY-LEETEN 03/25/2010-TO:
+	for(int i = iNrOfSampledPoints; i<sample_number_allowed; i++)
+		selZ[i] = FSampleFrom(
+			qz,
+			grid_res[2]);
+
+	for(int i = iNrOfSampledPoints; i<sample_number_allowed; i++)
+		selY[i] = FSampleFrom(
+			&qy[int(selZ[i])*grid_res[1]], 
+			grid_res[1]); 
+
+	for(int i = iNrOfSampledPoints; i<sample_number_allowed; i++)
+		selX[i] = FSampleFrom(
+			&qx[int(selZ[i])*grid_res[0]*grid_res[1]+int(selY[i])*grid_res[0]], 
+			grid_res[0]);
+	#endif	// MOD-BY-LEETEN 03/25/2010-END
+
+	// ADD-BY-LEETEN 03/25/2010-BEGIN
+	float4 *pf4SeedImportances;
+	pf4SeedImportances = (float4*)calloc(sample_number_allowed, sizeof(pf4SeedImportances[0]));
+	for(int s = 0; s < sample_number_allowed; s++)
 	{
-		selZ[i] = sample_from(qz,grid_res[2]);
-		i++;
+		int iX = min(max(int(selX[s]), 0), grid_res[0]-1);
+		int iY = min(max(int(selY[s]), 0), grid_res[1]-1);
+		int iZ = min(max(int(selZ[s]), 0), grid_res[2]-1);
+		int i = iX + iY * grid_res[0] + iZ * grid_res[0] * grid_res[1];
+		pf4SeedImportances[s].x = selX[s];
+		pf4SeedImportances[s].y = selY[s];
+		pf4SeedImportances[s].z = selZ[s];
+		pf4SeedImportances[s].w = img_entropies[i];
 	}
-	i=0;
-	while(i<sample_number_allowed)
+	// sort the seeds in descent order of importances
+	qsort(pf4SeedImportances, sample_number_allowed, sizeof(pf4SeedImportances[0]), IQSortImportances);
+	for(int s = 0; s < sample_number_allowed; s++)
 	{
-		selY[i] = sample_from(qy+selZ[i]*grid_res[1],grid_res[1]);
-		i++;
+		selX[s] = pf4SeedImportances[sample_number_allowed - 1 - s].x;
+		selY[s] = pf4SeedImportances[sample_number_allowed - 1 - s].y;
+		selZ[s] = pf4SeedImportances[sample_number_allowed - 1 - s].z;
 	}
-	i=0;
-	while(i<sample_number_allowed)
+	free(pf4SeedImportances);
+
+	// dump the coordinates of the seeds
+	sprintf(szFilename, "%s_seeds.bin", g_filename);
 	{
-		selX[i] = sample_from(qx+selZ[i]*grid_res[0]*grid_res[1]+selY[i]*grid_res[0],grid_res[0]);
-		i++;
+		FILE *fpSeeds;
+		if( 1 == iRound )
+			fpSeeds = fopen(szFilename, "wb");
+		else
+			fpSeeds = fopen(szFilename, "ab");
+
+		fwrite(&sample_number_allowed, sizeof(sample_number_allowed), 1, fpSeeds);
+		fwrite(selX, sizeof(selX[0]), sample_number_allowed, fpSeeds);
+		fwrite(selX, sizeof(selY[0]), sample_number_allowed, fpSeeds);
+		fwrite(selZ, sizeof(selZ[0]), sample_number_allowed, fpSeeds);
+
+		fclose(fpSeeds);
 	}
+	// ADD-BY-LEETEN 03/25/2010-END
 
 	// ADD-BY-LEETEN 02/06/2010-BEGIN
 	FREE(qx);
@@ -3664,7 +3890,11 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 	float cur_entropy=in_entropy;
 	//scan and get the distributions out
 	list<vtListSeedTrace*> lines,new_lines; 
-	for(i=0;i<sample_number_allowed;i++)//start pruning
+	// MOD-BY-LEETEN 03/25/2010-FROM:
+		// for(i=0;i<sample_number_allowed;i++)//start pruning
+	// TO:
+	for(int i=0;i<sample_number_allowed;i++)//start pruning
+	// MOD-BY-LEETEN 03/25/2010-END
 	{
 		lines.clear();
 		new_lines.clear();
@@ -3678,7 +3908,14 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 		osuflow->SetIntegrationParams(minstepsize, maxstepsize);							//small and large step size
 
 		//adjust streamline length by its entropy value
-		int idx=selX[i]+selY[i]*grid_res[0]+selZ[i]*grid_res[0]*grid_res[1];
+		// MOD-BY-LEETEN 03/25/2010-FROM:
+			// int idx=selX[i]+selY[i]*grid_res[0]+selZ[i]*grid_res[0]*grid_res[1];
+		// TO:
+		int idx = 
+			int(selX[i]) + 
+			int(selY[i]) * grid_res[0] + 
+			int(selZ[i]) * grid_res[0] * grid_res[1];
+		// MOD-BY-LEETEN 03/25/2010-END
 		float length=entropies[idx]*maxi_stepnum;
 
 		osuflow->GenStreamLines(lines , BACKWARD_AND_FORWARD,length, 0);	 //maxi steps
@@ -4301,7 +4538,7 @@ void compute_streamlines()
 
 	// ADD-BY-LEETEN 03/18/2010-BEGIN
 	double dwComputeStreamlinesEnd = GetTickCount();
-	printf("\n\n %s takes %.3f milli-seconds.\n", __FUNCTION__, dwComputeStreamlinesEnd - dwComputeStreamlinesBegin); 	
+	LOG_ERROR(printf("\n\n %s takes %.3f milli-seconds.\n", __FUNCTION__, dwComputeStreamlinesEnd - dwComputeStreamlinesBegin)); 	
 	// ADD-BY-LEETEN 03/18/2010-END
 }
 /*
@@ -6591,6 +6828,17 @@ void Streamline_entorpy_calculation_loadfile()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.7  2010/03/18 16:23:54  leeten
+
+[03/18/2010]
+1. [MOD] Define a new function IWrapCoord3D to wrapt the coordinates. The coordinate near the boundary will be wrapped according to a preprocessor WRAP_MODE.
+2. [MOD] Disable the square of the entropy when compute the pdf.
+3. [ADD] When the preprocessor PRUNING_MODE is PRUNING_MODE_COND_ENTROPY, call _CombineHalfLinesNotOccupied() to combine and prune too close streamline.
+4. [ADD] Compute the timing of compute_streamlines.
+5. [MOD] Output the streamlines to the same file, and output the accoumated numbers of streamlines to a log.
+6. [MOD] Change the converge criteria s.t the iteration stop when the error converges.
+7. [ADD] Add a hotkey ESC to terminate the application.
+
 Revision 1.6  2010/03/10 20:29:13  leeten
 
 [03/10/2010]
