@@ -2097,43 +2097,61 @@ float * cumsum(float * p, int num)
 // ADD-BY-LEETEN 03/23/2010-BEGIN
 float FSampleFrom(float* p,int num)
 {
-     float * a=cumsum(p,num);
-
-	 float fI;
-     float u = ((float )rand()/( float )RAND_MAX);
-	 if( 0.0f == u )
-		 fI = 0.0f;
-	 else
-	 {
-		 int i ;
-		 for(i = 0; i < num; i++)
-			 if( u < a[i] )
-			 {
-				 break;
-			 }
-
-		 if( num == i )
-			 fI = float(num);
+	#if	0	// MOD-BY-LEETEN 03/25/2010-FROM:
+		float * a=cumsum(p,num);
+		 float fI;
+		 float u = ((float )rand()/( float )RAND_MAX);
+		 if( 0.0f == u )
+			 fI = 0.0f;
 		 else
 		 {
-			 float fMin, fMax;
-			 if( 0 == i )
-			 {
-				 fMin = 0.0f;
-				 fMax = a[i];
-			 }
+			 int i ;
+			 for(i = 0; i < num; i++)
+				 if( u < a[i] )
+				 {
+					 break;
+				 }
+
+			 if( num == i )
+				 fI = float(num);
 			 else
 			 {
-				 fMin = a[i - 1];
-				 fMax = a[i];
+				 float fMin, fMax;
+				 if( 0 == i )
+				 {
+					 fMin = 0.0f;
+					 fMax = a[i];
+				 }
+				 else
+				 {
+					 fMin = a[i - 1];
+					 fMax = a[i];
+				 }
+
+				 fI = float(i) + (u - fMin)/(fMax - fMin);
+
+				 // TEST-DEBUG	LOG(printf("%f in (%f, %f)", u, fMin, fMax));
 			 }
+		}
+		delete [] a;
+	#else	// MOD-BY-LEETEN 03/25/2010-TO:
 
-			 fI = float(i) + (u - fMin)/(fMax - fMin);
-
-			 // TEST-DEBUG	LOG(printf("%f in (%f, %f)", u, fMin, fMax));
-		 }
+	float u = float(rand())/ float(RAND_MAX - 1);
+	float fI = float(num - 1);
+	float fMin = 0.0f;
+	float fMax = 0.0f;
+	for(int i = 0; i < num; i++)
+	{
+		fMax += p[i];
+		if( fMin <= u && u < fMax )
+		{
+			fI = float(i) + (u - fMin)/(fMax - fMin);
+			break;
+		}
+		fMin = fMax;
 	}
-	delete [] a;
+	fI = min(max(fI, 0.0f), float(num - 1));
+	#endif	// MOD-BY-LEETEN 03/25/2010-END
 	return fI;
 }
 // ADD-BY-LEETEN 03/23/2010-END
@@ -2606,8 +2624,15 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 
 		double dI = cos(dAngle);
 		double dJ = sin(dAngle);
-		ppdCircularMask[b][0] = dI * dRadius;
-		ppdCircularMask[b][1] = dJ * dRadius;
+
+		#if	0	// MOD-BY-LEETEN 03/25/2010-FROM:
+			ppdCircularMask[b][0] = dI * dRadius;
+			ppdCircularMask[b][1] = dJ * dRadius;
+		#else	// MOD-BY-LEETEN 03/25/2010-TO:
+		double dR = ( 0 == b % 2 )?dRadius:dRadius*2.0;
+		ppdCircularMask[b][0] = dI * dR;
+		ppdCircularMask[b][1] = dJ * dR;
+		#endif	// MOD-BY-LEETEN 03/25/2010-END
 	
 		// ADD-BY-LEETEN 03/24/2010-BEGIN
 		if( 0 == b )
@@ -2637,25 +2662,38 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 				continue;
 			// ADD-BY-LEETEN 03/22/2010-END
 
-			bool bLocalMax = true;
+			#if	0	// MOD-BY-LEETEN 03/25/2010-FROM:
+				bool bLocalMax = true;
+				for(int j = -1; j <= 1; j++)
+				{
+					for(int i = -1; i <= 1; i++)
+					{
+						if( 0 == i && 0 == j )
+							continue;
+
+						if( img_entropies[p] <= img_entropies[(x+i) + (y+j) * grid_res[0]])
+						{
+							bLocalMax = false;
+							break;
+						}
+					}
+					if( false == bLocalMax )
+						break;
+				}
+				if( true == bLocalMax )
+			#else	// MOD-BY-LEETEN 03/25/2010-TO:
+			bool bIsLocalMax = true;
 			for(int j = -1; j <= 1; j++)
-			{
 				for(int i = -1; i <= 1; i++)
 				{
 					if( 0 == i && 0 == j )
 						continue;
 
 					if( img_entropies[p] <= img_entropies[(x+i) + (y+j) * grid_res[0]])
-					{
-						bLocalMax = false;
-						break;
-					}
+						bIsLocalMax = false;
 				}
-				if( false == bLocalMax )
-					break;
-			}
-
-			if( true == bLocalMax )
+			if( true == bIsLocalMax )
+			#endif	// MOD-BY-LEETEN 03/25/2010-END
 			{
 				#if	0	// DEL-BY-LEETEN 03/22/2010-BEGIN
 					float fP = img_entropies[p];
@@ -2723,6 +2761,26 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 								iNrOfSampledPoints++;
 							}
 
+				// ADD-BY-LEETEN 03/25/2010-BEGIN
+				#elif	KERNEL_SHAPE	== KERNEL_SHAPE_DIAMOND
+				for(int r = 0; r <= KERNEL_RADIUS_AROUND_CRITICAL_POINT; r++) 
+					for(int		j = -1; j <= 1; j++)
+						for(int i = -1; i <= 1; i++)
+						{
+							int iManhattanDist = abs(i) + abs(j);
+							int iWeight = (2 + 1 - iManhattanDist) * r;
+							/*
+							if( iWeight > 2 * KERNEL_RADIUS_AROUND_CRITICAL_POINT )
+								continue;
+							*/
+
+							double dWeight = double(iWeight) * M_SQRT2 * SEPARATION_DISTANCE;
+
+							sx[iNrOfSampledPoints] = min(max(double(x) + dWeight * double(i), 0.0), double(grid_res[0]-1));
+							sy[iNrOfSampledPoints] = min(max(double(y) + dWeight * double(j), 0.0), double(grid_res[1]-1));
+							iNrOfSampledPoints++;
+						}
+				// ADD-BY-LEETEN 03/25/2010-END
 				#elif	KERNEL_SHAPE	== KERNEL_SHAPE_CIRCLE
 
 				for(int b = 0; b < KERNEL_SIZE_AROUND_CRITICAL_POINT; b++)
@@ -2838,8 +2896,12 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 		float fM = fMaxProb;
 	#endif	// DEL-BY-LEETEN 03/23/2010-END
 
-	int i;
-	for(i = 0; i < sample_number_allowed; )
+	#if	0	// MOD-BY-LEETEN 03/25/2010-FROM:
+		int i;
+		for(i = 0; i < sample_number_allowed; )
+	#else	// MOD-BY-LEETEN 03/25/2010-TO:
+	for(int i = iNrOfSampledPoints; i<sample_number_allowed; )
+	#endif	// MOD-BY-LEETEN 03/25/2010-END
 	{
 		float fU = float(rand()) / float(RAND_MAX);
 		#if	0	// MOD-BY-LEETEN 03/23/2010-FROM:
@@ -2989,6 +3051,9 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 			grid_res,
 			m_grid,
 			streamlineId,
+			// ADD-BY-LEETEN 03/26/2010-BEGIN
+			fMaxProb,
+			// ADD-BY-LEETEN 03/26/2010-END
 			img_entropies);
 		// MOD-BY-LEETEN 03/19/2010-END
 
@@ -5312,6 +5377,13 @@ fclose(my);
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.10  2010/03/24 16:16:14  leeten
+
+[03/23/2010]
+1. [ADD] Add a center in the circular kernel for local max.
+2. [ADD] Sort the seeds by their importances.
+3. [MOD] Specify the line integral step size by two preprocessors STREAMLINE_INIT_STEP_SIZE and STREAMLINE_MAX_STEP_SIZE.
+
 Revision 1.9  2010/03/23 19:39:21  leeten
 
 [03/23/2010]
