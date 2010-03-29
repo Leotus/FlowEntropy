@@ -356,7 +356,11 @@ void calc_entropy( int* bins,int* grid_res, int binnum,float* entropies)
 				entropies[x+y*grid_res[0]+z*grid_res[0]*grid_res[1]]=tmp;
 			}
 		}
-		printf("z=%d/%d\r",z,grid_res[2]);
+		// MOD-BY-LEETEN 03/28/2010-FROM:
+			// printf("z=%d/%d\r",z,grid_res[2]);
+		// TO:
+		fprintf(stderr, "z=%d/%d\r",z,grid_res[2]);
+		// MOD-BY-LEETEN 03/28/2010-END
 	}
 	dumpImportanceField("importance.bin",entropies, grid_res);
 
@@ -2820,6 +2824,11 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.9  2010/03/26 15:01:48  leeten
+
+[03/26/2010]
+1. [MOD] Change the wraping of boundary in the functions calc_entropy() and calcEntropy_known_bins().
+
 Revision 1.8  2010/03/19 19:49:59  leeten
 
 [03/19/2010]
