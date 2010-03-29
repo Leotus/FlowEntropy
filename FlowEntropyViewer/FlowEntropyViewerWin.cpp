@@ -214,9 +214,15 @@ CFlowEntropyViewerWin::_SetEntropyField(int iXDim, int iYDim, int iZDim, float *
 }
 
 void
-CFlowEntropyViewerWin::_ReadStreamlines(char *szStreamlineFilename)
+#if	0	// MOD-BY-LEETEN 03/28/2010-FROM:
+	CFlowEntropyViewerWin::_ReadStreamlines(char *szStreamlineFilename)
 {
 	cStreamline._Read(float(pf3DEntropyField.iWidth), float(pf3DEntropyField.iHeight), float(pf3DEntropyField.iDepth), szStreamlineFilename);
+#else	// MOD-BY-LEETEN 03/28/2010-TO:
+CFlowEntropyViewerWin::_ReadStreamlines(char *szStreamlineFilename, int iMaxNrOfLoadedStreamlines)
+{
+	cStreamline._Read(float(pf3DEntropyField.iWidth), float(pf3DEntropyField.iHeight), float(pf3DEntropyField.iDepth), szStreamlineFilename, iMaxNrOfLoadedStreamlines);
+#endif	// MOD-BY-LEETEN 03/28/2010-END
 
 	// ADD-BY-LEETEN 01/08/2010-BEGIN
 				// create the user control after the streamlines have been read so #streamlines can be knewn
@@ -765,8 +771,6 @@ CFlowEntropyViewerWin::_InitFunc()
 	_KeepUpdateOn();
 	// ADD-BY-LEETEN 01/10/2010-END
 
-	_DisplayFpsOn();	// TEST-ADD
-
 	// ADD-BY-LEETEN 01/05/2010-BEGIN
 	CClipVolume::_InitFunc();
 	// ADD-BY-LEETEN 01/05/2010-END
@@ -1023,6 +1027,11 @@ CFlowEntropyViewerWin::~CFlowEntropyViewerWin(void)
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.11  2010/02/02 03:35:04  leeten
+
+[02/01/2010]
+1. [MOD] Plot the spherical histogram before the scaling.
+
 Revision 1.10  2010/02/01 06:16:16  leeten
 
 [01/31/2010]
