@@ -94,21 +94,23 @@ _ReadEntropyField(char *szEntropyFieldFilename)
 		pfHist[b] /= fMaxCount;
 }
 
-void
-_ReadStreamlines(char *szEntropyFieldFilename)
-{
-	FILE *fpFile;
-	fpFile = fopen(szEntropyFieldFilename, "rb");
-	assert(fpFile);
+#if	0	// TEST-DEL
+	void
+	_ReadStreamlines(char *szEntropyFieldFilename)
+	{
+		FILE *fpFile;
+		fpFile = fopen(szEntropyFieldFilename, "rb");
+		assert(fpFile);
 
-	fread(&pf3DEntropyField.iWidth,		sizeof(pf3DEntropyField.iWidth),	1, fpFile);
-	fread(&pf3DEntropyField.iHeight,	sizeof(pf3DEntropyField.iHeight),	1, fpFile);
-	fread(&pf3DEntropyField.iDepth,		sizeof(pf3DEntropyField.iDepth),	1, fpFile);
-	pf3DEntropyField.alloc(pf3DEntropyField.iWidth, pf3DEntropyField.iHeight, pf3DEntropyField.iDepth);
-	assert( pf3DEntropyField.BIsAllocated() );
-	fread(&pf3DEntropyField[0],			sizeof(pf3DEntropyField[0]),	pf3DEntropyField.iWidth * pf3DEntropyField.iHeight * pf3DEntropyField.iDepth, fpFile);
-	fclose(fpFile);
-}
+		fread(&pf3DEntropyField.iWidth,		sizeof(pf3DEntropyField.iWidth),	1, fpFile);
+		fread(&pf3DEntropyField.iHeight,	sizeof(pf3DEntropyField.iHeight),	1, fpFile);
+		fread(&pf3DEntropyField.iDepth,		sizeof(pf3DEntropyField.iDepth),	1, fpFile);
+		pf3DEntropyField.alloc(pf3DEntropyField.iWidth, pf3DEntropyField.iHeight, pf3DEntropyField.iDepth);
+		assert( pf3DEntropyField.BIsAllocated() );
+		fread(&pf3DEntropyField[0],			sizeof(pf3DEntropyField[0]),	pf3DEntropyField.iWidth * pf3DEntropyField.iHeight * pf3DEntropyField.iDepth, fpFile);
+		fclose(fpFile);
+	}
+#endif
 
 // ADD-BY-LEETEN 01/30/2010-BEGIN
 void
@@ -200,6 +202,13 @@ main(int argn, char* argv[])
 		&szVectorFieldFilename, NULL);
 	// ADD-BY-LEETEN 01/30/2010-END
 
+	// ADD-BY-LEETEN 01/30/2010-BEGIN
+	int iMaxNrOfLoadedStreamlines = -1;
+	_OPTAddIntegerVector(
+		"--max-nr-of-loaded-streamlines", 1,
+		&iMaxNrOfLoadedStreamlines, iMaxNrOfLoadedStreamlines);
+	// ADD-BY-LEETEN 01/30/2010-END
+
 						// specify the .gtc file
 	char *szEntropyFieldFilename;
 	_OPTAddStringVector(
@@ -223,7 +232,11 @@ main(int argn, char* argv[])
 	////////////////////////////////////////////////////////
 	cFlowEntropyViewerWin.ICreate("Flow Entropy Viewer");
 		cFlowEntropyViewerWin._SetEntropyField(pf3DEntropyField.iWidth, pf3DEntropyField.iHeight, pf3DEntropyField.iDepth, &pf3DEntropyField[0]);
-		cFlowEntropyViewerWin._ReadStreamlines(szStreamlineFilename);
+		// MOD-BY-LEETEN 03/28/2010-FROM:
+			// cFlowEntropyViewerWin._ReadStreamlines(szStreamlineFilename);
+		// TO:
+		cFlowEntropyViewerWin._ReadStreamlines(szStreamlineFilename, iMaxNrOfLoadedStreamlines);
+		// MOD-BY-LEETEN 03/28/2010-END
 		// ADD-BY-LEETEN 01/12/2010-BEGIN
 		cFlowEntropyViewerWin._LoadData(iDataName);
 		// ADD-BY-LEETEN 01/12/2010-END
@@ -328,6 +341,12 @@ main(int argn, char* argv[])
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.8  2010/02/02 03:32:50  leeten
+
+[02/01/2010]
+1. [MOD] If the switch --vector-field-filename is absent, the tangents of the streamlines are used to construct the polar histogram.
+2. [ADD] Call the function cFlowEntropyViewerWin.cSphericalHistogram._Init() to initialize the OpenGL context.
+
 Revision 1.7  2010/02/01 06:18:59  leeten
 
 [01/31/2010]
