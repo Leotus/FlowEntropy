@@ -231,7 +231,11 @@ public:
 	// ADD-BY-LEETEN 01/12/2010-END
 
 	// methods to read the input
-	void _ReadStreamlines(char *szStreamlineFilename);
+	// MOD-BY-LEETEN 03/28/2010-FROM:
+		// void _ReadStreamlines(char *szStreamlineFilename);
+	// TO:
+	void _ReadStreamlines(char *szStreamlineFilename, int iMaxNrOfStreamlines);
+	// MOD-BY-LEETEN 03/28/2010-END
 	void _SetEntropyField(int iXDim, int iYDim, int iZDim, float *pfEntropyField);
 
 	// methods to control the transfer functions
@@ -263,6 +267,12 @@ public:
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.10  2010/02/02 03:43:01  leeten
+
+[02/01/2010]
+1. [ADD] declare a new method _Init().
+2. [ADD] declare a new method _ComputeHistogramFromStreamlineTangents().
+
 Revision 1.9  2010/02/01 06:17:26  leeten
 
 [01/31/2010]
