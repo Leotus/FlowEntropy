@@ -94,7 +94,7 @@ _ReadEntropyField(char *szEntropyFieldFilename)
 		pfHist[b] /= fMaxCount;
 }
 
-#if	0	// TEST-DEL
+#if	0	// DEL-BY-LEETEN 03/28/2010-BEGIN
 	void
 	_ReadStreamlines(char *szEntropyFieldFilename)
 	{
@@ -110,7 +110,7 @@ _ReadEntropyField(char *szEntropyFieldFilename)
 		fread(&pf3DEntropyField[0],			sizeof(pf3DEntropyField[0]),	pf3DEntropyField.iWidth * pf3DEntropyField.iHeight * pf3DEntropyField.iDepth, fpFile);
 		fclose(fpFile);
 	}
-#endif
+#endif	// DEL-BY-LEETEN 03/28/2010-END
 
 // ADD-BY-LEETEN 01/30/2010-BEGIN
 void
@@ -341,6 +341,11 @@ main(int argn, char* argv[])
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.9  2010/03/29 04:04:25  leeten
+
+[03/28/2010]
+1. [ADD] Add one new switches '--max-nr-of-loaded-streamlines <int>' sepcify the max. #streamlines to be loaded. The parameter is then passed to the method CFlowEntropyViewerWin::_ReadStreamlines().
+
 Revision 1.8  2010/02/02 03:32:50  leeten
 
 [02/01/2010]
