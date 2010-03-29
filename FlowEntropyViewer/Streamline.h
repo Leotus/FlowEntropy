@@ -159,7 +159,11 @@ public:
 	void _CreateTubes(float fTubeWidth);
 	// ADD-BY-LEETEN 2009/05/15-END
 
-	void _Read(float fScaleX, float fScalyY, float fScaleZ, char *szStreamlineFilename);
+	// MOD-BY-LEETEN 03/28/2010-FROM:
+		// void _Read(float fScaleX, float fScalyY, float fScaleZ, char *szStreamlineFilename);
+	// TO:
+	void _Read(float fScaleX, float fScalyY, float fScaleZ, char *szStreamlineFilename, int iMaxNrOfLoadedStreamlines);
+	// MOD-BY-LEETEN 03/28/2010-END
 	void _Render();
 
 	void _AddGlui(GLUI* pcGlui);
@@ -171,6 +175,11 @@ public:
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.10  2010/03/10 20:21:59  leeten
+
+[03/10/2010]
+1. [ADD] Add a new variable uMinNrOfStreamlines. Only the streamlines whose ids are larger than uMinNrOfStreamlines will be rendered. A new spinner is added to control it.
+
 Revision 1.9  2010/02/05 01:46:30  leeten
 
 [02/04/2010]

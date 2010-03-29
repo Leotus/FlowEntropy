@@ -249,7 +249,11 @@ CStreamline::_SortSlab(
 
 
 void 
-CStreamline::_Read(float fScaleX, float fScaleY, float fScaleZ, char *szStreamlineFilename)
+// MOD-BY-LEETEN 03/28/2010-FROM:
+	// CStreamline::_Read(float fScaleX, float fScaleY, float fScaleZ, char *szStreamlineFilename)
+// TO:
+CStreamline::_Read(float fScaleX, float fScaleY, float fScaleZ, char *szStreamlineFilename, int iMaxNrOfLoadedStreamlines)
+// MOD-BY-LEETEN 03/28/2010-END
 {
 	FILE *fpStreamline;
 	fpStreamline = fopen(szStreamlineFilename, "rb");
@@ -257,6 +261,12 @@ CStreamline::_Read(float fScaleX, float fScaleY, float fScaleZ, char *szStreamli
 
 	unsigned int uNrOfStreamlines;
 	fread(&uNrOfStreamlines, sizeof(uNrOfStreamlines), 1, fpStreamline);
+
+	// ADD-BY-LEETEN 03/28/2010-BEGIN
+	int iActualNrOfStreamlines = uNrOfStreamlines;
+	if( iMaxNrOfLoadedStreamlines >= 0 )
+		uNrOfStreamlines = min(int(uNrOfStreamlines), iMaxNrOfLoadedStreamlines);
+	// ADD-BY-LEETEN 03/28/2010-END
 
 	uNrOfLines = 0;
 
@@ -272,6 +282,10 @@ CStreamline::_Read(float fScaleX, float fScaleY, float fScaleZ, char *szStreamli
 		uNrOfLines += uV - 1;
 		vuNrOfVertices.push_back(uV);
 	}
+
+	// ADD-BY-LEETEN 03/28/2010-BEGIN
+	fseek(fpStreamline, sizeof(unsigned int) * (iActualNrOfStreamlines - uNrOfStreamlines), SEEK_CUR);
+	// ADD-BY-LEETEN 03/28/2010-END
 
 	// ADD-BY-LEETEN 02/03/2010-BEGIN
 	LOG_VAR(uNrOfLines);
@@ -1057,6 +1071,11 @@ CStreamline::_RenderTubes()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.11  2010/03/10 20:21:59  leeten
+
+[03/10/2010]
+1. [ADD] Add a new variable uMinNrOfStreamlines. Only the streamlines whose ids are larger than uMinNrOfStreamlines will be rendered. A new spinner is added to control it.
+
 Revision 1.10  2010/02/05 01:44:56  leeten
 
 [02/04/2010]
