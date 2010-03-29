@@ -495,7 +495,11 @@ void compute_entropy_point_by_point_load_file()
 		// MOD-BY-LEETEN 01/22/2010-FROM:
 			// printf("y=%d/%d\n",y,grid_res[1]-1);
 		// TO:
-		printf("y=%d/%d\r",y,grid_res[1]-1);
+		// MOD-BY-LEETEN 03/28/2010-FROM:
+			// printf("y=%d/%d\r",y,grid_res[1]-1);
+		// TO:
+		fprintf(stderr, "y=%d/%d\r",y,grid_res[1]-1);
+		// MOD-BY-LEETEN 03/28/2010-END
 		// MOD-BY-LEETEN 01/22/2010-END
 	}
 	// ADD-BY-LEETEN 01/22/2010-BEGIN
@@ -2495,7 +2499,12 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 		// MOD-BY-LEETEN 01/22/2010-FROM:
 			// printf("y=%d/%d\n",y,grid_res[1]-1);
 		// TO:
-		printf("y=%d/%d\r",y,grid_res[1]-1);
+		// MOD-BY-LEETEN 03/28/2010-FROM:
+			// printf("y=%d/%d\r",y,grid_res[1]-1);
+		// TO:
+		fprintf(stderr, "y=%d/%d\r",y,grid_res[1]-1);
+		// MOD-BY-LEETEN 03/28/2010-END
+
 		// MOD-BY-LEETEN 01/22/2010-END
 	}
 	// ADD-BY-LEETEN 01/22/2010-BEGIN
@@ -2549,6 +2558,10 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 	// ADD-BY-LEETEN 03/16/2010-BEGIN
 	static int iRound = 0;
 	iRound++;
+
+	// ADD-BY-LEETEN 03/28/2010-BEGIN
+	LOG_VAR(iRound);
+	// ADD-BY-LEETEN 03/28/2010-END
 
 	char szFilename[1024];
 	// ADD-BY-LEETEN 03/16/2010-END
@@ -3841,6 +3854,12 @@ printf("p(e)=%f target entorpy=%f\n",error,target);
 	//	getchar();
 //	printf("posed\n");
 //	getchar();
+
+		// ADD-BY-LEETEN 03/28/2010-BEGIN
+		double dwIterationEnd = GetTickCount();
+		double dwAccumulatedTime = dwIterationEnd - dwComputeStreamlineBegin;
+		LOG(printf("Time up to Round %d: %.3f milli-seconds.", round, dwAccumulatedTime)); 	
+		// ADD-BY-LEETEN 03/28/2010-END
 	}
 	
 	// MOD-BY-LEETEN 02/05/2010-FROM:
@@ -5377,6 +5396,16 @@ fclose(my);
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.11  2010/03/26 14:55:32  leeten
+
+[03/26/2010]
+1. [MOD] Change the implementation of the function FSampleFrom() to clamp the range of the sampled coordinate.
+2. [MOD] Alter the radius of the samples in the circular kernel.
+3. [MOD] Change the name of the variable bLocalMax to bIsLocalMax.
+4. [ADD] Add the implemetnation of a new kernel shape KERNEL_SHAPE_DIAMOND.
+5. [MOD] When using rejection-based importance sample, begin the sample from the index iNrOfSampledPoints.
+6. [ADD] Pass fMAxProb to the function combinehalflines_check_stop().
+
 Revision 1.10  2010/03/24 16:16:14  leeten
 
 [03/23/2010]

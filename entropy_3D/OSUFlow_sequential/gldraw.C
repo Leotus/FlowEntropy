@@ -3295,6 +3295,10 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 	static int iRound = 0;
 	iRound++;
 
+	// ADD-BY-LEETEN 03/28/2010-BEGIN
+	LOG_VAR(iRound);
+	// ADD-BY-LEETEN 03/28/2010-END
+
 	float fMaxProb = 0.0f;	// the max. prob.
 	// ADD-BY-LEETEN 03/25/2010-END
 
@@ -3509,7 +3513,11 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 		}
 //		double elapsedTime= GetTickCount() - dwStart;
 //		printf("\n\n entorpy for each point time is %.3f milli-seconds.\n",elapsedTime); 	
-		printf("y=%d/%d\r",y,grid_res[1]);
+		// MOD-BY-LEETEN 03/28/2010-FROM:
+			// printf("y=%d/%d\r",y,grid_res[1]);
+		// TO:
+		fprintf(stderr, "y=%d/%d\r",y,grid_res[1]);
+		// MOD-BY-LEETEN 03/28/2010-END
 	}
 	// ADD-BY-LEETEN 02/02/2010-BEGIN
 	#else	// #if	!ENTROPY_ON_CUDA	
@@ -3727,7 +3735,11 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 		sample_number_allowed = sample_number_allowed / KERNEL_SIZE_AROUND_CRITICAL_POINT;
 	#endif	// #if	SAMPLE_LOCAL_MAX_FIRST
 
-	LOG_VAR_TO_ERROR(iNrOfSampledPoints);
+	// MOD-BY-LEETEN 03/28/2010-FROM:
+		// LOG_VAR_TO_ERROR(iNrOfSampledPoints);
+	// TO:
+	LOG_VAR(iNrOfSampledPoints);
+	// MOD-BY-LEETEN 03/28/2010-END
 	// ADD-BY-LEETEN 03/25/2010-END
 
 	//get z marginal
@@ -4500,6 +4512,12 @@ void compute_streamlines()
 		// ADD-BY-LEETEN 02/06/2010-BEGIN
 		printf("seed %d selected, entropy=%f/%f \n",selected_line_num, entropy,target_entropy);
 		// ADD-BY-LEETEN 02/06/2010-END
+
+		// ADD-BY-LEETEN 03/28/2010-BEGIN
+		double dwIterationEnd = GetTickCount();
+		double dwAccumulatedTime = dwIterationEnd - dwComputeStreamlinesBegin;
+		LOG(printf("Time up to Round %d: %.3f milli-seconds.", round, dwAccumulatedTime)); 	
+		// ADD-BY-LEETEN 03/28/2010-END
 	}
 	
 
@@ -6828,6 +6846,15 @@ void Streamline_entorpy_calculation_loadfile()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.8  2010/03/26 15:05:01  leeten
+
+[03/26/2010]
+1. [ADD] Define a new function FSampleFrom() to do importance sampling.
+2. [ADD] Define a new function _DumpField3D() to dump a field to a file.
+3. [MOD] Change the type of the seed coordinates from integer to floating point.
+4. [ADD] Sample the local max in the first round when the preprocessor SAMPLE_LOCAL_MAX_FIRST is not zero.
+5. [ADD] Sort the order of seeds by their local importance.
+
 Revision 1.7  2010/03/18 16:23:54  leeten
 
 [03/18/2010]
