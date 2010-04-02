@@ -3700,6 +3700,11 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 								for(int		j = -1; j <= 1; j++)
 									for(int i = -1; i <= 1; i++)
 								{
+									// ADD-BY-LEETEN 04/01/2010-BEGIN
+									if( 0 == r )
+										if( 0 != i || 0 != j || 0 != k )
+											continue;
+									// ADD-BY-LEETEN 04/01/2010-END
 									int iManhattanDist = abs(i) + abs(j) + abs(k);
 									int iWeight = (3 + 1 - iManhattanDist) * r;
 
@@ -3860,7 +3865,29 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 		pf4SeedImportances[s].x = selX[s];
 		pf4SeedImportances[s].y = selY[s];
 		pf4SeedImportances[s].z = selZ[s];
-		pf4SeedImportances[s].w = img_entropies[i];
+		// MOD-BY-LEETEN 04/01/2010-FROM:
+			// pf4SeedImportances[s].w = img_entropies[i];
+		// TO:
+		if( 1 < iRound )
+		{
+			pf4SeedImportances[s].w = img_entropies[i];
+		}
+		else
+		{
+			static float fLocalMax;
+			if( 0 == s % KERNEL_SIZE_AROUND_CRITICAL_POINT )
+			{
+				fLocalMax = -(float)HUGE_VAL;
+				for(int sj = 0; sj < KERNEL_SIZE_AROUND_CRITICAL_POINT ; sj++)
+				{
+					int j = int(selX[s+sj]) + int(selY[s+sj]) * grid_res[0] + int(selZ[s+sj]) * grid_res[0] * grid_res[1];
+					fLocalMax = max(fLocalMax, img_entropies[j]);
+				}
+			}
+
+			pf4SeedImportances[s].w = fLocalMax * fMaxProb + img_entropies[i];
+		}
+		#endif	// MOD-BY-LEETEN 04/01/2010-END
 	}
 	// sort the seeds in descent order of importances
 	qsort(pf4SeedImportances, sample_number_allowed, sizeof(pf4SeedImportances[0]), IQSortImportances);
@@ -3938,8 +3965,25 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 #if PRUNING_MODE==PRUNING_MODE_COND_ENTROPY
 		combinehalflines(lines, new_lines);	//for display only, the streamline stops when gets too near to an existing
 #else
-		void _CombineHalfLinesNotOccupied(list<vtListSeedTrace*> lines, list<vtListSeedTrace*>& long_lines, int *occupied, int grid_res[3]);
-		_CombineHalfLinesNotOccupied(lines, new_lines, occupied, grid_res);	//for display only, the streamline stops when gets too near to an existing
+		#if	0	// MOD-BY-LEETEN 04/01/2010-FROM:
+			void _CombineHalfLinesNotOccupied(list<vtListSeedTrace*> lines, list<vtListSeedTrace*>& long_lines, int *occupied, int grid_res[3]);
+			_CombineHalfLinesNotOccupied(lines, new_lines, occupied, grid_res);	//for display only, the streamline stops when gets too near to an existing
+		#else	// MOD-BY-LEETEN 04/01/2010-TO:
+		void _CombineHalfLinesNotOccupied(
+			float fMaxEntropy,
+			float img_entropies[],
+			list<vtListSeedTrace*> lines, 
+			list<vtListSeedTrace*>& long_lines,
+			int *occupied,
+			int grid_res[3]);
+		_CombineHalfLinesNotOccupied(
+			fMaxProb,
+			img_entropies,
+			lines, 
+			new_lines, 
+			occupied, 
+			grid_res);	//for display only, the streamline stops when gets too near to an existing
+		#endif	// MOD-BY-LEETEN 04/01/2010-END
 #endif
 		// MOD-BY-LEETEN 02/06/2010-END
 		/*
@@ -4364,7 +4408,11 @@ void compute_streamlines()
 	// MOD-BY-LEETEN 03/18/2010-FROM:
 		// for(int iIter = 0; false == bIsConverged && entropy>target_entropy; iIter++)
 	// TO:
-	for(int iIter = 0; false == bIsConverged; iIter++)
+	// MOD-BY-LEETEN 04/01/2010-FROM:
+		// for(int iIter = 0; false == bIsConverged; iIter++)
+	// TO:
+	for(int iIter = 0; iIter < MAX_NR_OF_ITERATIONS && false == bIsConverged; iIter++)
+	// MOD-BY-LEETEN 04/01/2010-END
 	// MOD-BY-LEETEN 03/18/2010-END
 	// MOD-BY-LEETEN 02/04/2010-END
 	// MOD-BY-LEETEN 02/02/2010-END
@@ -6846,6 +6894,12 @@ void Streamline_entorpy_calculation_loadfile()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.9  2010/03/29 04:24:19  leeten
+
+[03/28/2010]
+1. [MOD] Redirect the output of y indices to stderr.
+2. [ADD] Dump the current round and the accumulated execution time.
+
 Revision 1.8  2010/03/26 15:05:01  leeten
 
 [03/26/2010]
