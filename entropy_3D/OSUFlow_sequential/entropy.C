@@ -1097,6 +1097,10 @@ BIsDistantFromExistingStreamlines(
 
 void 
 _CombineHalfLinesNotOccupied(
+	// ADD-BY-LEETEN 04/01/2010-BEGIN
+	float fMaxEntropy,
+	float img_entropies[],
+	// ADD-BY-LEETEN 04/01/2010-END
 	list<vtListSeedTrace*> lines, 
 	list<vtListSeedTrace*>& long_lines,
 	int *occupied,
@@ -1121,7 +1125,26 @@ _CombineHalfLinesNotOccupied(
 			// MOD-BY-LEETEN 03/19/2010-FROM:
 				// bool bIsDistant = BIsDistantFromExistingStreamlines(p, p, occupied, 2.0f, grid_res);
 			// TO:
+			// ADD-BY-LEETEN 04/01/2010-BEGIN
+			#if	!ENTROPY_DEPENDENT_SEPARATION_DISTANCE	
+			// ADD-BY-LEETEN 04/01/2010-END
 			bool bIsDistant = BIsDistantFromExistingStreamlines(p, p, occupied, SEPARATION_DISTANCE, grid_res);
+
+			// ADD-BY-LEETEN 04/01/2010-BEGIN
+			#else	// #if	!ENTROPY_DEPENDENT_SEPARATION_DISTANCE	
+			bool bIsDistant = false;
+			int idx=(int)(p.x()) + (int)(p.y())*grid_res[0] + (int)(p.z())*grid_res[0]*grid_res[1];
+			float fEntropyThreshold = fMaxEntropy;
+			float fEntropy = img_entropies[idx];
+			float fMaxSeparateDistance = SEPARATION_DISTANCE;
+			float fMinSeparateDistance = SEPARATION_DISTANCE * 0.5f;	// * (1.0f - LOCAL_MAX_THRESHOLD));	// 1.0;
+
+			float fSeparateDistance = (fEntropy / fMaxEntropy) * (fMinSeparateDistance - fMaxSeparateDistance) + fMaxSeparateDistance;
+			// LOG_VAR_TO_ERROR(fSeparateDistance);
+			bIsDistant = BIsDistantFromExistingStreamlines(p, p, occupied, fSeparateDistance, grid_res);
+			#endif	// #if	!ENTROPY_DEPENDENT_SEPARATION_DISTANCE	
+			// ADD-BY-LEETEN 04/01/2010-END
+
 			// MOD-BY-LEETEN 03/19/2010-END
 			if(true == bIsDistant)
 				break;
@@ -2824,6 +2847,11 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.10  2010/03/29 04:23:34  leeten
+
+[03/28/2010]
+1. [MOD] Redirect the output of y indices to stderr.
+
 Revision 1.9  2010/03/26 15:01:48  leeten
 
 [03/26/2010]
