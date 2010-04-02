@@ -2949,7 +2949,29 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 		int i = int(sx[s]) + int(sy[s]) * grid_res[0];
 		pf4SeedImportances[s].x = sx[s];
 		pf4SeedImportances[s].y = sy[s];
-		pf4SeedImportances[s].w = img_entropies[i];
+		#if	0	// MOD-BY-LEETEN 04/01/2010-FROM:
+			pf4SeedImportances[s].w = img_entropies[i];
+		#else	// MOD-BY-LEETEN 04/01/2010-TO:
+		if( 1 < iRound )
+		{
+			pf4SeedImportances[s].w = img_entropies[i];
+		}
+		else
+		{
+			static float fLocalMax;
+			if( 0 == s % KERNEL_SIZE_AROUND_CRITICAL_POINT )
+			{
+				fLocalMax = -(float)HUGE_VAL;
+				for(int sj = 0; sj < KERNEL_SIZE_AROUND_CRITICAL_POINT ; sj++)
+				{
+					int j = int(sx[s+sj]) + int(sy[s+sj]) * grid_res[0];
+					fLocalMax = max(fLocalMax, img_entropies[j]);
+				}
+			}
+
+			pf4SeedImportances[s].w = fLocalMax * fMaxProb + img_entropies[i];
+		}
+		#endif	// MOD-BY-LEETEN 04/01/2010-END
 	}
 	// sort the seeds in descent order of importances
 	qsort(pf4SeedImportances, sample_number_allowed, sizeof(pf4SeedImportances[0]), IQSortImportances);
@@ -3751,8 +3773,12 @@ printf("p(e)=%f target entorpy=%f\n",error,target);
 		// MOD-BY-LEETEN 03/15/2010-FROM:
 			// entropy > target && false == bIsConverged;
 		// TO:
-		false == bIsConverged;
-		// MOD-BY-LEETEN 03/15/2010-TO:
+		// MOD-BY-LEETEN 04/01/2010-FROM:
+			// false == bIsConverged;
+		// TO:
+		false == bIsConverged && round < MAX_NR_OF_ITERATIONS;
+		// MOD-BY-LEETEN 04/01/2010-END
+		// MOD-BY-LEETEN 03/15/2010-END
 	)
 	// MOD-BY-LEETEN 02/05/2010-END
 //	while(entropy>target )
@@ -5396,6 +5422,12 @@ fclose(my);
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.12  2010/03/29 04:21:09  leeten
+
+[03/28/2010]
+1. [MOD] Redirect the output of y indices to stderr.
+2. [ADD] Dump the current round and the accumulated execution time.
+
 Revision 1.11  2010/03/26 14:55:32  leeten
 
 [03/26/2010]
