@@ -1249,24 +1249,36 @@ combinehalflines_check_stop(
 			VECTOR3 p = **pnIter; 
 			int idx=(int)(p.x())+((int)(p.y()))*grid_res[0];
 			// ADD-BY-LEETEN 03/26/2010-BEGIN
-			#if	!ENTROPY_SEPARATION_DISTANCE
+			#if	!ENTROPY_DEPENDENT_SEPARATION_DISTANCE
 			// ADD-BY-LEETEN 03/26/2010-END
 				bool bIsDistant = BIsDistantFromExistingStreamlines(p,p, m_grid, m_sepDist,m_sepMinDist, grid_res);
 
 			// ADD-BY-LEETEN 03/26/2010-BEGIN
-			#else	// #if	!ENTROPY_SEPARATION_DISTANCE
+			#else	// #if	!ENTROPY_DEPENDENT_SEPARATION_DISTANCE
 
 			bool bIsDistant = false;
-			float fEntropyThreshold = fMaxEntropy * LOCAL_MAX_THRESHOLD;
+
+			#if	0	// MOD-BY-LEETEN 04/01/2010-FROM:
+				float fEntropyThreshold = fMaxEntropy * LOCAL_MAX_THRESHOLD;
+				if( img_entropies[idx] < fEntropyThreshold )
+				{
+					float fEntropy = img_entropies[idx];
+					float fMinSeparateDistance = m_sepDist * LOCAL_MAX_THRESHOLD;	// * (1.0f - LOCAL_MAX_THRESHOLD));	// 1.0;
+					float fSeparateDistance = (fEntropy / fMaxEntropy) * (fMinSeparateDistance - m_sepDist) + m_sepDist;
+					bIsDistant = BIsDistantFromExistingStreamlines(p,p, m_grid, fSeparateDistance,m_sepMinDist, grid_res);
+				}
+			#else	// MOD-BY-LEETEN 04/01/2010-TO:
+			float fEntropyThreshold = fMaxEntropy;
 			if( img_entropies[idx] < fEntropyThreshold )
 			{
 				float fEntropy = img_entropies[idx];
-				float fMinSeparateDistance = m_sepDist * LOCAL_MAX_THRESHOLD;	// * (1.0f - LOCAL_MAX_THRESHOLD));	// 1.0;
+				float fMinSeparateDistance = m_sepDist * 0.5f;	// * (1.0f - LOCAL_MAX_THRESHOLD));	// 1.0;
 				float fSeparateDistance = (fEntropy / fMaxEntropy) * (fMinSeparateDistance - m_sepDist) + m_sepDist;
 				bIsDistant = BIsDistantFromExistingStreamlines(p,p, m_grid, fSeparateDistance,m_sepMinDist, grid_res);
 			}
+			#endif	// MOD-BY-LEETEN 04/01/2010-END
 
-			#endif	// #if	!ENTROPY_SEPARATION_DISTANCE
+			#endif	// #if	!ENTROPY_DEPENDENT_SEPARATION_DISTANCE
 			// ADD-BY-LEETEN 03/26/2010-END
 
 			if(true == bIsDistant)
@@ -2851,6 +2863,11 @@ void QuadTree::drawSelf()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.9  2010/03/26 14:51:41  leeten
+
+[03/26/2010]
+1. [ADD] If the preprocessor ENTROPY_DEPENDENT_SEPARATION_DISTANCE is not zero, modulate the separation distance by the etnropy.
+
 Revision 1.8  2010/03/23 19:33:50  leeten
 
 [03/23/2010]
