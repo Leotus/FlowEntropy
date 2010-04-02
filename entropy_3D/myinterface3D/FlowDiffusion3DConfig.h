@@ -8,7 +8,7 @@
 
 #define CLOCK_reconstruct_field_GVF_3D	0
 
-#define USE_CUDA			1
+#define USE_CUDA			0
 #define ENTER_GLUT_LOOP		0
 #define BIN_LOOKUP			1
 
@@ -58,7 +58,11 @@
 // MOD-BY-LEETEN 03/25/2010-FROM:
 	// #define	NR_OF_SAMPLES		(max(max(grid_res[0], grid_res[1]), grid_res[2]))
 // TO:
-#define	NR_OF_SAMPLES		(int((pow(double(max(max(grid_res[0], grid_res[1]), grid_res[2])), 1.5))))
+// MOD-BY-LEETEN 04/01/2010-FROM:
+	// #define	NR_OF_SAMPLES		(int((pow(double(max(max(grid_res[0], grid_res[1]), grid_res[2])), 1.5))))
+// TO:
+#define	NR_OF_SAMPLES		(int(double(sqrt(double(grid_res[0] * grid_res[1] * grid_res[2])))))
+// MOD-BY-LEETEN 04/01/2010-END
 // MOD-BY-LEETEN 03/25/2010-END
 // MOD-BY-LEETEN 03/18/2010-END
 // ADD-BY-LEETEN 02/04/2010-END
@@ -90,7 +94,7 @@
 
 // ADD-BY-LEETEN 03/25/2010-BEGIN
 // threshold of ratio to detect the salient local max.
-#define	LOCAL_MAX_THRESHOLD		0.7f		// 0.7f
+#define	LOCAL_MAX_THRESHOLD		0.7f
 
 #define	KERNEL_RADIUS_AROUND_CRITICAL_POINT		1
 #define KERNEL_LENGTH_AROUND_CRITICAL_POINT		(2 * KERNEL_RADIUS_AROUND_CRITICAL_POINT	 + 1)
@@ -104,7 +108,7 @@
 
 #if	KERNEL_SHAPE	== KERNEL_SHAPE_DIAMOND
 
-	#define KERNEL_SIZE_AROUND_CRITICAL_POINT		(KERNEL_RADIUS_AROUND_CRITICAL_POINT * 27)
+	#define KERNEL_SIZE_AROUND_CRITICAL_POINT		(KERNEL_RADIUS_AROUND_CRITICAL_POINT * 27 + 1)
 
 #elif	KERNEL_SHAPE	== KERNEL_SHAPE_CUBE		
 
@@ -116,6 +120,15 @@
 
 #endif	// #if	KERNEL_SHAPE	
 // ADD-BY-LEETEN 03/25/2010-END
+
+// ADD-BY-LEETEN 04/01/2010-BEGIN
+#define ENTROPY_DEPENDENT_SEPARATION_DISTANCE			1	// 1 or 0
+// ADD-BY-LEETEN 04/01/2010-END
+
+// max. #iterations
+#define	MAX_NR_OF_ITERATIONS							1000	// 5
+#endif
+
 
 #define NR_OF_STREAMLINES	1
 
@@ -139,6 +152,14 @@
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.5  2010/03/26 14:59:59  leeten
+
+[03/26/2010]
+1. [MOD] Define a new kernel size from 8 to 6.
+2. [MOD] Change the #samples from min(dim) to min(dim) ^ 1.5.
+3. [ADD] Specify the threshold LOCAL_MAX_THRESHOLD to 0.7.
+4. [ADD] Define kernel shapes KERNEL_SHAPE_DIAMOND and KERNEL_SHAPE_CUBE.
+
 Revision 1.4  2010/03/19 19:53:03  leeten
 
 [03/19/2010]
