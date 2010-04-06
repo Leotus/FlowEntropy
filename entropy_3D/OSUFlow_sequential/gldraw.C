@@ -3887,7 +3887,7 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 
 			pf4SeedImportances[s].w = fLocalMax * fMaxProb + img_entropies[i];
 		}
-		#endif	// MOD-BY-LEETEN 04/01/2010-END
+		// MOD-BY-LEETEN 04/01/2010-END
 	}
 	// sort the seeds in descent order of importances
 	qsort(pf4SeedImportances, sample_number_allowed, sizeof(pf4SeedImportances[0]), IQSortImportances);
@@ -6894,6 +6894,13 @@ void Streamline_entorpy_calculation_loadfile()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.10  2010/04/02 10:31:59  leeten
+
+[04/02/2010]
+1. [MOD] For template-based sampling, the importance of each seeds are sorted as R * log2(bin) + W, where R is the weight of the max in the same kernel and W is the original weight. The purpose is to group all seeds in the same kernel after the sorting.
+2. [MOD] Stop the iteration after MAX_NR_OF_ITERATIONS iteration.
+3. [MOD] Remove duplicate seeds in the template.
+
 Revision 1.9  2010/03/29 04:24:19  leeten
 
 [03/28/2010]

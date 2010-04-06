@@ -127,7 +127,7 @@
 
 // max. #iterations
 #define	MAX_NR_OF_ITERATIONS							1000	// 5
-#endif
+// #endif
 
 
 #define NR_OF_STREAMLINES	1
@@ -152,6 +152,12 @@
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.6  2010/04/02 10:33:15  leeten
+
+[04/02/2010]
+1. [ADD] Add a new preprocessor MAX_NR_OF_ITERATIONS.
+2. [MOD] Change #samples to square root of the #voxels.
+
 Revision 1.5  2010/03/26 14:59:59  leeten
 
 [03/26/2010]
