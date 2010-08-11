@@ -6,8 +6,10 @@ using namespace std;
 #include <GL/glew.h>
 #include <math.h>
 
-#pragma comment (lib, "libfbo.lib")   
-#pragma comment (lib, "libshader.lib")
+#if	0	// DEL-BY-LEETEN 08/09/2010-BEGIN
+	#pragma comment (lib, "libfbo.lib")   
+	#pragma comment (lib, "libshader.lib")
+#endif	// DEL-BY-LEETEN 08/09/2010-END
 
 #include "libopengl.h"
 #include "shader.h"
@@ -230,7 +232,12 @@ _FlowDiffusionGLGL
 					GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT+f,
 					GL_TEXTURE_3D, pt3dVolume[iDst], 0, z+f);
 			}
-			assert( GL_FRAMEBUFFER_COMPLETE_EXT == EGetFboStatus() );
+			// MOD-BY-LEETEN 08/09/2010-FROM:
+				// assert( GL_FRAMEBUFFER_COMPLETE_EXT == EGetFboStatus() );
+			// TO:
+			unsigned int uFboStatus = EGetFboStatus();
+			assert( GL_FRAMEBUFFER_COMPLETE_EXT == uFboStatus );
+			// MOD-BY-LEETEN 08/09/2010-END
 
 			glBegin(GL_QUADS);
 				glVertex2i(-1, -1);
@@ -274,5 +281,10 @@ _FlowDiffusionGLGL
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.1  2010/02/05 01:37:28  leeten
+
+[02/02/2010]
+1. [1ST] First time checkin.
+
 
 */
