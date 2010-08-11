@@ -429,7 +429,11 @@ CFlowEntropyViewerWin::CSphericalHistogram::_ComputeHistogramFromStreamlineTange
 		int iTheta	= int(float(NR_OF_THETAS) * fTheta / (2.0 * M_PI)); 
 		iTheta = min(max(iTheta, 0), NR_OF_THETAS - 1);
 		int iPhi	= int(float(NR_OF_PHIS) * fPhi / (M_PI)); 
-		iPhi =	min(max(iPhi, 0), NR_OF_PHIS);
+		// MOD-BY-LEETEN 08/06/2010-FROM:
+			// iPhi =	min(max(iPhi, 0), NR_OF_PHIS);
+		// TO:
+		iPhi =	min(max(iPhi, int(0)), int(NR_OF_PHIS));
+		// MOD-BY-LEETEN 08/06/2010-END
 
 		pfHistogram[ppiAngleMap[iTheta][iPhi]] += 1.0f;
 	}
@@ -472,6 +476,13 @@ CFlowEntropyViewerWin::CSphericalHistogram::CSphericalHistogram()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.2  2010/02/02 03:48:00  leeten
+
+[02/01/2010]
+1. [ADD] define a new method _Init().
+2. [ADD] define a new method _ComputeHistogramFromStreamlineTangents().
+3. [ADD] add glui control to specify the relative threshold fRelativewThreshold.
+
 Revision 1.1  2010/02/01 06:13:29  leeten
 
 [01/31/2010]
