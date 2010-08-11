@@ -2,6 +2,10 @@
 	#include <stdio.h>
 	#include <stdlib.h>
 
+	// ADD-BY-LEETEN 08/09/2010-BEGIN
+	#include "liblog.h"
+	// ADD-BY-LEETEN 08/09/2010-END
+
 						// incldue the headers of my own libraries
 	#include "libopt.h"
 
@@ -220,7 +224,12 @@ main(int argn, char* argv[])
 		"--streamline-filename", 1,
 		&szStreamlineFilename, NULL);
 
-	assert( BOPTParse(argv, argn, 1) );
+	// MOD-BY-LEETEN 08/09/2010-FROM:
+		// assert( BOPTParse(argv, argn, 1) );
+	// TO:
+	bool bIsOptParsed = BOPTParse(argv, argn, 1);
+	assert( bIsOptParsed );
+	// MOD-BY-LEETEN 08/09/2010-END
 
 	assert(szEntropyFieldFilename);
 	assert(szStreamlineFilename);
@@ -274,7 +283,6 @@ main(int argn, char* argv[])
 		#endif	// MOD-BY-LEETEN 02/01/2010-END
 		// ADD-BY-LEETEN 01/30/2010-END
 
-
 		////////////////////////////////////////////////////////
 		// initialize the transfer func.
 		pfTransFunc.alloc(CTransFunc::NR_OF_COLORS * iNrOfTfEntries);
@@ -289,7 +297,6 @@ main(int argn, char* argv[])
 			cTransFunc._SetTfDomain(fMinEntropy, fMaxEntropy);
 		}
 		cTransFunc._ExportColorMap(&pfTransFunc[0], iNrOfTfEntries);
-
 		float fTfDomainMin, fTfDomainMax;
 		cTransFunc._GetTfDomain(&fTfDomainMin, &fTfDomainMax);
 
@@ -341,6 +348,11 @@ main(int argn, char* argv[])
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.10  2010/03/29 04:13:47  leeten
+
+[03/28/2010]
+1. [DEL] Delete the function _ReadStreamlines().
+
 Revision 1.9  2010/03/29 04:04:25  leeten
 
 [03/28/2010]
