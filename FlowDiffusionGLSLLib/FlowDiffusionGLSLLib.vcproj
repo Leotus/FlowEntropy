@@ -102,7 +102,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PreprocessorDefinitions="WIN32;_DEBUG;_LIB"
+				PreprocessorDefinitions="WIN32;NDEBUG;_LIB"
 				RuntimeLibrary="2"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
@@ -297,7 +297,7 @@
 				>
 				<Tool
 					Name="VCCustomBuildTool"
-					CommandLine="shader2string $(InputFileName) $(InputFileName).h"
+					CommandLine="shader2string $(InputFileName) $(InputFileName).h&#x0D;&#x0A;"
 					Outputs="$(InputFileName).h"
 				/>
 			</FileConfiguration>
@@ -306,7 +306,7 @@
 				>
 				<Tool
 					Name="VCCustomBuildTool"
-					CommandLine="shader2string $(InputFileName) $(InputFileName).h"
+					CommandLine="shader2string $(InputFileName) $(InputFileName).h&#x0D;&#x0A;"
 					Outputs="$(InputFileName).h"
 				/>
 			</FileConfiguration>
@@ -315,7 +315,7 @@
 				>
 				<Tool
 					Name="VCCustomBuildTool"
-					CommandLine="shader2string $(InputFileName) $(InputFileName).h"
+					CommandLine="shader2string $(InputFileName) $(InputFileName).h&#x0D;&#x0A;"
 					Outputs="$(InputFileName).h"
 				/>
 			</FileConfiguration>
@@ -324,7 +324,7 @@
 				>
 				<Tool
 					Name="VCCustomBuildTool"
-					CommandLine="shader2string $(InputFileName) $(InputFileName).h"
+					CommandLine="shader2string $(InputFileName) $(InputFileName).h&#x0D;&#x0A;"
 					Outputs="$(InputFileName).h"
 				/>
 			</FileConfiguration>
