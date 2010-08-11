@@ -2178,6 +2178,32 @@ int sample_from( float* p,int num)
          return i+1;
 }
 
+// ADD-BY-LEETEN 08/09/2010-BEGIN
+void 
+_DumpVectorField2D(int grid_res[3], float *pfVectorField2D, char *szFilename)
+{
+	// open the file
+	FILE *fpFile;
+	fpFile = fopen(szFilename, "wb");
+	assert(fpFile);
+
+	// write the res.
+	fwrite(grid_res, sizeof(grid_res[0]), 2, fpFile);
+
+	// make the third res. as 1
+	int iTwo = 2;
+	fwrite(&iTwo, sizeof(iTwo), 1, fpFile);
+
+	// write the data
+	fwrite(pfVectorField2D, sizeof(pfVectorField2D[0]), 3 * grid_res[0] * grid_res[1], fpFile);
+	fwrite(pfVectorField2D, sizeof(pfVectorField2D[0]), 3 * grid_res[0] * grid_res[1], fpFile);
+
+	// close the file
+	fclose(fpFile);
+}
+// ADD-BY-LEETEN 08/09/2010-END
+
+
 // ADD-BY-LEETEN 03/16/2010-BEGIN
 void 
 _DumpField2D(int grid_res[3], float *pfField2D, char *szFilename)
@@ -2314,6 +2340,12 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 	// MOD-BY-LEETEN 03/18/2010-END
 	// ADD-BY-LEETEN 03/16/2010-END
 
+	// ADD-BY-LEETEN 08/09/2010-BEGIN
+	float* pfAngleDiffImage = NULL;
+	pfAngleDiffImage = (float*)calloc(grid_res[0] * grid_res[1], sizeof(pfAngleDiffImage[0]));
+	assert(pfAngleDiffImage);
+	// ADD-BY-LEETEN 08/09/2010-END
+
 	for(int y=0;y<grid_res[1];y++)
 	{
 		memset(histo_pxy,0,sizeof(int)*binnum*binnum);
@@ -2324,6 +2356,11 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 			int p = x + y * grid_res[0];
 
 			float pfVec[3], pfNewVec[3];
+			// ADD-BY-LEETEN 08/09/2010-BEGIN
+			pfVec[0] = pfVec[1] = pfVec[2] = 0.0f;
+			pfNewVec[0] = pfNewVec[1] = pfNewVec[2] = 0.0f;
+			// ADD-BY-LEETEN 08/09/2010-END
+
 			float fVecLength = 0.0f, fNewVecLength = 0.0f;
 			for(int i = 0; i < 2; i++)
 			{
@@ -2345,14 +2382,17 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 					pfNewVec[i] = new_vectors[3*p + i] / fNewVecLength;
 			}
 
-			float fError = 0.0f;
-			for(int i = 0; i < 2; i++)
-			{
-				float fD = pfVec[i] - pfNewVec[i];
-				fError += fD * fD;
-			}
-			pfErrorImage[p] = sqrtf(fError);
 			// ADD-BY-LEETEN 03/16/2010-END
+
+			// ADD-BY-LEETEN 08/09/2010-BEGIN
+			float fDot = 0.0f;
+			for(int i = 0; i < 2; i++)
+				fDot += (pfVec[i] * pfNewVec[i]);
+
+			fDot = min(max(fDot, -1.0f), 1.0f);
+			float fAngleDiff = acosf(fDot);
+			pfAngleDiffImage[p] = fAngleDiff;
+			// ADD-BY-LEETEN 08/09/2010-END
 
 			VECTOR3 startpt,endpt;
 
@@ -2576,6 +2616,15 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 	_DumpField2D(grid_res, pfErrorImage, szFilename);
 	free(pfErrorImage);
 	// MOD-BY-LEETEN 03/16/2010-END
+
+	// ADD-BY-LEETEN 08/09/2010-BEGIN
+	sprintf(szFilename, "%s_anglediff%d.bin", g_filename, iRound);
+	_DumpField2D(grid_res, pfAngleDiffImage, szFilename);
+	free(pfAngleDiffImage);
+
+	sprintf(szFilename, "%s_new_%d.vec", g_filename, iRound);
+	_DumpVectorField2D(grid_res, new_vectors, szFilename);
+	// ADD-BY-LEETEN 08/09/2010-END
 
 	delete [] data_color;
 //	printf("done\n");
@@ -3061,7 +3110,7 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 		#endif
 
 		#if	GENERATE_PRIMITIVE == GENERATE_PRIMITIVE_STREAMLINES
-		osuflow->GenStreamLines(lines , BACKWARD_AND_FORWARD, 200,0);	 //maxi steps
+		osuflow->GenStreamLines(lines , BACKWARD_AND_FORWARD,200,0);	 //maxi steps
 		#endif
 		// MOD-BY-LEETEN 02/05/2010-END
 
@@ -3106,8 +3155,6 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 //		combinehalflines_check_stop_entropy(lines, new_lines,grid_res,entropies);//for display only, the streamline stops when gets too near to an existing
 //		streamlineId++;
 
-
-		
 		if(new_lines.size())
 		{
 			// MOD-BY-LEETEN 02/05/2010-FROM:
@@ -5422,6 +5469,12 @@ fclose(my);
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.13  2010/04/02 10:26:18  leeten
+
+[04/02/2010]
+1. [MOD] For template-based sampling, the importance of each seeds are sorted as R * log2(bin) + W, where R is the weight of the max in the same kernel and W is the original weight. The purpose is to group all seeds in the same kernel after the sorting.
+2. [MOD] Stop the iteration after MAX_NR_OF_ITERATIONS iteration.
+
 Revision 1.12  2010/03/29 04:21:09  leeten
 
 [03/28/2010]
