@@ -911,7 +911,13 @@ _FlowDiffusionInit(
 		cudppPlan(&cScanplan, cConfig, iVolumeWidth * iVolumeHeight * iVolumeDepth, iVolumeHeight * iVolumeDepth, cErrorVolume_device.pitch);  
 	#else	// MOD-BY-LEETEN 12/16/2009-TO:
 	cConfig.options = CUDPP_OPTION_BACKWARD | CUDPP_OPTION_INCLUSIVE;
-	assert(CUDPP_SUCCESS  == cudppPlan(&cScanplan, cConfig, iVolumeWidth * iVolumeHeight * iVolumeDepth, iVolumeHeight * iVolumeDepth, cErrorVolume_device.pitch) );  
+	// MOD-BY-LEETEN 08/09/2010-FROM:
+		// assert(CUDPP_SUCCESS  == cudppPlan(&cScanplan, cConfig, iVolumeWidth * iVolumeHeight * iVolumeDepth, iVolumeHeight * iVolumeDepth, cErrorVolume_device.pitch) );  
+	// TO:
+	unsigned int uPlanStatus = cudppPlan(&cScanplan, cConfig, iVolumeWidth * iVolumeHeight * iVolumeDepth, iVolumeHeight * iVolumeDepth, cErrorVolume_device.pitch);
+	assert(CUDPP_SUCCESS  == uPlanStatus);  
+	// MOD-BY-LEETEN 08/09/2010-END
+
 	#endif	// MOD-BY-LEETEN 12/16/2009-END
 	// DEL-BY-LEETEN 2009/12/17-BEGIN
 	// #endif	// #if	CHECK_ERROR_CONVERGENCE_BY_CUDPP
@@ -1579,6 +1585,12 @@ _FlowDiffusion(
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.13  2010/03/18 16:08:02  leeten
+
+[03/18/2010]
+1. [MOD] Change ratio for max. #iterations from 1024 to 9.
+2. [MOD] Change the stop criteria such that it won't stop in the first iteration.
+
 Revision 1.12  2010/03/10 20:19:44  leeten
 
 [03/10/2010]
