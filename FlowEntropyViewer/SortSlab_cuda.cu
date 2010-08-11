@@ -5,7 +5,15 @@
 #include "cudpp/cudpp.h"
 
 #if	 __DEVICE_EMULATION__ 
-#pragma comment (lib, "cudpp32d_emu.lib")
+// MOD-BY-LEETEN 08/11/2010-FROM:
+	// #pragma comment (lib, "cudpp32d_emu.lib")
+// TO:
+#ifdef _DEBUG
+	#pragma comment (lib, "cudppemu32d.lib")
+#elif defined(NDEBUG)
+	#pragma comment (lib, "cudppemu32.lib")
+#endif
+// MOD-BY-LEETEN 08/11/2010-END
 #else
 #pragma comment (lib, "cudpp32.lib")
 #endif
@@ -208,6 +216,11 @@ _ComputeDeptpFree_cuda
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.3  2010/01/04 18:27:20  leeten
+
+[01/04/2010]
+1. [ADD] Add the standard header stdio.h.
+
 Revision 1.2  2009/12/31 02:00:30  leeten
 
 [12/30/2009]

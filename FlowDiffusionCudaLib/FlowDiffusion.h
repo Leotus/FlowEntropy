@@ -13,7 +13,16 @@
 #include "cudpp/cudpp.h"
 // ADD-BY-LEETEN 01/25/2010-BEGIN
 #ifdef __DEVICE_EMULATION__
-#pragma comment (lib, "cudpp32d_emu.lib")
+// MOD-BY-LEETEN 08/11/2010-FROM:
+	// #pragma comment (lib, "cudpp32d_emu.lib")
+// TO:
+#ifdef _DEBUG
+	#pragma comment (lib, "cudppemu32d.lib")
+#elif defined(NDEBUG)
+	#pragma comment (lib, "cudppemu32.lib")
+#endif
+// MOD-BY-LEETEN 08/11/2010-END
+
 #else
 // ADD-BY-LEETEN 01/25/2010-END
 #pragma comment (lib, "cudpp32.lib")
@@ -165,6 +174,11 @@ void _FlowDiffusionFree();
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.7  2010/02/09 00:43:06  leeten
+
+[02/08/2010]
+1. [ADD] Define a new preprocessor DIFFUSION_CONVERGE_THRESHOLD as the converge threshold for diffusion.
+
 Revision 1.6  2010/02/02 23:39:59  leeten
 
 [02/02/2010]
