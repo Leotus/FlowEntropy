@@ -12,7 +12,11 @@ This is the shader program for direct volume rendering
 	uniform sampler2D t2dPrevLayer;	// the texture hold the depths of each knots
 
 	// ADD-BY-LEETEN 01/12/2010-BEGIN
-	uniform sampler2DShadow t2dsDepth;	// the texture hold the depths of each knots
+	// MOD-BY-LEETEN 05/11/2011-FROM:
+		// uniform sampler2DShadow t2dsDepth;	// the texture hold the depths of each knots
+	// TO:
+	uniform sampler2D t2dsDepth;	// the texture hold the depths of each knots
+	// MOD-BY-LEETEN 05/11/2011-END
 	// ADD-BY-LEETEN 01/12/2010-END
 
 	// ADD-BY-LEETEN 01/05/2010-BEGIN
@@ -260,7 +264,11 @@ main()
 	// ADD-BY-LEETEN 01/10/2010-END
 
 	// ADD-BY-LEETEN 01/12/2010-BEGIN
-	float fDepth = shadow2D(t2dsDepth, v4FragCoord.xyz).r;
+	// MOD-BY-LEETEN 05/11/2011-FROM:
+		// float fDepth = shadow2D(t2dsDepth, v4FragCoord.xyz).r;
+	// TO:
+	float fDepth = texture2D(t2dsDepth, v4FragCoord.xy).r;
+	// MOD-BY-LEETEN 05/11/2011-END
 	if( v4FragCoord.z > fDepth )
 		v4Color.a = 0.0;
 	// ADD-BY-LEETEN 01/12/2010-END
@@ -272,6 +280,14 @@ main()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.7  2010/01/12 23:50:32  leeten
+
+[01/12/2010]
+1. [ADD] Add a new texture unit t2dsDepth, which define the background depth. The fragment will be cull out if its depth is larger than the background depth.
+2. [DEL] Remove the variable ibIsHigherEntropyWithLongerLine.
+3. [ADD] Add a new variable ibIsEntropyDependentDashed. If this variable is not zero, the space btw the dashed lines become the same regardless of the local entropy.
+4. [MOD] Change the declaration fo the variable v3Tangent_eye from 'varying' to 'in.'
+
 Revision 1.6  2010/01/11 19:19:03  leeten
 
 [01/10/2010]

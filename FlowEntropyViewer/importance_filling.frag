@@ -11,7 +11,11 @@ This is the shader program to fill the importance
 	// ADD-BY-LEETEN 01/01/2010-END
 
 	// ADD-BY-LEETEN 01/12/2010-BEGIN
-	uniform sampler2DShadow t2dsDepth;	// the texture hold the depths of each knots
+	// MOD-BY-LEETEN 05/11/2011-FROM:
+		// uniform sampler2DShadow t2dsDepth;	// the texture hold the depths of each knots
+	// TO:
+	uniform sampler2D t2dsDepth;	// the texture hold the depths of each knots
+	// MOD-BY-LEETEN 05/11/2011-END
 	// ADD-BY-LEETEN 01/12/2010-END
 
 	uniform float fWindowWidth;
@@ -130,7 +134,11 @@ main()
 	}
 
 	// ADD-BY-LEETEN 01/12/2010-BEGIN
-	float fBackgroundDepth = shadow2D(t2dsDepth, v4FragCoord.xyz).r;
+	// MOD-BY-LEETEN 05/11/2011-FROM:
+		// float fBackgroundDepth = shadow2D(t2dsDepth, v4FragCoord.xyz).r;
+	// TO:
+	float fBackgroundDepth = texture2D(t2dsDepth, v4FragCoord.xy).r;
+	// MOD-BY-LEETEN 05/11/2011-END
 	if( v4FragCoord.z > fBackgroundDepth )
 		v4Color.a = 0.0;
 	// ADD-BY-LEETEN 01/12/2010-END
@@ -145,6 +153,11 @@ main()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.6  2010/01/12 23:47:47  leeten
+
+[01/12/2010]
+1. [ADD] Add a new texture unit t2dsDepth, which define the background depth. The fragment will be cull out if its depth is larger than the background depth.
+
 Revision 1.5  2010/01/07 15:04:36  leeten
 
 [01/07/2010]

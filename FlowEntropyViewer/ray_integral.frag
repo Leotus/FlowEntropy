@@ -14,7 +14,11 @@ This is the shader program for direct volume rendering
 	// DEL-BY-LEETEN 01/05/2010-END
 	uniform sampler2D t2dPrevLayer;	// the texture hold the depths of each knots
 	// ADD-BY-LEETEN 01/12/2010-BEGIN
-	uniform sampler2DShadow t2dsDepth;	// the texture hold the depths of each knots
+	// MOD-BY-LEETEN 05/11/2011-FROM:
+		// uniform sampler2DShadow t2dsDepth;	// the texture hold the depths of each knots
+	// TO:
+	uniform sampler2D t2dsDepth;	// the texture hold the depths of each knots
+	// MOD-BY-LEETEN 05/11/2011-END
 	// ADD-BY-LEETEN 01/12/2010-END
 
 	uniform float fThicknessGain;
@@ -97,7 +101,11 @@ main()
 	// MOD-BY-LEETEN 05/13/2010-END
 
 	// ADD-BY-LEETEN 01/12/2010-BEGIN
-	float fBackgroundDepth = shadow2D(t2dsDepth, v4FragCoord.xyz).r;
+	// MOD-BY-LEETEN 05/11/2011-FROM:
+		// float fBackgroundDepth = shadow2D(t2dsDepth, v4FragCoord.xyz).r;
+	// TO:
+	float fBackgroundDepth = texture(t2dsDepth, v4FragCoord.xy).r;
+	// MOD-BY-LEETEN 05/11/2011-END
 	if( v4FragCoord.z > fBackgroundDepth )
 		v4Color.a = 0.0;
 	// ADD-BY-LEETEN 01/12/2010-END
@@ -116,6 +124,11 @@ main()
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.4  2010/05/14 15:42:48  leeten
+
+[05/14/2010]
+1. [MOD] Change the ray integral equation from A = 1 - (1 - A)^D to A = 1 - exp(-AD).
+
 Revision 1.3  2010/01/12 23:47:10  leeten
 
 [01/12/2010]
