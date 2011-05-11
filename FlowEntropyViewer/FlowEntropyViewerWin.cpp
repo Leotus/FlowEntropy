@@ -590,7 +590,15 @@ void CFlowEntropyViewerWin::_RenderSlab(
 	/*
 	*/
 	// ADD-BY-LEETEN 01/12/2010-BEGIN
-	glPushAttrib(GL_DEPTH_BUFFER_BIT);
+	// MOD-BY-LEETEN 05/11/2011-FROM:
+		// glPushAttrib(GL_DEPTH_BUFFER_BIT);
+	// TO:
+	glPushAttrib(
+		GL_ENABLE_BIT |
+		GL_DEPTH_BUFFER_BIT |
+		0 );
+	glEnable( GL_BLEND );
+	// MOD-BY-LEETEN 05/11/2011-END
 	glDepthMask(GL_FALSE);
 	// ADD-BY-LEETEN 01/12/2010-END
 
@@ -760,6 +768,14 @@ void
 CFlowEntropyViewerWin::_InitFunc()
 {
 	CDvrWin2::_InitFunc();
+
+	// ADD-BY-LEETEN 05/11/2011-BEGIN
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	_DisableVerticalSync();
+	_DisplayFpsOn();		// the FPS will be displayed 
+	_KeepUpdateOn();		// the frame will be keep updating
+	// ADD-BY-LEETEN 05/11/2011-END
 
 	#if	0	// DEL-BY-LEETEN 01/08/2010-BEGIN
 		_DisableVerticalSync();
@@ -1027,6 +1043,11 @@ CFlowEntropyViewerWin::~CFlowEntropyViewerWin(void)
 /*
 
 $Log: not supported by cvs2svn $
+Revision 1.12  2010/03/29 03:59:42  leeten
+
+[03/28/2010]
+1. [ADD] Add one parameter iMaxNrOfLoadedStreamlines to sepcify the max. #streamlines to be load by the method CFlowEntropyViewerWin::_ReadStreamlines(). The new parameter is then passed to the method cStreamline._Read().
+
 Revision 1.11  2010/02/02 03:35:04  leeten
 
 [02/01/2010]
