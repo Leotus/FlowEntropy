@@ -173,6 +173,7 @@ struct CFlowEntropyViewerWin :
 
 public:
 
+	#if	0	// DEL-BY-LEETEN 2013/09/10-BEGIN
 	// ADD-BY-LEETEN 01/30/2010-BEGIN
 	struct CSphericalHistogram
 	{
@@ -225,6 +226,7 @@ public:
 		CSphericalHistogram();
 	} cSphericalHistogram;
 	// ADD-BY-LEETEN 01/30/2010-END
+	#endif	// DEL-BY-LEETEN 2013/09/10-END
 
 	// ADD-BY-LEETEN 01/12/2010-BEGIN
 	void _LoadData(int iDataName);

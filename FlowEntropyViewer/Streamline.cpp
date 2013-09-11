@@ -13,7 +13,7 @@
 
 #include "Streamline.h"
 
-#include "SortSlab_cuda.h"
+// DEL-BY-LEETEN 2013/09/10:	#include "SortSlab_cuda.h"
 
 // ADD-BY-LEETY 2009/05/15-BEGIN
 #define RENDER_STREAMLINE_AS_LINES		1
@@ -673,7 +673,7 @@ CStreamline::CStreamline(void)
 
 CStreamline::~CStreamline(void)
 {
-	_ComputeDeptpFree_cuda();
+	// DEL-BY-LEETEN 2013/09/10:	_ComputeDeptpFree_cuda();
 }
 
 // ADD-BY-LEETY 2009/05/15-BEGIN

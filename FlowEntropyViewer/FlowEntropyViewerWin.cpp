@@ -3,6 +3,11 @@
 	#include <stdio.h>
 	#include <stdlib.h>
 
+	// ADD-BY-LEETEN 2013/09/10-BEGIN
+	#include	<opencv/cxcore.h>	
+	#include	<opencv/highgui.h>	
+	// ADD-BY-LEETEN 2013/09/10-END
+
 	#include "shader.h"
 
 	// ADD-BY-LEETEN 01/12/2010-BEGIN
@@ -262,11 +267,13 @@ CFlowEntropyViewerWin::_BeginDisplay()
 						// flip the Z axis
 	glScalef(1.0f, 1.0f, -1.0f);
 
+	#if	0	// DEL-BY-LEETEN 2013/09/10-BEGIN
 	// ADD-BY-LEETEN 02/01/2010-BEGIN
 	// render the histogram before the scaling
 	if( 0 != cSphericalHistogram.ibIsEnabled )
 		cSphericalHistogram._DrawHistogrm();
 	// ADD-BY-LEETEN 02/01/2010-END
+	#endif	// DEL-BY-LEETEN 2013/09/10-END
 
 	float fMaxDim = max(pf3DEntropyField.iWidth, max(pf3DEntropyField.iHeight, pf3DEntropyField.iDepth));
 	glScalef(
@@ -924,9 +931,11 @@ CFlowEntropyViewerWin::_InitFunc()
 	PCGetGluiWin()->add_radiobutton_to_group(pcRadioGroup_RenderMode, "Streamlines w/ Importance Culling");
 	PCGetGluiWin()->add_radiobutton_to_group(pcRadioGroup_RenderMode, "Streamlines in Slabs");
 
+	#if	0	// DEL-BY-LEETEN 2013/09/10-BEGIN
 	// ADD-BY-LEETEN 01/30/2010-BEGIN
 	cSphericalHistogram._AddGlui(PCGetGluiWin(), NULL);
 	// ADD-BY-LEETEN 01/30/2010-END
+	#endif	// DEL-BY-LEETEN 2013/09/10-END
 
 	// ADD-BY-LEETEN 01/01/2010-BEGIN
 		// MOD-BY-LEETEN 01/10/2010-FROM:

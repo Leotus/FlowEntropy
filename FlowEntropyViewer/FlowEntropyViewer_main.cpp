@@ -250,6 +250,7 @@ main(int argn, char* argv[])
 		cFlowEntropyViewerWin._LoadData(iDataName);
 		// ADD-BY-LEETEN 01/12/2010-END
 
+		#if	0	// DEL-BY-LEETEN 2013/09/10-BEGIN
 		// ADD-BY-LEETEN 01/30/2010-BEGIN
 		#if	0	// MOD-BY-LEETEN 02/01/2010-FROM:
 			assert( szVectorFieldFilename );
@@ -282,6 +283,7 @@ main(int argn, char* argv[])
 		cFlowEntropyViewerWin.cSphericalHistogram._Init();
 		#endif	// MOD-BY-LEETEN 02/01/2010-END
 		// ADD-BY-LEETEN 01/30/2010-END
+		#endif	// DEL-BY-LEETEN 2013/09/10-END
 
 		////////////////////////////////////////////////////////
 		// initialize the transfer func.
