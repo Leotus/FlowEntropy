@@ -205,7 +205,6 @@ _CollectNeighborsInVectors_kernel
 					iThreadId, iOffset) = iSrcBin;
 			}
 }
-// ADD-BY-LEETEN 12/18/2009-END
 
 void 
 _ComputeEntropyVolumeWithSortingInVectors_cuda

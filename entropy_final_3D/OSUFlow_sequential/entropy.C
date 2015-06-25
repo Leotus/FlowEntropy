@@ -1,16 +1,5 @@
 #include "entropy.h"
 
-#if	0	// DEL-BY-LEETEN 12/01/2009-BEGIN
-	#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
-	#include <CGAL/Triangulation_3.h>
-	#include <CGAL/Delaunay_triangulation_3.h>
-
-	#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
-	#include <CGAL/Delaunay_triangulation_3.h>
-	#include <CGAL/Triangulation_vertex_base_with_info_3.h>
-	#include <CGAL/IO/Color.h>
-#endif	// DEL-BY-LEETEN 12/01/2009-END
-
 #include <iostream>
 #include <fstream>
 #include <cassert>
@@ -18,44 +7,13 @@
 #include <vector>
 #include <windows.h>
 
-// ADD-BY-LEETEN 12/01/2009-BEGIN
 #define _USE_MATH_DEFINES	1
 #include <math.h>
-// ADD-BY-LEETEN 12/01/2009-END
 
-// ADD-BY-LEETEN 2009/11/10-BEGIN
 #include "FlowDiffusion3DConfig.h"
-// ADD-BY-LEETEN 2009/11/10-END
-
-#if	0	// DEL-BY-LEETEN 12/01/2009-BEGIN
-	typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
-
-	typedef CGAL::Triangulation_3<K>      Triangulation;
-
-	typedef Triangulation::Cell_handle    Cell_handle;
-	typedef Triangulation::Cell_iterator  Cell_iterator;
-	typedef Triangulation::Vertex_handle  Vertex_handle;
-	typedef Triangulation::Locate_type    Locate_type;
-	typedef Triangulation::Point          Point;
-	typedef Triangulation::Finite_cells_iterator Finite_cells_iterator; 
-	  
-	typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
-
-	typedef CGAL::Triangulation_vertex_base_with_info_3<CGAL::Color, K> Vb;
-	typedef CGAL::Triangulation_data_structure_3<Vb>                    Tds;
-	typedef CGAL::Delaunay_triangulation_3<K, Tds>                      Delaunay;
-#endif // DEL-BY-LEETEN 12/01/2009-END
 
 #define pi 3.14
 
-#if	0	// DEL-BY-LEETEN 12/01/2009-BEGIN
-	float dot(Point p1, Point p2)
-	{
-		return (p1.x()*p2.x()+p1.y()*p2.y());
-	}
-#endif // DEL-BY-LEETEN 12/01/2009-END
-
-// ADD-BY-XUL 01/22/2010-BEGIN
 bool discardredundantstreamlines(float& cur_entropy,float eplison, list<vtListSeedTrace*> new_lines,
 								 float* vectors, float* new_vectors,int* grid_res,
 								 int* bin_my_vector,int* bin_new_vector,int binnum,
@@ -135,7 +93,6 @@ bool discardredundantstreamlines(float& cur_entropy,float eplison, list<vtListSe
 		return true;
 	}
 }
-// ADD-BY-XUL 01/22/2010-END
 
 void dumpArray( vector<float> entropies,  char* filename)
 {
@@ -185,45 +142,6 @@ void getVectorAt(int x, int y, float& fx, float& fy, int * grid_res,float* vecto
 }
 
 
-#if	0	// DEL-BY-LEETEN 12/01/2009-BEGIN
-	void doTriangulation3D(list<vtListSeedTrace*> sl_list,std::vector<VECTOR3>& tetrahedras,int* grid_res)
-	{
-
-		std::list<Point> myPts;
-		std::list<vtListSeedTrace*>::iterator pIter; 
-
-		pIter = sl_list.begin(); 
-		for (; pIter!=sl_list.end(); pIter++) {
-			vtListSeedTrace *trace = *pIter; 
-			std::list<VECTOR3*>::iterator pnIter; 
-			pnIter = trace->begin(); 
-			//int skip=0;
-			for (; pnIter!= trace->end(); pnIter++) {
-				VECTOR3 p = **pnIter; 
-			//	printf(" %f %f %f ", p[0], p[1], p[2]); 
-				//if(skip%150==0);
-				myPts.push_back(Point(p[0], p[1],p[2]));
-				//skip++;
-
-			}
-		}
-
-		Delaunay T(myPts.begin(), myPts.end());
-		Point p[4],q[4];
-
-		tetrahedras.clear();
-		Delaunay::Finite_cells_iterator vit;
-		for (vit = T.finite_cells_begin(); vit != T.finite_cells_end(); ++vit)
-		{
-			for(int i=0; i<4; i++)
-			tetrahedras.push_back(	VECTOR3(vit->vertex(i)->point().x(),
-											vit->vertex(i)->point().y(),
-											vit->vertex(i)->point().z()));	
-		}
-	}
-#endif // DEL-BY-LEETEN 12/01/2009-END
-
-
 
 void save2PPM(char* filename, unsigned char* data, int xdim, int ydim)
 {
@@ -252,7 +170,6 @@ void save2PPM(char* filename, unsigned char* data, int xdim, int ydim)
 	fclose(fp);
 }
 
-// ADD-BY-XUL 01/22/2010-BEGIN
 void combinehalflines_check_stop_entropy(list<vtListSeedTrace*> lines, list<vtListSeedTrace*>& long_lines,int* grid_res,
 										 float* entropies)
 {
@@ -337,7 +254,6 @@ void calc_entropy( int* bins,int* grid_res, int binnum,float* entropies)
 	dumpImportanceField("importance.bin",entropies, grid_res);
 
 }
-// ADD-BY-XUL 01/22/2010-END
 
 //crop the image manaually
 void save2PPM_1(char* filename, unsigned char* data, int xdim, int ydim)
@@ -356,11 +272,7 @@ void save2PPM_1(char* filename, unsigned char* data, int xdim, int ydim)
 			int idx = i * xdim + j;
 
 			int r,g,b; 
-			// MOD-BY-XUL 01/22/2010-FROM:
-				// r=data[idx]*255;
-			// TO:
 			r=data[idx];
-			// MOD-BY-XUL 01/22/2010-END
 			g=b=r;
 			fprintf(fp, " %d %d %d", r,g,b); 
 		}
@@ -681,7 +593,6 @@ void dumpSeeds(vector<VECTOR3> seeds, char* filename)//crtical points excluded
 
 }
 
-// ADD-BY-XUL 01/22/2010-BEGIN
 VECTOR3* get_line_vertices(VECTOR3* vecs,int* ver_num, int line_no,int& length)
 {
 	int first_ver_num=0;
@@ -935,7 +846,6 @@ void dumpEntropyField(char*  filename,float* importance, int* grid_res)
 	fclose(fp);
 
 }
-// ADD-BY-XUL 01/22/2010-END
 
 void dumpImportanceField(char*  filename,float* importance, int* grid_res)
 {
@@ -955,14 +865,6 @@ void dumpImportanceField(char*  filename,float* importance, int* grid_res)
 			max_imp=importance[i];
 	}
 
-	#if	0	// MOD-BY-XUL 01/22/2010-FROM:
-		if(max_imp)
-			for(int i=0;i<grid_res[0]*grid_res[1]*grid_res[2];i++)
-			{
-				importance[i]=importance[i]/max_imp;
-				importance[i]=sqrt(sqrt(sqrt(sqrt(importance[i]))));
-			}
-	#else	// MOD-BY-XUL 01/22/2010-TO:
 	if(max_imp>0)
 	{
 		for(int i=0;i<grid_res[0]*grid_res[1]*grid_res[2];i++)
@@ -971,16 +873,11 @@ void dumpImportanceField(char*  filename,float* importance, int* grid_res)
 			//importance[i]=sqrt(sqrt(sqrt(sqrt(importance[i]))));
 		}
 	}	
-	#endif	// MOD-BY-XUL 01/22/2010-END
 	
 
 	unsigned char* char_importance= new unsigned char[grid_res[0]*grid_res[1]*grid_res[2]];
 	for(int i=0;i<grid_res[0]*grid_res[1]*grid_res[2];i++)
-		// MOD-BY-XUL 01/22/2010-FROM:
-			// char_importance[i]=(1-importance[i])*255;//flip, to use the volume rendering transfer function
-		// TO:
 		char_importance[i]=(importance[i])*255;//flip, to use the volume rendering transfer function
-		// MOD-BY-XUL 01/22/2010-END
 	fwrite(grid_res,sizeof(int),3,fp);
 	fwrite(char_importance,sizeof(unsigned char),grid_res[0]*grid_res[1]*grid_res[2],fp);
 	fclose(fp);
@@ -1183,58 +1080,6 @@ int getBin(float angle, int binnum)
 	return (binnum-1)*angle/(2*3.1415926);
 }
 
-#if	0	// DEL-BY-XUL 01/22/2010-BEGIN
-	float calcPoint2PointError( float* vectors,float* new_vectors, int* grid_res, VECTOR3 startpt,VECTOR3 endpt)
-	{
-		int binnum=360;
-
-		float error_sum=0;
-		int vol=(endpt.y()-startpt.y())*(endpt.x()-startpt.x())*(endpt.z()-startpt.z());
-		for(int z=(int)startpt.z(); z<(int)endpt.z();z++)
-		{
-			for(int y=(int)startpt.y(); y<(int)endpt.y();y++)
-			{
-				for(int x=(int)startpt.x(); x<(int)endpt.x();x++)
-				{
-					VECTOR3 orif,newf;
-					int idx=x+y*grid_res[0]+z*grid_res[0]*grid_res[1];
-					orif.Set(vectors[idx*3+0],vectors[idx*3+1],vectors[idx*3+2]);
-					newf.Set(new_vectors[idx*3+0],new_vectors[idx*3+1],new_vectors[idx*3+2]);
-					
-					float scalar[2];
-					if((orif.x()==0) && (orif.y()==0))
-						scalar[0]=0;
-					else
-						scalar[0]=pi+(atan2(orif.y(),orif.x()));
-
-					if((newf.x()==0)&&(newf.y()==0))
-					{
-						scalar[1]=0;
-	//					vac_count++;
-					}
-					else
-						scalar[1]=pi+(atan2(newf.y(),newf.x()));
-
-					int bin_no_ori=(binnum-1)*scalar[0]/(2*3.1415926);
-					int bin_no_new=(binnum-1)*scalar[1]/(2*3.1415926);
-
-					//orif.Normalize();//already normalizedd
-					//newf.Normalize();
-
-					VECTOR3 error=orif-newf;
-					error_sum=error_sum+error.GetMag();
-					//float tmp=abs(bin_no_ori-bin_no_new);
-					//tmp=tmp/360.0;
-					//error_sum=error_sum+tmp;
-		
-				}
-			}
-		}
-		return error_sum/vol;
-	}
-#endif	// DEL-BY-XUL 01/22/2010-END
-
-// ADD-BY-LEETEN 12/01/2009-BEGIN
 int get_bin_by_angle(float mytheta, float myphi, int binnum, float* theta, float* phi)
 {
 	for(int i=0; i<binnum;i++)
@@ -1275,20 +1120,12 @@ int get_bin_by_angle(float mytheta, float myphi, int binnum, float* theta, float
 	}
 	return -1;
 }
-// ADD-BY-LEETEN 12/01/2009-END
 
-// MOD-BY-XUL 01/22/2010-FROM:
-	// int get_bin_number_3D(VECTOR3 v, float* theta, float* phi)
-// TO:
 int get_bin_number_3D(VECTOR3 v, float* theta, float* phi, int binnum=360)
-// MOD-BY-XUL 01/22/2010-END
 {
 	float mytheta=getAngle(v.x(), v.y());//0~2pi
 	float myphi=  getAngle2(sqrt(v.x()*v.x()+v.y()*v.y()), v.z());//0~pi
 	
-	// DEL-BY-XUL 01/22/2010-BEGIN
-		// int binnum=360;
-	// DEL-BY-XUL 01/22/2010-END
 	if(!theta || !phi)
 	{
 		printf("read in the regions first\n");
@@ -1296,9 +1133,7 @@ int get_bin_number_3D(VECTOR3 v, float* theta, float* phi, int binnum=360)
 	}
 //	mytheta=4.7113109;
 //myphi=0.00015759557;
-	// ADD-BY-LEETEN 12/01/2009-BEGIN
 	#if	!BIN_LOOKUP
-	// ADD-BY-LEETEN 12/01/2009-END
 		int theta_id,phi_id;
 		for(int i=0; i<binnum;i++)
 		{
@@ -1336,7 +1171,6 @@ int get_bin_number_3D(VECTOR3 v, float* theta, float* phi, int binnum=360)
 				return i;
 			}
 		}
-	// ADD-BY-LEETEN 12/01/2009-BEGIN
 	#else	// #if	!BIN_LOOKUP
 	static bool bIsAngleMapInitialized = false;
 	static const int iNrOfThetas = 1440;
@@ -1361,16 +1195,15 @@ int get_bin_number_3D(VECTOR3 v, float* theta, float* phi, int binnum=360)
 	int iTheta	=	min(iNrOfThetas - 1,	int(dNrOfThetas	* mytheta	/ (M_PI * 2.0)));
 	int iPhi	=	min(iNrOfPhis - 1,		int(dNrOfPhis	* myphi		/ M_PI));
 	return piAngleMap[iTheta][iPhi];
-	#endif	// ADD-BY-LEETEN 12/01/2009-END
 
 	return -1;//should not be this, but...
+	#endif
 }
 float log2(float v)
 {
 	return log(v)/log(2.0);
 }
 
-// ADD-BY-XUL 01/22/2010-BEGIN
 float calcEntropy_known_bins( int* bins,int* grid_res, VECTOR3 startpt,VECTOR3 endpt,int binnum)
 {
 
@@ -1412,60 +1245,7 @@ float calcEntropy_known_bins( int* bins,int* grid_res, VECTOR3 startpt,VECTOR3 e
 	return entropy;
 
 }
-// ADD-BY-XUL 01/22/2010-END
 
-#if	0	// MOD-BY-XUL 01/22/2010-FROM:
-	float calcEntropy1( float* vectors,int* grid_res, VECTOR3 startpt,VECTOR3 endpt,float* theta, float* phi)
-	{
-	int binnum=360;
-
-		//start calc p(u|v)
-		int *histo_pv=new int[binnum];
-		memset(histo_pv,0,sizeof(int)*binnum);
-
-		int vol=(endpt.y()-startpt.y())*(endpt.x()-startpt.x())*(endpt.z()-startpt.z());
-
-		for(int z=(int)startpt.z(); z<(int)endpt.z();z++)
-		{
-			for(int y=(int)startpt.y(); y<(int)endpt.y();y++)
-			{
-				for(int x=(int)startpt.x(); x<(int)endpt.x();x++)
-				{
-					VECTOR3 orif;
-					int idx=x+y*grid_res[0]+z*grid_res[0]*grid_res[1];
-					orif.Set(vectors[idx*3+0],vectors[idx*3+1],vectors[idx*3+2]);
-
-					int bin_no_ori,bin_no_new;
-					bin_no_ori=get_bin_number_3D(orif,theta, phi);
-
-					if(bin_no_ori<0 || bin_no_ori>=binnum)
-					{
-						printf("sth wrong, bin id=%d  %d\n", bin_no_ori,bin_no_new);
-						continue;
-					}
-
-					histo_pv[bin_no_ori]++;//p(v)
-				}
-			}
-		}
-		//calc probs.
-		float* pv=new float[binnum];
-
-		float entropy=0;
-		for(int i=0; i<binnum; i++)
-		{
-			pv[i]=(((float)histo_pv[i])/((float)vol));
-			entropy=entropy+pv[i];
-			if(pv[i]>0)
-			entropy-=(pv[i]*log2(pv[i]));
-		}
-
-		delete [] pv;
-		delete [] histo_pv;
-		return entropy;
-
-	}
-#else	// MOD-BY-XUL 01/22/2010-TO:
 float calcEntropy1( float* vectors,int* grid_res, VECTOR3 startpt,VECTOR3 endpt,float* theta, float* phi,int binnum)
 {
 
@@ -1516,33 +1296,7 @@ float calcEntropy1( float* vectors,int* grid_res, VECTOR3 startpt,VECTOR3 endpt,
 	return entropy;
 
 }
-#endif	// MOD-BY-XUL 01/22/2010-END
 
-#if	0	// MOD-BY-XUL 01/22/2010-FROM:
-	void UpdateOccupied(list<vtListSeedTrace*> lines, int* occupied,int* grid_res)
-	{
-		vtListSeedTrace* newlist;
-		list<vtListSeedTrace*>::iterator pIter;
-		
-		//update occupied
-		pIter =lines.begin(); 
-		for (; pIter!=lines.end(); pIter++) 
-		{
-			vtListSeedTrace *trace = *pIter; 
-			std::list<VECTOR3*>::iterator pnIter; 
-			pnIter = trace->begin(); 
-
-			for (; pnIter!= trace->end(); pnIter++) 
-			{
-				VECTOR3 p = **pnIter; 
-				int idx=(int)(p.x())+((int)(p.y()))*grid_res[0]+((int)(p.z()))*grid_res[0]*grid_res[1];
-				occupied[idx]=1;
-			}
-		}
-
-		
-	}
-#else	// MOD-BY-XUL 01/22/2010-TO:
 void UpdateOccupied(list<vtListSeedTrace*> lines, int* occupied,int* grid_res,float radius)
 {
 	vtListSeedTrace* newlist;
@@ -1579,10 +1333,6 @@ void UpdateOccupied(list<vtListSeedTrace*> lines, int* occupied,int* grid_res,fl
 	
 }
 
-#endif	// MOD-BY-XUL 01/22/2010-END
-
-// ADD-BY-LEETEN 12/14/2009-BEGIN
-
 static bool bIsCalcRelativeEntropy6Initialized = false;
 
 static int *histo_puv;
@@ -1604,185 +1354,7 @@ calcRelativeEntropy6Free()
 	FREE(histo_pu);
 	FREE(pu);
 }
-// ADD-BY-LEETEN 12/14/2009-END
 
-#if	0	// MOD-BY-XUL 01/22/2010-FROM:
-	float calcRelativeEntropy6( float* vectors,float* new_vectors, int* grid_res, VECTOR3 startpt,VECTOR3 endpt,
-							   float* theta, float* phi,
-							   int* old_bin, int* new_bin,int* occupied)
-	{
-		int binnum=360;
-		float penalty=0;
-
-		//start calc p(u|v)
-		#if	0	// MOD-BY-LEETEN 12/14/2009-FROM:
-			int *histo_puv=new int[binnum*binnum];
-			int *histo_pv=new int[binnum];
-			int *histo_pu=new int[binnum];
-		#else	// MOD-BY-LEETEN 12/14/2009-TO:
-		if( !bIsCalcRelativeEntropy6Initialized )
-		{
-			MALLOC(histo_puv,	int, binnum*binnum);
-			MALLOC(histo_pv,	int, binnum);
-			MALLOC(histo_pu,	int, binnum);
-		}
-		#endif	// MOD-BY-LEETEN 12/14/2009-END
-		memset(histo_puv,0,sizeof(int)*binnum*binnum);
-		memset(histo_pv,0,sizeof(int)*binnum);
-		memset(histo_pu,0,sizeof(int)*binnum);
-
-		float error_probability=0;
-		int vol=(endpt.y()-startpt.y())*(endpt.x()-startpt.x())*(endpt.z()-startpt.z());
-
-		int count_empty_space=0;
-		bool dif=false;
-		for(int z=(int)startpt.z(); z<(int)endpt.z();z++)
-		{
-			for(int y=(int)startpt.y(); y<(int)endpt.y();y++)
-			{
-				for(int x=(int)startpt.x(); x<(int)endpt.x();x++)
-				{
-					VECTOR3 orif,newf;
-					int idx=x+y*grid_res[0]+z*grid_res[0]*grid_res[1];
-					if(occupied && occupied[idx]==1)
-					{
-						vol--;
-						continue;
-					}
-					orif.Set(vectors[idx*3+0],vectors[idx*3+1],vectors[idx*3+2]);
-					newf.Set(new_vectors[idx*3+0],new_vectors[idx*3+1],new_vectors[idx*3+2]);
-
-
-					if((newf.x()==0) && (newf.y()==0)&&(newf.z()==0))
-						if((orif.x()!=0)||(orif.y()!=0)||(orif.z()!=0))
-						count_empty_space++;
-					int bin_no_ori,bin_no_new;
-					bin_no_ori=old_bin[idx];
-					bin_no_new=new_bin[idx];
-
-
-					if(bin_no_ori!=bin_no_new)
-						error_probability=error_probability+1;
-					//bin_no_ori=get_bin_number_3D(orif,  theta,  phi);
-					//bin_no_new=get_bin_number_3D(newf,  theta,  phi);
-					if(bin_no_ori<0 || bin_no_ori>=binnum||
-						bin_no_new<0 || bin_no_new>=binnum)
-					{
-						printf("sth wrong, bin id=%d  %d\n", bin_no_ori,bin_no_new);
-						continue;
-					}
-
-					idx=bin_no_ori+binnum*bin_no_new;
-					histo_puv[idx]++;//p(u|v)
-					histo_pu[bin_no_ori]++;//p(u)
-					histo_pv[bin_no_new]++;//p(v)
-					if(bin_no_new!=bin_no_ori)
-						dif=true;
-				}
-			}
-		}
-		//calc probs.
-		#if	0	// MOD-BY-LEETEN 12/14/2009-FROM:
-			float* puv=new float[binnum*binnum];
-			float* pu=new float[binnum];
-			float* pv=new float[binnum];
-		#else	// MOD-BY-LEETEN 12/14/2009-TO:
-		if( !bIsCalcRelativeEntropy6Initialized )
-		{
-			MALLOC(puv,	float, binnum*binnum);
-			MALLOC(pu,	float, binnum);
-			MALLOC(pv,	float, binnum);
-		}
-		memset(puv, 0, sizeof(float)*binnum*binnum);
-		memset(pu, 0, sizeof(float)*binnum);
-		memset(pv, 0, sizeof(float)*binnum);
-		#endif	// MOD-BY-LEETEN 12/14/2009-END
-
-		int total_num=0;
-		for(int i=0; i<binnum*binnum; i++)
-			total_num+=histo_puv[i];
-
-		//H(x|y=a)
-		// MOD-BY-LEETEN 12/14/2009-FROM:
-			// float* entropy_tmp=new float[binnum];
-		// TO: 
-		if( !bIsCalcRelativeEntropy6Initialized )
-		{
-			MALLOC(entropy_tmp, float, binnum);
-		}
-		memset(entropy_tmp, 0, sizeof(float)*binnum);
-		// MOD-BY-LEETEN 12/14/2009-END
-
-		// ADD-BY-LEETEN 12/14/2009-BEGIN
-		if( !bIsCalcRelativeEntropy6Initialized )
-		{
-			atexit(calcRelativeEntropy6Free);
-			bIsCalcRelativeEntropy6Initialized = true;
-		}
-		// ADD-BY-LEETEN 12/14/2009-END
-
-		for(int y=0; y<binnum; y++)
-		{
-			entropy_tmp[y]=0;
-
-			if(histo_pv[y]==0)
-				continue;
-			
-		//	float* p_tmp=new float[binnum];
-		//	memset(p_tmp,0,sizeof(float)*binnum);
-			for(int x=0; x<binnum; x++)
-			{
-			//	if(x!=y)//penalty for errors, if x is recog as y, and exist one such  
-			//		if(histo_puv[x+binnum*y]==1)
-			//		penalty=penalty+0.001;
-			
-				//p(x|y=a)
-				float p_tmp=histo_puv[x+binnum*y]/((float)(histo_pv[y]));
-				if(p_tmp>1)
-					printf("p(x,y)/p(y) is not always between (0~1)\n");
-				if(p_tmp>0)
-				entropy_tmp[y]-=(p_tmp*log2(p_tmp));
-			}
-			//delete [] p_tmp;
-		}
-		
-
-		float tmp_entropy=0;
-		float entropy=0;
-		for(int i=0; i<binnum; i++)
-		{
-			pu[i]=(((float)histo_pu[i])/((float)vol));
-			pv[i]=(((float)histo_pv[i])/((float)vol));
-			entropy=entropy+pv[i]*entropy_tmp[i];
-		//	entropy=entropy+1/((float)binnum)*entropy_tmp[i];
-			tmp_entropy=tmp_entropy-pu[i]*log2(pu[i]);
-		}
-
-	//	entropy=error_probability/((float)vol);
-	//	if(entropy<0.000001)  
-	//		if(dif==true)//take care where entropy is low and error is high
-	//			entropy=100;
-	//	penalty=penalty+count_empty_space*0.001;
-		//entropy=entropy+penalty;
-		
-	//	if(tmp_entropy>0)
-	//	entropy=entropy/tmp_entropy;
-
-		#if	0	// DEL-BY-LEETEN 12/14/2009-BEGIN
-			delete [] puv;
-			delete [] pv;
-			delete [] histo_puv;
-			delete [] histo_pv;
-			delete [] entropy_tmp;
-			// ADD-BY-LEETEN 2009/11/25-BEGIN
-			delete [] histo_pu;
-			delete [] pu;
-			// ADD-BY-LEETEN 2009/11/25-END
-		#endif	// MOD-BY-LEETEN 12/14/2009-END
-		return entropy;
-
-	}
-#else	// MOD-BY-XUL 01/22/2010-TO:
 float calcRelativeEntropy6( float* vectors,float* new_vectors, int* grid_res, VECTOR3 startpt,VECTOR3 endpt,
 						   float* theta, float* phi,
 						   int* old_bin, int* new_bin,int* occupied,int binnum,
@@ -1866,7 +1438,6 @@ float calcRelativeEntropy6( float* vectors,float* new_vectors, int* grid_res, VE
 	return entropy;
 
 }
-#endif	// MOD-BY-XUL 01/22/2010-END
 
 /*
 float calcRelativeEntropy6( float* vectors,float* new_vectors, int* grid_res, VECTOR3 startpt,VECTOR3 endpt,
@@ -1984,7 +1555,6 @@ float calcRelativeEntropy6( float* vectors,float* new_vectors, int* grid_res, VE
 }
 */
 
-// ADD-BY-XUL 01/22/2010-BEGIN
 float calcRelativeEntropy6_by_known_histograms( float* vectors,float* new_vectors, int* grid_res, VECTOR3 startpt,VECTOR3 endpt,
 						   float* theta, float* phi,
 						   int* old_bin, int* new_bin,int* occupied,int binnum,
@@ -2114,8 +1684,6 @@ float calcRelativeEntropy6_new( float* vectors,float* new_vectors, int* grid_res
 
 }
 
-// ADD-BY-XUL 01/22/2010-END
-
 /***************************
 begin octree
 **************************/
@@ -2141,40 +1709,6 @@ void OCNode::getLeaves(std::vector<VECTOR3>& leaves)
 	}
 }
 
-#if	0	// MOD-BY-XUL 01/22/2010-FROM:
-	void OCNode::calcEntropy( float* result, float* vectors,int* grid_res,float* theta,float* phi)
-	{
-		if(LeaveNode==1)
-		{
-			 VECTOR3 startpt, endpt;
-			 startpt.Set(XMin,YMin,ZMin);
-			 endpt.Set(XMax, YMax,ZMax);
-			//write the result
-			float entropy=calcEntropy1(  vectors, grid_res,  startpt, endpt, theta,  phi);
-			for(int z=startpt.z(); z<endpt.z();z++)
-			{
-				for(int y=startpt.y(); y<endpt.y();y++)
-				{
-					for(int x=startpt.x(); x<endpt.x();x++)
-					{
-						int idx=x+y*grid_res[0]+z*grid_res[0]*grid_res[1];
-						result[idx]=entropy;
-					}
-				}
-			}
-			return;
-		}
-		else
-		{
-			for(int i=0; i<ChildrenNo;i++)
-			{
-				Children[i]->calcEntropy( result,vectors, grid_res,
-									theta,phi);
-
-			}
-		}
-	}
-#else	// MOD-BY-XUL 01/22/2010-TO:
 void OCNode::calcEntropy( float* result, float* vectors,int* grid_res,float* theta,float* phi,int binnum)
 {
 	if(LeaveNode==1)
@@ -2207,7 +1741,6 @@ void OCNode::calcEntropy( float* result, float* vectors,int* grid_res,float* the
 		}
 	}
 }
-#endif	// MOD-BY-XUL 01/22/2010-END
 
 void OCNode::get_nodes_bounds(std::vector<VECTOR3>& lower_bound,std::vector<VECTOR3>& higher_bound)
 {
@@ -2245,62 +1778,6 @@ float OCNode::CalcEntropy_InnerNode()
 	}
 }
 
-#if	0	// MOD-BY-XUL 01/22/2010-FROM:
-	void OCNode::CalcEntropy_FindMaxEntropyNode(float* vectors,float* new_vectors, int* grid_res, 
-												int& min_x, int& max_x, int& min_y, int& max_y, int& min_z, int& max_z,
-												 float* theta, float* phi,int* oldbin, int* newbin,int * occupied)
-	{
-		if(LeaveNode==1)
-		{
-			min_x=XMin; max_x=XMax; min_y=YMin; max_y=YMax;min_z=ZMin; max_z=ZMax;
-			return;
-		}
-
-		if(LeaveNode!=1)
-		{
-	 
-			float maxentropy=0;
-			int maxi=0;
-			for(int i=0; i<ChildrenNo;i++)
-			{
-				//(Children[i]->m_entropy
-				float entropy=calcRelativeEntropy6( vectors,new_vectors, grid_res, 
-					VECTOR3(Children[i]->XMin, Children[i]->YMin,Children[i]->ZMin),
-					VECTOR3(Children[i]->XMax, Children[i]->YMax,Children[i]->ZMax), 
-					theta, phi,
-					oldbin, newbin,occupied);
-
-				
-	//			if(entropy<0.00001)
-	//				entropy=point_error;
-				if(occupied)//add density control
-				{
-					int nonempty=0;
-					for(int z=Children[i]->ZMin;z<Children[i]->ZMax;z++)
-					for(int y=Children[i]->YMin;y<Children[i]->YMax;y++)
-					for(int x=Children[i]->XMin;x<Children[i]->XMax;x++)
-						{
-							if(occupied[x+y*grid_res[0]+z*grid_res[0]*grid_res[1]]!=0)
-								nonempty++;
-						}
-			
-					float pv=((float)nonempty)/((float)((Children[i]->ZMax - Children[i]->ZMin)*(Children[i]->YMax - Children[i]->YMin)*(Children[i]->XMax - Children[i]->XMin)));
-				//	printf("density control=%f\n",1-pv);
-					entropy=entropy*(1-pv);
-				}	
-				if(entropy > maxentropy)
-				{	
-					maxentropy=entropy;
-					maxi=i;
-				}
-			}
-			Children[maxi]->CalcEntropy_FindMaxEntropyNode( vectors, new_vectors,  grid_res,
-															min_x,  max_x,  min_y,  max_y,min_z,  max_z,
-															theta, phi,
-															oldbin, newbin,occupied);
-		}
-	}
-#else	// MOD-BY-XUL 01/22/2010-TO:
 void OCNode::CalcEntropy_FindMaxEntropyNode(float* vectors,float* new_vectors, int* grid_res, 
 											int& min_x, int& max_x, int& min_y, int& max_y, int& min_z, int& max_z,
 											 float* theta, float* phi,int* oldbin, int* newbin,int * occupied)
@@ -2355,52 +1832,7 @@ void OCNode::CalcEntropy_FindMaxEntropyNode(float* vectors,float* new_vectors, i
 														oldbin, newbin,occupied);
 	}
 }
-#endif	// MOD-BY-XUL 01/22/2010-END
 
-#if	0	// MOD-BY-XUL 01/22/2010-FROM:
-	void OCNode::CalcEntropy_LeafNode(float* vectors,float* new_vectors, int* grid_res, 
-												int& min_x, int& max_x, int& min_y, int& max_y, int& min_z, int& max_z,
-												 float* theta, float* phi,int* oldbin, int* newbin,int * occupied)
-	{
-		if(LeaveNode==1)
-		{
-	 
-			float maxentropy=0;
-			int maxi=0;
-			float entropy=calcRelativeEntropy6( vectors,new_vectors, grid_res, 
-				VECTOR3(XMin, YMin,ZMin),
-				VECTOR3(XMax, YMax,ZMax), 
-				theta, phi,
-				oldbin, newbin,occupied);
-
-			
-			if(occupied)//add density control
-			{
-				int nonempty=0;
-				for(int z=ZMin;z<ZMax;z++)
-				for(int y=YMin;y<YMax;y++)
-				for(int x=XMin;x<XMax;x++)
-					{
-						if(occupied[x+y*grid_res[0]+z*grid_res[0]*grid_res[1]]!=0)
-							nonempty++;
-					}
-		
-				float pv=((float)nonempty)/((float)((ZMax - ZMin)*(YMax - YMin)*(XMax - XMin)));
-				entropy=entropy*(1-pv);
-			}	
-			m_entropy=entropy;
-			
-		}
-		else
-		{
-			for(int i=0; i<ChildrenNo;i++)
-			Children[i]->CalcEntropy_LeafNode( vectors, new_vectors,  grid_res,
-															min_x,  max_x,  min_y,  max_y,min_z,  max_z,
-															theta, phi,
-															oldbin, newbin,occupied);
-		}
-	}
-#else	// MOD-BY-XUL 01/22/2010-TO:
 void OCNode::CalcEntropy_LeafNode(float* vectors,float* new_vectors, int* grid_res, 
 											int& min_x, int& max_x, int& min_y, int& max_y, int& min_z, int& max_z,
 											 float* theta, float* phi,int* oldbin, int* newbin,int * occupied)
@@ -2443,8 +1875,6 @@ void OCNode::CalcEntropy_LeafNode(float* vectors,float* new_vectors, int* grid_r
 														oldbin, newbin,occupied);
 	}
 }
-
-#endif	// MOD-BY-XUL 01/22/2010-END
 
 void OCNode::FindMaxEntropyNode(int& min_x, int& max_x, int& min_y, int& max_y, int& min_z, int& max_z)
 {
@@ -2822,7 +2252,6 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 
 */
 
-// ADD-BY-LEETEN 2009/11/25-BEGIN
 static float* tmp_new_vectors = NULL;
 
 void _FreeTmpNewVectors()
@@ -2832,7 +2261,6 @@ void _FreeTmpNewVectors()
 
 	tmp_new_vectors = NULL;
 }
-// ADD-BY-LEETEN 2009/11/25-END
 
 void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,list<vtListSeedTrace*> l_list,int* donot_change, 
 							  float* kx, float* ky, float* kz,
@@ -2840,11 +2268,7 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 							  float* importance)
 {
 
-	// MOD-BY-XUL 01/22/2010-FROM:
-		// int iter=64;
-	// TO:
 	int iter=max(grid_res[0],max(grid_res[1],grid_res[2]))*2;
-	// MOD-BY-XUL 01/22/2010-END
 
 	//initial GVF, combine with input new_vectors
 	list<vtListSeedTrace*>::iterator pIter;
@@ -2877,9 +2301,6 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 			ky[idx]=vy;
 			kz[idx]=vz;
 			//initial GVF  to kx ky
-			// DEL-BY-LEETEN 01/22/2010-BEGIN
-				// if(donot_change[idx]==0)
-			// DEL-BY-LEETEN 01/22/2010-END
 			{
 			new_vectors[idx*3+0]=kx[idx];
 			new_vectors[idx*3+1]=ky[idx];
@@ -2899,12 +2320,7 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 			{
 				int idx=x+y*grid_res[0]+z*grid_res[0]*grid_res[1];
 
-				// MOD-BY-LEETEN 12/14/2009-FROM:
-					// #if	0	// DEL-BY-LEETEN 12/07/2009-BEGIN
-				// TO:
 				#if	KEEP_BOUNDARY
-				// MOD-BY-LEETEN 12/14/2009-END
-				// ADD-BY-LEETEN 2009/11/25-BEGIN
 					if( x == 0 || x == grid_res[0]-1 ||
 						y == 0 || y == grid_res[1]-1 ||
 						z == 0 || z == grid_res[2]-1 )
@@ -2929,12 +2345,7 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 						new_vectors[idx*3+2]=kz[idx];
 						donot_change[idx]=1;
 					}
-					// ADD-BY-LEETEN 2009/11/25-END
-				// MOD-BY-LEETEN 12/14/2009-FROM:
-					// #endif	// DEL-BY-LEETEN 12/07/2009-END
-				// TO:
 				#endif	// #if	KEEP_BOUNDARY
-				// MOD-BY-LEETEN 12/14/2009-END
 
 				b[idx]=kx[idx]*kx[idx]+ky[idx]*ky[idx]+kz[idx]*kz[idx];
 				c1[idx]=b[idx]*kx[idx];
@@ -2946,11 +2357,6 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 		}
 	}
 	//update the GVF
-	#if	0	// MOD-BY-LEETEN 2009/11/25-FROM:
-		float* tmp_new_vectors=new float[grid_res[0]*grid_res[1]*grid_res[2]*3];
-		for(int i=0; i<grid_res[0]*grid_res[1]*grid_res[2]*3;i++)
-			tmp_new_vectors[i]=new_vectors[i];
-	#else	// MOD-BY-LEETEN 2009/11/25-TO:
 	if( !tmp_new_vectors )
 	{
 		tmp_new_vectors = (float*)calloc(grid_res[0]*grid_res[1]*grid_res[2]*3, sizeof(tmp_new_vectors[0]));
@@ -2961,18 +2367,12 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 		atexit(_FreeTmpNewVectors);
 	}
 	memcpy(tmp_new_vectors, new_vectors, sizeof(tmp_new_vectors[0]) * grid_res[0]*grid_res[1]*grid_res[2]*3);
-	#endif	// MOD-BY-LEETEN 2009/11/25-END
 
 	//parameter setting:
 	float mu=0.1;
 
-	// ADD-BY-LEETEN 2009/11/23-BEGIN
 	#if	USE_CUDA	
-	// MOD-BY-LEETEN 12/07/2009-FROM:
-		// _FlowFusion(
-	// TO:
 	_FlowDiffusion(
-	// MOD-BY-LEETEN 12/07/2009-END
 		mu, 
 		iter, 
 		grid_res[0], grid_res[1], grid_res[2],
@@ -2986,7 +2386,6 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 		donot_change		
 	);
 	#else			
-	// ADD-BY-LEETEN 2009/11/23-END
 
 	//iteration by iteration
 	for(int i=0; i<iter; i++)
@@ -2994,21 +2393,6 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 		//start iterations
 		//update the GVF
 //double dwStart = GetTickCount();
-		#if	0	// MOD-BY-LEETEN 12/07/2009-FROM:
-			for(int z=1; z<grid_res[2]-1;z++)
-			{
-				for(int y=1; y<grid_res[1]-1;y++)
-				{
-					for(int x=1; x<grid_res[0]-1;x++)//cut boundary for now
-					{
-						int idx=x+y*grid_res[0]+z*grid_res[0]*grid_res[1]; 
-						int idx_1=x+1+y*grid_res[0]+z*grid_res[0]*grid_res[1]; 
-						int idx_2=x+(y+1)*grid_res[0]+z*grid_res[0]*grid_res[1]; 
-						int idx_3=x+y*grid_res[0]+(z+1)*grid_res[0]*grid_res[1]; 
-						int idx_4=x-1+y*grid_res[0]+z*grid_res[0]*grid_res[1]; 
-						int idx_5=x+(y-1)*grid_res[0]+z*grid_res[0]*grid_res[1]; 
-						int idx_6=x+y*grid_res[0]+(z-1)*grid_res[0]*grid_res[1]; 
-		#else	// MOD-BY-LEETEN 12/07/2009-TO:
 		for(int z=0; z<grid_res[2];z++)
 		{
 			for(int y=0; y<grid_res[1];y++)
@@ -3022,7 +2406,6 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 					int idx_4=max(x-1, 0)+y*grid_res[0]+z*grid_res[0]*grid_res[1]; 
 					int idx_5=x+max(y-1, 0)*grid_res[0]+z*grid_res[0]*grid_res[1]; 
 					int idx_6=x+y*grid_res[0]+max(z-1, 0)*grid_res[0]*grid_res[1]; 
-		#endif	// MOD-BY-LEETEN 12/07/2009-END
 
 					tmp_new_vectors[idx*3+0]=	(1-b[idx])*new_vectors[idx*3+0]+
 												mu*(new_vectors[idx_1*3+0]+new_vectors[idx_2*3+0]+new_vectors[idx_3*3+0]+new_vectors[idx_4*3+0]+new_vectors[idx_5*3+0]+new_vectors[idx_6*3+0]
@@ -3055,9 +2438,6 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 				for(int x=0; x<grid_res[0];x++)
 				{
 					int idx=x+y*grid_res[0]+z*grid_res[0]*grid_res[1]; 
-					// DEL-BY-LEETEN 12/07/2009-BEGIN
-						// if(donot_change[idx]==0)
-					// DEL-BY-LEETEN 12/07/2009-END
 					{
 					new_vectors[idx*3+0]=tmp_new_vectors[idx*3+0];
 					new_vectors[idx*3+1]=tmp_new_vectors[idx*3+1];
@@ -3073,37 +2453,7 @@ void reconstruct_field_GVF_3D(float* new_vectors,float* vectors, int* grid_res,l
 		//memcpy(new_vectors,tmp_new_vectors,sizeof(float)*grid_res[0]*grid_res[1]*grid_res[2]*3);
 	}
 
-	// ADD-BY-LEETEN 2009/11/23-BEGIN
 	#endif	
-	// ADD-BY-LEETEN 2009/11/23-END
-
-	// DEL-BY-LEETEN 12/01/2009-BEGIN
-		// delete [] tmp_new_vectors;
-	// DEL-BY-LEETEN 12/01/2009-END
-	
 
 }
 
-/*
-
-$Log: not supported by cvs2svn $
-Revision 1.3  2009/12/15 20:11:03  leeten
-
-[12/15/2009]
-1. [ADD] Change the resolution of the lookup table.
-2. [MOD] When calculate the histogram, only allocate the memory once.
-3. [MOD] When KEEP_BOUNDARY is 1, the vector field along the boundary will be preserved.
-
-Revision 1.2  2009/12/07 20:08:01  leeten
-
-[12/07/2009]
-1. [MOD] Use the new API from the library FlowDiffusionCudaLib.
-2. [MOD] Not to initilize boundary condition; instead, apply diffusion over the whole field.
-
-Revision 1.1.1.1  2009/12/05 21:31:08  leeten
-
-[12/04/2009]
-1. [1ST] First time checkin.
-
-
-*/

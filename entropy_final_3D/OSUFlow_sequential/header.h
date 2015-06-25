@@ -14,7 +14,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-// DEL-BY-LEETEN 2015/06/24:	#include <assert.h>
 #include <float.h>
 #include <time.h>
 #include <iostream>
@@ -38,13 +37,11 @@ const double	PIBY2 = 1.57079632679489661923;			// PI / 2
 const double	EPS = 1.0E-6;
 const int		OCT = 8;
 
-// ADD-BY-LEETEN 2015/06/24-BEGIN
 #include "liblog.h"
 #ifdef assert
 #undef assert
 #endif
 #define assert(expr)	ASSERT_OR_LOG(expr, "")
-// ADD-BY-LEETEN 2015/06/24-END
 //#define DEBUG_MODE
 
 #endif
