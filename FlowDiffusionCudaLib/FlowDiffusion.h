@@ -10,7 +10,10 @@
 // ADD-BY-LEETEN 02/08/2010-END
 
 // ADD-BY-LEETEN 12/07/2009-BEGIN
+
+#if	0	// DEL-BY-LEETEN 2015/06/24-BEGIN
 #include "cudpp/cudpp.h"
+
 // ADD-BY-LEETEN 01/25/2010-BEGIN
 #ifdef __DEVICE_EMULATION__
 // MOD-BY-LEETEN 08/11/2010-FROM:
@@ -30,12 +33,29 @@
 #endif
 // ADD-BY-LEETEN 01/25/2010-END
 // ADD-BY-LEETEN 12/07/2009-END
+#endif	// DEL-BY-LEETEN 2015/06/24-END
 
 #include "cuda_macro.h"
 
+// ADD-BY-LEETEN 2015/06/24-BEGIN
+#include "libclock.h"	
+#define CLOCK_INIT	LIBCLOCK_INIT
+#define CLOCK_BEGIN	LIBCLOCK_BEGIN
+#define CLOCK_END	LIBCLOCK_END
+#define CLOCK_PRINT	LIBCLOCK_PRINT
+
+#include "liblog.h"
+#ifdef assert
+#undef assert
+#endif
+#define assert(expr)	ASSERT_OR_LOG(expr, "")
+// ADD-BY-LEETEN 2015/06/24-END
+
+#if 0	// DEL-BY-LEETEN 2015/06/24-BEGIN
 #pragma comment (lib, "cutil32.lib ")      // link with my own library libfps
 
 #pragma comment (lib, "cudart.lib")      // link with my own library libfps
+#endif	// DEL-BY-LEETEN 2015/06/24-END
 
 #if	0	// MOD-BY-LEETEN 02/02/2010-FROM:
 	#define MALLOC(p, type, size)\

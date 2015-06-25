@@ -88,6 +88,7 @@
 #include "EntropyField_kernel.cu"
 
 	// ADD-BY-LEETEN 12/23/2009-BEGIN
+	#if	0	// MOD-BY-LEETEN 2015/06/24-FROM:
 	#if	COMPUTE_ENTROPY_VOLUME_HOST
 		#include	"EntropyField_host.cu"
 	#endif
@@ -121,7 +122,41 @@
 		#include	"EntropyFieldWithSortingInVectors_cuda.cu"
 	#endif
 	// ADD-BY-LEETEN 12/29/2009-END
+	#else	// MOD-BY-LEETEN 2015/06/24-TO:
+	#if	COMPUTE_ENTROPY_VOLUME == COMPUTE_ENTROPY_VOLUME_HOST
+		#include	"EntropyField_host.cu"
+	#endif
 
+	#if	COMPUTE_ENTROPY_VOLUME == COMPUTE_ENTROPY_VOLUME_CUDA
+		#include	"EntropyField_cuda.cu"
+	#endif
+
+	#if	COMPUTE_ENTROPY_VOLUME == COMPUTE_ENTROPY_VOLUME_WITH_SORTING_CUDA	
+		#include	"EntropyFieldWithSorting_cuda.cu"
+	#endif
+
+	#if	COMPUTE_ENTROPY_VOLUME == COMPUTE_ENTROPY_VOLUME_PER_SCANLINE_CUDA
+		#include	"EntropyFieldPerScanline_cuda.cu"
+	#endif
+
+	#if	COMPUTE_ENTROPY_VOLUME == COMPUTE_ENTROPY_VOLUME_SORT_PER_VOXEL_CUDA	
+		#include	"EntropyFieldSortPerVoxel_cuda.cu"
+	#endif
+
+	#if	COMPUTE_ENTROPY_VOLUME == COMPUTE_ENTROPY_VOLUME_ON_SPARSE_HISTOGRAM_CUDA	
+		#include	"EntropyFieldOnSparseHistogram_cuda.cu"
+	#endif
+
+	#if	COMPUTE_ENTROPY_VOLUME == COMPUTE_ENTROPY_VOLUME_WITH_MARGINAL_HISTOGRAM	
+		#include	"EntropyFieldWithMarginalHistogram_cuda.cu"
+	#endif
+
+	// ADD-BY-LEETEN 12/29/2009-BEGIN
+	#if	COMPUTE_ENTROPY_VOLUME == COMPUTE_ENTROPY_VOLUME_WITH_SORTING_IN_VECTORS_CUDA	
+		#include	"EntropyFieldWithSortingInVectors_cuda.cu"
+	#endif
+	// ADD-BY-LEETEN 12/29/2009-END
+	#endif	// MOD-BY-LEETEN 2015/06/24-END
 	// ADD-BY-LEETEN 12/23/2009-END
 
 ////////////////////////////////////////////
@@ -967,6 +1002,7 @@ _FlowDiffusionSetAngleMap(int *piAngleMap, int iNrOfPhis, int iNrOfThetas)
 		t2dAngleMap, pcAngleMap_array, 
 		cudaAddressModeClamp, cudaAddressModeClamp, cudaFilterModePoint, true);	
 
+	#if	0	// MOD-BY-LEETEN 2015/06/24-FROM:
     CUDA_SAFE_CALL( 
 		cudaMemcpy2DToArray(
 			pcAngleMap_array, 
@@ -977,6 +1013,18 @@ _FlowDiffusionSetAngleMap(int *piAngleMap, int iNrOfPhis, int iNrOfThetas)
 			iNrOfPhis * sizeof(piAngleMap), 
 			iNrOfThetas, 
 			cudaMemcpyHostToDevice) );
+	#else	// MOD-BY-LEETEN 2015/06/24-TO:
+    CUDA_SAFE_CALL( 
+		cudaMemcpy2DToArray(
+			pcAngleMap_array, 
+			0, 
+			0, 
+			(void*)piAngleMap, 
+			iNrOfPhis * sizeof(piAngleMap[0]), 
+			iNrOfPhis * sizeof(piAngleMap[0]), 
+			iNrOfThetas, 
+			cudaMemcpyHostToDevice) );
+	#endif	// MOD-BY-LEETEN 2015/06/24-END
 
 	// check whether the volume extent has been setup
 	assert( NULL != pcVolumePtrs_global[0].ptr );

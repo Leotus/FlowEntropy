@@ -17,19 +17,24 @@ include_directories(
 	)
 
 
-set(MYLIB_DIR "~/mylib" CACHE PATH "Path to mylib.")
-include_directories(
-	"${MYLIB_DIR}/include"
-)
-link_directories(
-	"${MYLIB_DIR}/lib"
-)
-add_definitions(
-	-DUSE_FREEGLUT
-	-DWITH_STATIC_LINK 
-	-DFREEGLUT_STATIC
-	-DGLEW_STATIC
-)	
+# # MOD-BY-LEETEN 2015/06/24-FROM:
+# set(MYLIB_DIR "~/mylib" CACHE PATH "Path to mylib.")
+# include_directories(
+	# "${MYLIB_DIR}/include"
+# )
+# link_directories(
+	# "${MYLIB_DIR}/lib"
+# )
+# add_definitions(
+	# -DUSE_FREEGLUT
+	# -DWITH_STATIC_LINK 
+	# -DFREEGLUT_STATIC
+	# -DGLEW_STATIC
+# )	
+# # MOD-BY-LEETEN 2015/06/24-TO:
+find_package(mylib)
+find_package(osuflow)
+# # MOD-BY-LEETEN 2015/06/24-END
 
 list(APPEND HEADER_FILES 
 	FlowEntropyViewerWin.h 

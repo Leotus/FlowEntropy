@@ -9,7 +9,7 @@
 	#include "liblog.h"
 	
 	#include "FlowEntropyViewerWin.h"
-	#include "FlowDiffusionCudaLib/FlowDiffusion.h"
+	// DEL-BY-LEETEN 2015/06/24:	#include "FlowDiffusionCudaLib/FlowDiffusion.h"
 
 void
 CFlowEntropyViewerWin::CSphericalHistogram::_ComputeHistogram

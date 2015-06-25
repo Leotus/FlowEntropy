@@ -3794,7 +3794,6 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 										int* g_histo,int* g_histo_puv,int round,
 											std::vector<float>& line_importance, float in_entropy)
 {
-
 	int sample_number_allowed=50;
 	int  kernel_size[3];
 	kernel_size[0]=kernel_size[1]= 8;//this is radium, actuall kernel is 2 x kernel_size+1
@@ -5189,7 +5188,9 @@ void testReconstruction()
 
 
 												//load seeds from file
-	int nSeeds; 
+	// MOD-BY-LEETEN 2015/06/24:	int nSeeds; 
+	int nSeeds = 0; 
+	// MOD-BY-LEETEN 2015/06/24-END
 	//set first seed as domain center
 	VECTOR3* newseed=new VECTOR3;
 
@@ -6715,11 +6716,12 @@ void readPatches_center()
 }
 void readPatches_region()
 {
+	#if 0 // MOD-BY-LEETEN 2015/06/24-FROM:
 	if(!theta)
 		theta=new float[2*360];
 
 	if(!phi)
-		phi=new float[2*360];
+		phi=new float[2*360]; 
 
 	float x[2],y[2];
 	FILE* fp=fopen("patch.txt","r");
@@ -6727,13 +6729,32 @@ void readPatches_region()
 	{
 		fscanf(fp,"%f, %f", &x[0],&y[0]);
 		fscanf(fp,"%f, %f", &x[1],&y[1]);
-	
 		theta[i*2+0]=x[0];
 		theta[i*2+1]=y[0];
 		phi[i*2+0]=x[1];
 		phi[i*2+1]=y[1];
 	}
 	fclose(fp);
+	#else	// MOD-BY-LEETEN 2015/06/24-TO:
+	float x[2],y[2];
+	float pfPatch[] = {
+#include "patch.txt"
+	};
+	size_t uNrOfPatches = (sizeof(pfPatch)/sizeof(pfPatch[0]))/4;
+	if(!theta)
+		theta=new float[2*uNrOfPatches];
+
+	if(!phi)
+		phi=new float[2*uNrOfPatches]; 
+
+	for(size_t p = 0; p < uNrOfPatches; p++)
+	{
+		theta[p*2+0] = pfPatch[p*4+0];
+		theta[p*2+1] = pfPatch[p*4+1];
+		phi[p*2+0] = pfPatch[p*4+2];
+		phi[p*2+1] = pfPatch[p*4+3];
+	}
+	#endif	// MOD-BY-LEETEN 2015/06/24-END
 }
 
 void set_time_step(char* filename,float t)
