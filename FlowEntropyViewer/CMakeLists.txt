@@ -48,7 +48,6 @@ foreach(SHADER ${SHADER_FILES})
 	file(TO_NATIVE_PATH ${SHADER} SHADER_NATIVE_PATH)
 	set(SHADER_OUTPUT_NATIVE_PATH ${SHADER_NATIVE_PATH}.h)
     
-    # TEST-ADD-BEGIN
     # Force CMake to convert shader codes to headers first.
     execute_process(COMMAND 
         ${mylib_DIR}/bin/shader2string
@@ -56,15 +55,12 @@ foreach(SHADER ${SHADER_FILES})
         ${SHADER_OUTPUT_NATIVE_PATH}
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
         )
-    # TEST-ADD-END
     
 	add_custom_command (
 		OUTPUT ${SHADER}.h
 		MAIN_DEPENDENCY ${SHADER}
 		DEPENDS ${SHADER}
-		# TEST-MOD: COMMAND ${MYLIB_DIR}/bin/shader2string "${SHADER_NATIVE_PATH}" "${SHADER_OUTPUT_NATIVE_PATH}"
         COMMAND ${mylib_DIR}/bin/shader2string "${SHADER_NATIVE_PATH}" "${SHADER_OUTPUT_NATIVE_PATH}"
-        # TEST-MOD-END
 	)
     
 endforeach(SHADER)
