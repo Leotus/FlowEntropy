@@ -8,7 +8,6 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 find_package(CUDA)
 find_package(ThirdPartyLib)
 find_package(mylib)
-# DEL-BY-LEETEN 2015/06/25:	find_package(cudpp)
 
 list(APPEND INC_DIRS
 	${CUDA_TOOLKIT_ROOT_DIR}/include
