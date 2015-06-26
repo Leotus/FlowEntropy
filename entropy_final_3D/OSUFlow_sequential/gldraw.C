@@ -5201,6 +5201,7 @@ void readPatches_center()
 }
 void readPatches_region()
 {
+	#if 0 // MOD-BY-LEETEN 2015/06/25-FROM:
 	float x[2],y[2];
 	float pfPatch[] = {
 #include "patch.txt"
@@ -5219,6 +5220,25 @@ void readPatches_region()
 		phi[p*2+0] = pfPatch[p*4+2];
 		phi[p*2+1] = pfPatch[p*4+3];
 	}
+	#else	// MOD-BY-LEETEN 2015/06/25-TO:
+	double pdPatch[] = {
+#include "patch.txt"
+	};
+	size_t uNrOfPatches = (sizeof(pdPatch)/sizeof(pdPatch[0]))/4;
+	if(!theta)
+		theta = new float[2*uNrOfPatches];
+
+	if(!phi)
+		phi = new float[2*uNrOfPatches]; 
+
+	for(size_t p = 0; p < uNrOfPatches; p++)
+	{
+		theta[p*2+0] = (float)pdPatch[p*4+0];
+		theta[p*2+1] = (float)pdPatch[p*4+1];
+		phi[p*2+0] = (float)pdPatch[p*4+2];
+		phi[p*2+1] = (float)pdPatch[p*4+3];
+	}
+	#endif	// MOD-BY-LEETEN 2015/06/25-END
 }
 
 void set_time_step(char* filename,float t)
