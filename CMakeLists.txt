@@ -18,4 +18,6 @@ include_directories(entropy_final_3D/OSUFlow_sequential)
 add_subdirectory(entropy_final_3D/OSUFlow_sequential)
 add_dependencies(OSUFlowExe FlowDiffusionCudaLib)
 
-# add_subdirectory(FlowEntropyViewer)
+# TEST-MOD: # add_subdirectory(FlowEntropyViewer)
+add_subdirectory(FlowEntropyViewer)
+# TEST-MOD-END
