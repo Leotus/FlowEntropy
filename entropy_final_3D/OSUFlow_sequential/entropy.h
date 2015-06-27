@@ -3,11 +3,7 @@
 #include <stdlib.h>
 #include <vector>
 #include <math.h>
-#if 0 // TEST-MOD
-#include "OSUFlow.h"
-#else
 #include "OSUFlowEntropy.h"
-#endif
 
 class OCNode
 {

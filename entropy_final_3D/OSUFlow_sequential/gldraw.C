@@ -15,11 +15,7 @@
 
 #include <GL/glut.h> 
 
-#if 0 // TEST-MOD
-#include "OSUFlow.h"
-#else
 #include "OSUFlowEntropy.h"
-#endif
 
 #include <list>
 #include <iterator>
@@ -57,11 +53,7 @@ int xform_mode = 0;
 #define XFORM_ROTATE  1
 #define XFORM_SCALE 2 
 
-#if 0 // TEST-MOD
-OSUFlow *osuflow;
-#else
 OSUFlowEntropy *osuflow;
-#endif
 VECTOR3 minLen, maxLen; 
 list<vtListSeedTrace*> sl_list; 
 list<vtListSeedTrace*> show_list; 
@@ -2761,11 +2753,7 @@ readPatches_region();
 
 	VECTOR3 minB, maxB; 
 
-#if 0 // TEST-MOD
-	osuflow = new OSUFlow(); 
-#else
 	osuflow = new OSUFlowEntropy(); 
-#endif
 	//printf("read file %s\n", argv[1]); 
 //	g_filename=argv[1];
 	osuflow->LoadData((const char*)argv[1], true);//, minB, maxB); //true: a steady flow field 

@@ -478,11 +478,7 @@ void calcDistanceField(char* filename, list<vtListSeedTrace*> lines, int* grid_r
 /////////////////////////////////////////////////////////////////
 ///time varying part
 ////////////////////////////////////// ///////////////////////////
-#if 0 // TEST-MOD
-void dumpSeedandLines(VECTOR3* seeds,int nseed, OSUFlow* osuflow, char* filename)//crtical points excluded
-#else
 void dumpSeedandLines(VECTOR3* seeds,int nseed, OSUFlowEntropy* osuflow, char* filename)//crtical points excluded
-#endif
 {
 	//1. gen streamlines
 
