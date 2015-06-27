@@ -75,6 +75,7 @@ vector<VECTOR3> sphere_mesh;
 
 typedef GLdouble TMatrix[16];
 
+#if 0 // TEST-DEL
 void 
 SaveMatrix(char *szMatrixFilename)
 {
@@ -111,6 +112,7 @@ void draw_cube(float r, float g, float b)
 	glutWireSphere(1.0,15,15);   // draw a solid cube 
 
 }
+
 void draw_region_centers()
 {
 	for(int i=0; i<360;i++)
@@ -121,6 +123,7 @@ void draw_region_centers()
 		glPopMatrix();
 	}
 }
+
 void save_streamlines_to_file()
 {
 	int grid_res[3];
@@ -238,6 +241,7 @@ void save_streamlines_to_file()
 	
 
 }
+
 void get_line_color(int color,float& r,float& g,float& b,float& a,float totalf)
 {
 	a=1.0f;
@@ -366,6 +370,8 @@ void save_streamlines_to_file_alpha_by_importance(std::vector<int> line_color,
 	delete [] alpha;
 
 }
+#endif
+
 void normalized_entropy(int* grid_res,float* values)
 {
 	if(!values)
@@ -948,7 +954,7 @@ void compute_streamlines_random() {
 
 }
 
-
+#if 0 // TEST-DEL
 
 vtListSeedTrace* getSelectedLine(list<vtListSeedTrace*>sl_list, int line_id)
 {
@@ -1056,6 +1062,8 @@ VECTOR3	selectNextSeed(float* vectors,float* new_vectors, int* grid_res,OCTree* 
 
 	return max_pt;
 }
+#endif
+
 typedef std::vector<int> vtListVertex;
 /*
 float evaluate_error(VECTOR3 pos,std::vector<vtListVertex*>	Graph,float* vectors,float* new_vectors,int* grid_res)
@@ -1296,6 +1304,9 @@ VECTOR3	selectNextSeed3(float* vectors,float* new_vectors, int* grid_res,OCTree*
 	}
 	return max_pt;
 }
+
+#if 0 // TEST-DEL
+
 /*
 
 exhause search
@@ -1391,8 +1402,6 @@ void output_entropy(OCTree* Tree, float* vectors, int* grid_res, float* theta,fl
 	delete [] result;
 	
 }
-
-
 
 
 void hand_tuning_streamlines()
@@ -1804,6 +1813,7 @@ bool isvalid_context(int* occupied, list<vtListSeedTrace*> context_list, int* di
 	}	
 	return true;
 }
+	 
 /*
 void add_context_streamlines(std::vector<int>& line_color)
 {
@@ -1965,7 +1975,7 @@ void add_context_streamlines(std::vector<int>& line_color)
 
 
 }
-	 
+
 void update_score(float* score,float* vectors,float* new_vectors, list<vtListSeedTrace*> long_lines, 
 				  int* grid_res, int line_num)
 {
@@ -2159,6 +2169,7 @@ void compute_streamlines_select_salient_streamlines() {
 	delete [] new_bin;
 }
 */
+#endif
 		list<vtListSeedTrace*> half_lines, long_lines; 
 
 float dsim(std::vector<VECTOR3> mylist,std::vector<VECTOR3> yourlist, VECTOR3 p, VECTOR3 q,float a)
@@ -2367,11 +2378,12 @@ void compute_streamlines_select_salient_streamlines() {
 	delete [] vectors;
 }
 
-
+#if 0 // TEST-DEL
 void save_distance_volume()
 {
 	//sl_list;
 }
+#endif
 
 void compute_streamlines_load_file() {
 
@@ -2449,6 +2461,8 @@ void dumpEntropies(std::vector<float> mylist)
 			fwrite(&(mylist[i]),sizeof(float),1,fp);
 	fclose(fp);
 }
+
+#if 0 // TEST-DEL
 
 void compute_streamlines_calc_entropy() {
 
@@ -2608,7 +2622,6 @@ void trim_dull_segments(list<vtListSeedTrace*> lines, int* new_bin, int* old_bin
 			}
 		}
 	}
-	
 }
 
 void dumphistogram(int* bin, int* grid_res, int binnum, int n)
@@ -2629,7 +2642,7 @@ void dumphistogram(int* bin, int* grid_res, int binnum, int n)
 	fwrite(histo,sizeof(int),binnum,fp);
 	fclose(fp);
 }
-
+#endif
 
 bool inside(int x, int y,int z,int xdim,int ydim,int zdim)
 {
@@ -3447,6 +3460,7 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 	return;
 }
 
+#if 0 // TEST-DEL
 /*
 //original
 void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* grid_res, 
@@ -3608,6 +3622,7 @@ void selectStreamlines_by_distribution(float* vectors,float* new_vectors, int* g
 	return;
 }
 */
+#endif
 
 static int* done=NULL;
 // static int* old_bin;
@@ -3626,6 +3641,8 @@ static float* importance=NULL;
 // static float* c3=NULL;	
 
 static bool bIsInitialized = false;
+
+#if 0 // TEST-DEL
 void _FreeComputeStreamlineTemp()
 {
 	/*
@@ -3657,6 +3674,7 @@ void _FreeComputeStreamlineTemp()
 	FREE(importance);
 	FREE(done);
 }
+#endif
 
 void compute_streamlines() 
 {
@@ -3891,6 +3909,8 @@ void compute_streamlines()
 	#endif
 }
 
+#if 0 // TEST-DEL
+
 void testReconstruction()
 {
 
@@ -3985,7 +4005,7 @@ void testReconstruction()
 	delete [] importance;
 
 }
-
+#endif
 
 void copyFrameBuffer(char* filename, int XDim,int YDim)
 {
@@ -4017,6 +4037,8 @@ void copyFrameBuffer(char* filename, int XDim,int YDim)
 	delete [] crop_data;
 	delete [] pdata;
 }
+
+#if 0 // TEST-DEL
 
 void draw_grid()
 {
@@ -4080,6 +4102,7 @@ void draw_sphere_mesh()
 
 	glPopMatrix();
 }
+
 void draw_triangulation()
 {
 		glPushMatrix(); 
@@ -4181,6 +4204,7 @@ char *textFileRead(char *fn) {
 	}
 	return content;
 }
+
 void SetShaders()
 {
 	if (glewInit()!=GLEW_OK) 
@@ -4295,6 +4319,7 @@ void draw_streamlines_load_file() {
 	glUseProgramObjectARB(0);
 
 }
+#endif
 
 void draw_streamlines() {
 
@@ -4491,6 +4516,8 @@ void draw_streamlines() {
 
 }
 
+#if 0 // TEST-DEL
+
 void animate_streamlines() {
 
 	std::list<vtListSeedTrace*>::iterator pIter; 
@@ -4555,7 +4582,6 @@ void animate_streamlines() {
 
 ////////////////////////////////////////////// 
 
-
 //////////////////////////////////////////////////////
 int getDepth(const GLfloat *v, GLfloat *mvp)
 {
@@ -4569,6 +4595,7 @@ int getDepth(const GLfloat *v, GLfloat *mvp)
 
 	return ((int)(depth * INT_MAX) / 4);
 }
+
 struct DepthSorter
 {
 	int	*depths;
@@ -4658,6 +4685,7 @@ int * zsort_bound()
 		delete [] faces;
 		return (indices);
 	}
+
 void drawBounds_inner()
 {
 	glShadeModel(GL_SMOOTH);
@@ -4765,6 +4793,7 @@ void drawBounds_inner()
 
 
 }
+
 void drawBounds_outter()
 {
 	GLfloat light_specular[] = {1,1,1, 1.0};
@@ -4887,7 +4916,7 @@ void drawBounds_outter()
 	delete [] faces;
 	delete [] indices;
 }
-
+#endif
 
 void display()
 {
@@ -5092,7 +5121,7 @@ void mykey(unsigned char key, int x, int y)
 }
 ///////////////////////////////////////////////////////////////
 
-
+#if 0 // TEST-DEL
 void convert()
 {
 	//convert from little endian to large endian
@@ -5199,6 +5228,7 @@ void readPatches_center()
 	}
 	fclose(fp);
 }
+#endif
 void readPatches_region()
 {
 	double pdPatch[] = {
@@ -5256,6 +5286,7 @@ void set_time_step(char* filename,float t)
 
 }
 
+#if 0 // TEST-DEL
 void process_time_varying()
 {
 
@@ -5364,6 +5395,7 @@ void combine_data()
 	delete [] uvwf;
 	printf("combine done\n");
 }
+
 void convert_vis_data(char* filename)
 {
 	int grid_res[3];
@@ -5379,6 +5411,7 @@ void convert_vis_data(char* filename)
 	fclose(fp);
 	delete [] vec;
 }
+#endif
 
 int main(int argc, char** argv) 
 {
@@ -5445,5 +5478,3 @@ readPatches_region();
 	#endif
 	return 0;
 }
-
-
