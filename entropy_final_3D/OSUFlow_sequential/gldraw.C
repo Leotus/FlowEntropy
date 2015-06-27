@@ -238,6 +238,7 @@ void save_streamlines_to_file_hand_tuning(char* filename, std::vector<int> line_
 
 }
 
+#if 0 // TEST-DEL
 void hand_tune_alpha()
 {
 
@@ -548,6 +549,7 @@ void compute_bundles(int bundle_num)
 		line_color.push_back(group_ids[i]);
 	save_streamlines_to_file_hand_tuning("test.dat",line_color,sl_list.size());
 }
+
 //random lines
 void compute_streamlines_random() {
 
@@ -656,8 +658,10 @@ void compute_streamlines_random() {
 //	save_streamlines_to_file_hand_tuning("test.dat",line_color,sl_list.size());
 
 }
+#endif
 
 typedef std::vector<int> vtListVertex;
+#if 0 // TEST-DEL
 /*
 float evaluate_error(VECTOR3 pos,std::vector<vtListVertex*>	Graph,float* vectors,float* new_vectors,int* grid_res)
 {
@@ -1105,6 +1109,7 @@ void compute_streamlines_select_salient_streamlines() {
 	delete [] cpy_seeds;
 	delete [] vectors;
 }
+#endif
 
 void compute_streamlines_load_file() {
 
@@ -1183,6 +1188,7 @@ void dumpEntropies(std::vector<float> mylist)
 	fclose(fp);
 }
 
+#if 0 // TEST-DEL
 bool inside(int x, int y,int z,int xdim,int ydim,int zdim)
 {
 	if(x<0 || x>xdim-1 || y<0||y>ydim-1 || z<0||z>zdim-1)
@@ -1362,6 +1368,7 @@ void ConstructGraph_static_3D(char* filename, std::vector<vtListVertex*>& Graph)
 	delete [] buf;
 
 }
+#endif
 
 int grid_res[3];
 float* vectors,*new_vectors;
@@ -1372,6 +1379,7 @@ float* kx,*ky,*kz,*b,*c1,*c2,*c3;
 OCTree* Tree;
 std::vector<vtListVertex*>	Graph;
 int* occupied;
+#if 0 // TEST-DEL
 void compute_streamlines_by_click_initialize() 
 {
 	
@@ -1564,6 +1572,7 @@ void compute_streamlines_by_click()
 	//dumpReconstruedField("r.vec", new_vectors, grid_res);
 	
 }
+#endif
 
 float * cumsum(float * p, int num)
 {
@@ -2250,6 +2259,7 @@ void compute_streamlines()
 	#endif
 }
 
+#if 0 // TEST-DEL
 void copyFrameBuffer(char* filename, int XDim,int YDim)
 {
 	unsigned char* pdata=new unsigned char[XDim*YDim*3];
@@ -2280,6 +2290,7 @@ void copyFrameBuffer(char* filename, int XDim,int YDim)
 	delete [] crop_data;
 	delete [] pdata;
 }
+#endif
 
 void draw_streamlines() {
 
@@ -2600,7 +2611,7 @@ void mykey(unsigned char key, int x, int y)
 	case 27:
 		exit(0);
 		break;
-
+#if 0 // TEST-DEL
 	case 'Q': 
 	case 'q': 
 		compute_streamlines_by_click_cleanup();
@@ -2610,6 +2621,7 @@ void mykey(unsigned char key, int x, int y)
 	case 'r':
 		compute_streamlines_random();
 		break;
+#endif
 	case 'S': 
 	case 's': 
 	//	compute_streamlines_by_click();
@@ -2636,10 +2648,12 @@ void mykey(unsigned char key, int x, int y)
 		toggle_draw_streamlines = false; 
 		first_frame = 1; 
 		break;
+#if 0 // TEST-MOD
 	case 'W':
 	case 'w':
 		copyFrameBuffer(strcat(g_filename,".ppm"),winWidth,winHeight);
 		break;
+#endif
 	case 'T':
 	case 't':
 		//testReconstruction();
@@ -2648,6 +2662,7 @@ void mykey(unsigned char key, int x, int y)
 
 		break;
 
+#if 0 // TEST-MOD
 	case 'P':
 	case 'p':
 		compute_streamlines_select_salient_streamlines();
@@ -2675,6 +2690,7 @@ void mykey(unsigned char key, int x, int y)
 		adjustLengthByEntropies("entropies.bin","streamlines.dat","velocity.dat");
 		printf("adjust done\n");
 		break;
+#endif
 	}
 }
 ///////////////////////////////////////////////////////////////
