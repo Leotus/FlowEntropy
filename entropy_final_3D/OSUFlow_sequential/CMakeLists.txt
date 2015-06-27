@@ -5,6 +5,9 @@ find_package(OpenGL)
 
 find_package(ThirdPartyLib)
 find_package(mylib)
+# TET-ADD-BEGIN
+find_package(osuflow)
+# TEST-ADD-END
 
 # grab all the header files
 file(GLOB HEADER_FILES "*.h" )
@@ -54,6 +57,9 @@ SET_SOURCE_FILES_PROPERTIES( ${SRC_FILES} PROPERTIES LANGUAGE CXX )
 target_link_libraries(${PROJECT_NAME} 
     ${ThirdPartyLib_LIBRARIES}
     ${mylib_LIBRARIES}
+    # TEST-ADD-BEGIN
+    ${osuflow_LIBRARIES}
+    # TEST-ADD-END
     FlowDiffusionCudaLib
 )
 
