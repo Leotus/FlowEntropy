@@ -22,9 +22,7 @@ This is the shader program to fill the importance
 	uniform float fWindowHeight;
 
 	// ADD-BY-LEETEN 01/05/2010-BEGIN
-	// TEST-MOD:	#include "clip_frag_func.frag.h"
 	#include "/clip_frag_func.frag.h"
-	// TEST-MOD-END
 
 	#if	0	// MOD-BY-LEETEN 01/07/2010-FROM:
 		uniform vec4	v4ClippingPlaneOutsideColor;
@@ -40,9 +38,7 @@ This is the shader program to fill the importance
 	// ADD-BY-LEETEN 01/05/2010-END
 
 	// ADD-BY-LEETEN 01/05/2010-BEGIN
-	// TESt-MOD:	#include "tf1d_frag_func.frag.h"
 	#include "/tf1d_frag_func.frag.h"
-	// TEST-MOD-END
 	// ADD-BY-LEETEN 01/05/2010-END
 
 void 

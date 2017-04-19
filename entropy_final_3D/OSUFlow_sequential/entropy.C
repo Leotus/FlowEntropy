@@ -1198,12 +1198,6 @@ int get_bin_number_3D(VECTOR3 v, float* theta, float* phi, int binnum=360)
 	return -1;//should not be this, but...
 	#endif
 }
-#if 0	// TEST-DEL
-float log2(float v)
-{
-	return log(v)/log(2.0);
-}
-#endif
 
 float calcEntropy_known_bins( int* bins,int* grid_res, VECTOR3 startpt,VECTOR3 endpt,int binnum)
 {
