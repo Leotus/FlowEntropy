@@ -6,40 +6,21 @@ This is the shader program to fill the importance
 
 	uniform sampler3D t3dVolume;	// the texture hold the depths of each knots
 	uniform sampler2D t2dPrevLayer;	// the texture hold the depths of each knots
-	// ADD-BY-LEETEN 01/01/2010-BEGIN
 	uniform sampler2D t2dLineFlag;
-	// ADD-BY-LEETEN 01/01/2010-END
 
-	// ADD-BY-LEETEN 01/12/2010-BEGIN
-	// MOD-BY-LEETEN 05/11/2011-FROM:
-		// uniform sampler2DShadow t2dsDepth;	// the texture hold the depths of each knots
-	// TO:
 	uniform sampler2D t2dsDepth;	// the texture hold the depths of each knots
-	// MOD-BY-LEETEN 05/11/2011-END
-	// ADD-BY-LEETEN 01/12/2010-END
 
 	uniform float fWindowWidth;
 	uniform float fWindowHeight;
 
-	// ADD-BY-LEETEN 01/05/2010-BEGIN
 	#include "/clip_frag_func.frag.h"
 
-	#if	0	// MOD-BY-LEETEN 01/07/2010-FROM:
-		uniform vec4	v4ClippingPlaneOutsideColor;
-		uniform int		ibIsClippingPlaneOutsideColorMono;
-		uniform vec4	v4ClippingPlaneInsideColor;
-		uniform int		ibIsClippingPlaneInsideColorMono;
-	#else	// MOD-BY-LEETEN 01/07/2010-TO:
 	uniform vec4	v4ClippingPlaneOutsideColor;
 	uniform int		ibIsClippingPlaneOutsideColorMono;
 	uniform vec4	v4ClippingPlaneInsideColor;
 	uniform int		ibIsClippingPlaneInsideColorMono;
-	#endif	// MOD-BY-LEETEN 01/07/2010-END
-	// ADD-BY-LEETEN 01/05/2010-END
 
-	// ADD-BY-LEETEN 01/05/2010-BEGIN
 	#include "/tf1d_frag_func.frag.h"
-	// ADD-BY-LEETEN 01/05/2010-END
 
 void 
 main()
@@ -57,13 +38,6 @@ main()
 	float fV_normalized = texture3D(t3dVolume, gl_TexCoord[0].xyz).x;
 
 	/////////////////////////////////////////////////////////////////
-	#if	0	// MOD-BY-LEETEN 01/01/2010-FROM:
-		vec4 v4Data = vec4(
-			v4FragCoord.z, 
-			max(fPrevV_normalized, fV_normalized),
-			0.0, 
-			1.0);
-	#else	// MOD-BY-LEETEN 01/01/2010-TO:
 	vec4 v4Data = vec4(
 		v4FragCoord.z, 
 		0.0,
@@ -73,27 +47,12 @@ main()
 	if( v4PrevColor.a > 0.0 )
 		v4Data.g = max(fPrevV_normalized, fV_normalized);
 	else
-		// MOD-BY-LEETEN 01/02/2010-FROM:
-			// v4Data.g = 0;	
-		// TO:
 		v4Data.g = 0.0;	
-		// MOD-BY-LEETEN 01/02/2010-END
-	#endif	// MOD-BY-LEETEN 01/01/2010-END
 
-	// MOD-BY-LEETEN 01/05/2010-FROM:
-		// gl_FragData[0] = vec4(0.0);
-	// TO:
 	float fDepth = v4FragCoord.z;
 
 	vec4 v4Color = vec4(0.0);
 
-	#if	0	// MOD-BY-LEETEN 01/07/2010-FROM:
-		float fThicknessRatio = FAdjustThickness(v4FragCoord.z, v4PrevFragData.r, v4FragCoord.xy);
-		if( 0.0 < fThicknessRatio && fThicknessRatio < 1.0 )
-		{
-			float fZNear	= FGetZNear(v4FragCoord.xy);
-			float fZFar		= FGetZFar(v4FragCoord.xy);
-	#else	// MOD-BY-LEETEN 01/07/2010-TO:
 	float fTolerance = v4PrevFragData.r - v4FragCoord.z; 
 	float fDepthWithTolerance = v4FragCoord.z - fTolerance;
 	float fPrevDepthWithTolerance = v4PrevFragData.r + fTolerance;
@@ -102,13 +61,8 @@ main()
 	{
 		float fZNear	= FGetZNear(v4FragCoord.xy);
 		float fZFar		= FGetZFar(v4FragCoord.xy);
-	#endif	// MOD-BY-LEETEN 01/07/2010-END
 
-		// MOD-BY-LEETEN 01/07/2010-FROM:
-			// if( v4FragCoord.z < fZFar && fZFar < v4PrevFragData.r )
-		// TO:
 		if( fDepthWithTolerance < fZFar && fZFar < fPrevDepthWithTolerance )
-		// MOD-BY-LEETEN 01/07/2010-END
 		{
 			fDepth = fZFar;
 			if( 0 != ibIsClippingPlaneInsideColorMono )
@@ -118,11 +72,7 @@ main()
 			v4Color.a = v4ClippingPlaneInsideColor.a;
 		}
 
-		// MOD-BY-LEETEN 01/07/2010-FROM:
-			// if( v4FragCoord.z < fZNear && fZNear < v4PrevFragData.r )
-		// TO:
 		if( fDepthWithTolerance < fZNear && fZNear < fPrevDepthWithTolerance )
-		// MOD-BY-LEETEN 01/07/2010-END
 		{
 			fDepth = fZNear;
 			if( 0 != ibIsClippingPlaneOutsideColorMono )
@@ -133,19 +83,12 @@ main()
 		}
 	}
 
-	// ADD-BY-LEETEN 01/12/2010-BEGIN
-	// MOD-BY-LEETEN 05/11/2011-FROM:
-		// float fBackgroundDepth = shadow2D(t2dsDepth, v4FragCoord.xyz).r;
-	// TO:
 	float fBackgroundDepth = texture2D(t2dsDepth, v4FragCoord.xy).r;
-	// MOD-BY-LEETEN 05/11/2011-END
 	if( v4FragCoord.z > fBackgroundDepth )
 		v4Color.a = 0.0;
-	// ADD-BY-LEETEN 01/12/2010-END
 
 	gl_FragDepth = fDepth;
 	gl_FragData[0] = v4Color;
-	// MOD-BY-LEETEN 01/05/2010-END
 
 	gl_FragData[1] = v4Data;
 }

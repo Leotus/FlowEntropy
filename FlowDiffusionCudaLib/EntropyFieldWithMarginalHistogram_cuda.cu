@@ -277,7 +277,6 @@ CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_TIMING);
 				CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_LOOP_TIMING);
 
 				if( 0 == z )
-				// MOD-BY-LEETEN 12/19/2009-END
 				{
 					_CreateHistogramWithMarginalHistogram_kernel<<<v3Grid, v3Blk, 0>>>
 					(
@@ -335,7 +334,6 @@ CLOCK_END(_ComputeEntropyVolume_PRINT_TIMING, false);
 
 CLOCK_PRINT(_ComputeEntropyVolume_PRINT_TIMING);
 }
-// ADD-BY-LEETEN 12/18/2009-END
 
 #endif	// COMPUTE_ENTROPY_VOLUME_WITH_MARGINAL_HISTOGRAM
 

@@ -4,24 +4,14 @@ This is the shader program for direct volume rendering
 
 */
 
-// ADD-BY-LEETEN 01/10/2010-BEGIN
 #extension GL_EXT_gpu_shader4 : enable
-// ADD-BY-LEETEN 01/10/2010-END
 
 	uniform sampler3D t3dVolume;	// the texture hold the depths of each knots
 	uniform sampler2D t2dPrevLayer;	// the texture hold the depths of each knots
 
-	// ADD-BY-LEETEN 01/12/2010-BEGIN
-	// MOD-BY-LEETEN 05/11/2011-FROM:
-		// uniform sampler2DShadow t2dsDepth;	// the texture hold the depths of each knots
-	// TO:
 	uniform sampler2D t2dsDepth;	// the texture hold the depths of each knots
-	// MOD-BY-LEETEN 05/11/2011-END
-	// ADD-BY-LEETEN 01/12/2010-END
 
-	// ADD-BY-LEETEN 01/05/2010-BEGIN
 	#include "/clip_frag_func.frag.h"
-	// ADD-BY-LEETEN 01/05/2010-END
 
 	uniform float fThicknessGain;
 	uniform float fOcclusionSaturation;
@@ -30,52 +20,23 @@ This is the shader program for direct volume rendering
 	uniform float fWindowWidth;
 	uniform float fWindowHeight;
 
-	#if	0	// MOD-BY-LEETEN 01/05/2010-FROM:
-		// range of the data
-		uniform float fDataValueMin;
-		uniform float fDataValueMax;
-
-		// range of the TF's support 
-		uniform float fTfDomainMin;
-		uniform float fTfDomainMax;
-	#else	// MOD-BY-LEETEN 01/05/2010-TO:
 	#include "/tf1d_frag_func.frag.h"
-	#endif	// MOD-BY-LEETEN 01/05/2010-END
 
-	// ADD-BY-LEETEN 12/31/2009-BEGIN
-	// MOD-BY-LEETEN 01/12/2010-FROM:
-		// varying vec3 v3Tangent_eye;
-	// TO:
 	in		vec3 v3Tangent_eye;
-	// MOD-BY-LEETEN 01/12/2010-END
 	uniform int ibIsLightingEnabled;
-	// ADD-BY-LEETEN 12/31/2009-END
 
-	// ADD-BY-LEETEN 01/01/2010-BEGIN
 	uniform int ibIsColorMono;
-	// ADD-BY-LEETEN 01/01/2010-END
 
-	// ADD-BY-LEETEN 01/03/2010-BEGIN
 	uniform int iMaxDistanceToNeighbors_screen;
-	// ADD-BY-LEETEN 01/03/2010-END
 
-	// ADD-BY-LEETEN 01/05/2010-BEGIN
 	uniform float fClipVolumeOutsideThreshold;
 	uniform float fClipVolumeInsideThreshold;
-	// ADD-BY-LEETEN 01/05/2010-END
 
-	// ADD-BY-LEETEN 01/10/2010-BEGIN
 	uniform float	fDashPeriod;
 	uniform float	fDashOffset;
 	uniform float	fDashThreshold;
-	// MOD-BY-LEETEN 01/12/2010-FROM:
-		// uniform int		ibIsHigherEntropyWithLongerLine;
-	// TO:
 	uniform int		ibIsEntropyDependentDashed;
-	// MOD-BY-LEETEN 01/12/2010-END
-	// ADD-BY-LEETEN 01/10/2010-END
 
-// ADD-BY-LEETEN 01/02/2010-BEGIN
 float FBias(float b, float t)
 {
 	if( 0.0 == b )
@@ -89,7 +50,6 @@ float FBias(float b, float t)
 
 	return pow(t, log(b) / log(0.5));
 }
-// ADD-BY-LEETEN 01/02/2010-END
 
 void 
 main()
@@ -102,15 +62,8 @@ main()
 				// read the previous layer
 	vec4 v4PrevFragData = texture2D(t2dPrevLayer, v4FragCoord.xy);
 	float fPrevDepth		= v4PrevFragData.r;
-	// MOD-BY-LEETEN 01/03/2010-FROM:
-		// float fPrevV_normalized = v4PrevFragData.g;
-	// TO:
 	float fPrevV_normalized;
-	// MOD-BY-LEETEN 01/05/2010-FROM:
-		// fPrevV_normalized = 0.0;
-	// TO:
 	fPrevV_normalized = 1.0;
-	// MOD-BY-LEETEN 01/05/2010-END
 
 	for(int		dy = -iMaxDistanceToNeighbors_screen; dy <= +iMaxDistanceToNeighbors_screen; dy++)
 		for(int dx = -iMaxDistanceToNeighbors_screen; dx <= +iMaxDistanceToNeighbors_screen; dx++)
@@ -121,13 +74,8 @@ main()
 			v2NeighboringFragCoord.x /= fWindowWidth;
 			v2NeighboringFragCoord.y /= fWindowHeight;
 			vec4 v4PrevNeighboringFragData = texture2D(t2dPrevLayer, v2NeighboringFragCoord);
-			// MOD-BY-LEETEN 01/05/2010-FROM:
-				// fPrevV_normalized = max(fPrevV_normalized, v4PrevNeighboringFragData.g);
-			// TO:
 			fPrevV_normalized = min(fPrevV_normalized, v4PrevNeighboringFragData.g);
-			// MOD-BY-LEETEN 01/05/2010-END
 		}
-	// MOD-BY-LEETEN 01/03/2010-END
 
 	float fThickness_obj;
 	fThickness_obj = fThicknessGain;
@@ -136,17 +84,7 @@ main()
 	float fV_normalized = texture3D(t3dVolume, gl_TexCoord[0].xyz).x;
 
 				// convert the value into color via the transfer function
-	#if	0	// MOD-BY-LEETEN 01/05/2010-FROM:
-		vec4 v4Color;
-		float fV_data = fDataValueMin + fV_normalized * (fDataValueMax - fDataValueMin);
-		float fV_tf = (fV_data - fTfDomainMin) / (fTfDomainMax - fTfDomainMin);
-		if( fV_tf < 0.0 || fV_tf > 1.0 )
-			v4Color = vec4(0.0);
-		else
-			v4Color = texture1D(t1dTf, fV_tf);
-	#else	// MOD-BY-LEETEN 01/05/2010-TO:
 	vec4 v4Color = F4GetColorFrom1DTf(fV_normalized);
-	#endif	// MOD-BY-LEETEN 01/05/2010-END
 
 	if( 1.0 / 255.0 < v4Color.a && v4Color.a < 1.0 - 1.0 / 255.0 )
 		v4Color.a = 1.0 - pow(1.0 - v4Color.a, fThickness_obj);
@@ -155,18 +93,11 @@ main()
 	else if( 1.0 - 1.0 / 255.0 < v4Color.a )
 		v4Color.a = 1.0;
 
-	// ADD-BY-LEETEN 01/03/2010-BEGIN
 	if( 0 != ibIsColorMono )
 	{
-		// MOD-BY-LEETEN 01/05/2010-FROM:
-			// v4Color = gl_Color;
-		// TO:
 		v4Color.rgb = gl_Color.rgb;
-		// MOD-BY-LEETEN 01/05/2010-END
 	}
-	// ADD-BY-LEETEN 01/03/2010-END
 
-	// ADD-BY-LEETEN 12/31/2009-BEGIN
 						// apply lighting
 	if( 0 != ibIsLightingEnabled )
 	{
@@ -197,81 +128,45 @@ main()
 		v4Color.g = gl_FrontMaterial.ambient.g * v4Color.g + gl_FrontMaterial.diffuse.g * v4Color.g * LN + gl_FrontMaterial.specular.g * v4Color.g * VR;
 		v4Color.b = gl_FrontMaterial.ambient.b * v4Color.b + gl_FrontMaterial.diffuse.b * v4Color.b * LN + gl_FrontMaterial.specular.b * v4Color.b * VR;
 	}
-	// ADD-BY-LEETEN 12/31/2009-END
-
-	#if	0	// DEL-BY-LEETEN 01/03/2010-BEGIN
-		// ADD-BY-LEETEN 01/01/2010-BEGIN
-		if( 0 != ibIsColorMono )
-		{
-			v4Color = gl_Color;
-		}
-		// ADD-BY-LEETEN 01/01/2010-END
-	#endif	// DEL-BY-LEETEN 01/03/2010-END
 
 	/////////////////////////////////////////////////////////////////
 	// reduce the opacity if the importance is smaller than the previous one
 	if( fV_normalized < fPrevV_normalized )
 	{
-		// MOD-BY-LEETEN 01/02/2010-FROM:
-			// v4Color.a *= fOcclusionSaturation;
-		// TO:
 		v4Color.a *= FBias(fOcclusionSaturation, 1.0 - (fPrevV_normalized - fV_normalized));
-		// MOD-BY-LEETEN 01/02/2010-END
 	}
 
-	// ADD-BY-LEETEN 01/05/2010-BEGIN
 	bool bPassClipPlanes = BIsInClipvolume(v4FragCoord.z, v4FragCoord.xy);
 	if( false == bPassClipPlanes )
 	{
-		// MOD-BY-LEETEN 01/07/2010-FROM:
-			// if( fV_normalized < fClippingThreshold )
-		// TO:
 		if( fV_normalized < fClipVolumeOutsideThreshold )
-		// MOD-BY-LEETEN 01/07/2010-END
 		{
 			v4Color = vec4(0.0);
 		}
 	}
-	// ADD-BY-LEETEN 01/07/2010-BEGIN
 	else
 	{
 		if( fV_normalized < fClipVolumeInsideThreshold )
 			v4Color = vec4(0.0);
 	}
-	// ADD-BY-LEETEN 01/07/2010-END
-	// ADD-BY-LEETEN 01/05/2010-END
 
-	// ADD-BY-LEETEN 01/10/2010-BEGIN
 	if( fDashPeriod > 0.0 )
 	{
 		float fIndexInStreamline = gl_TexCoord[1].r;
 		float fFrequency = 2.0 * 3.14159 / fDashPeriod;
-		// ADD-BY-LEETEN 01/12/2010-BEGIN
 		if( 0 != ibIsEntropyDependentDashed )
-		// ADD-BY-LEETEN 01/12/2010-END
 		fFrequency /= (0.01 + fV_normalized);
 
 		float fPeriod = sin( fDashOffset + fIndexInStreamline * fFrequency );
 		fPeriod = (fPeriod + 1.0) / 2.0;
-		// MOD-BY-LEETEN 01/12/2010-FROM:
-			// if( fPeriod  > fV_normalized )
-		// TO:
 		if( (0 == ibIsEntropyDependentDashed && fPeriod  > fDashThreshold) ||
 			(0 != ibIsEntropyDependentDashed && fPeriod  > fV_normalized) )
-		// MOD-BY-LEETEN 01/12/2010-END
 			v4Color.a = 0.0;
 	}
-	// ADD-BY-LEETEN 01/10/2010-END
 
-	// ADD-BY-LEETEN 01/12/2010-BEGIN
-	// MOD-BY-LEETEN 05/11/2011-FROM:
-		// float fDepth = shadow2D(t2dsDepth, v4FragCoord.xyz).r;
-	// TO:
 	float fDepth = texture2D(t2dsDepth, v4FragCoord.xy).r;
-	// MOD-BY-LEETEN 05/11/2011-END
 	if( v4FragCoord.z > fDepth )
 		v4Color.a = 0.0;
-	// ADD-BY-LEETEN 01/12/2010-END
 
 	gl_FragData[0] = v4Color;
 	gl_FragData[1] = vec4(0.0);

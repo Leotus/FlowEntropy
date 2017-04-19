@@ -1,10 +1,8 @@
 #if	COMPUTE_ENTROPY_VOLUME_CUDA
 
-// ADD-BY-LEETEN 12/23/2009-BEGIN
 #define NR_OF_THREADS_PER_MARGIN	1
 
 static texture<float, 2, cudaReadModeElementType> t2dActiveVoxelMarginalEntropy;
-// ADD-BY-LEETEN 12/23/2009-END
 
 __device__
 void
@@ -66,51 +64,13 @@ _UpdateHistogram_kernel
 )
 {
 	int iActiveVoxelX = blockIdx.x * blockDim.x + threadIdx.x;
-	#if	0		// MOD-BY-LEETEN 12/19/2009-FROM:
-		int iActiveVoxelZ = blockIdx.y * blockDim.y + threadIdx.y;
-		int iActiveVoxelId = iActiveVoxelX + iActiveVoxelZ * gridDim.x * blockDim.x;
- 		int iVoxelX = i3BlockCorner.x + iActiveVoxelX;
-		int iVoxelY = i3BlockCorner.y;
-		int iVoxelZ = i3BlockCorner.z + iActiveVoxelZ;
-	#else		// MOD-BY-LEETEN 12/19/2009-TO:
-
 	int iActiveVoxelY = blockIdx.y * blockDim.y + threadIdx.y;
 	int iActiveVoxelId = iActiveVoxelX + iActiveVoxelY * gridDim.x * blockDim.x;
  	int iVoxelX = i3BlockCorner.x + iActiveVoxelX;
 	int iVoxelY = i3BlockCorner.y + iActiveVoxelY;
 	int iVoxelZ = i3BlockCorner.z;
 
-	#endif		// MOD-BY-LEETEN 12/19/2009-END
-
-
 	if( iVoxelX < i3VolumeSize.x && iVoxelY < i3VolumeSize.y && iVoxelZ < i3VolumeSize.z  )
-
-		#if	0		// MOD-BY-LEETEN 12/19/2009-FROM:
-
-			for(int iYDir = -1; iYDir <= +1; iYDir+=2)
-			{
-				int iYOffset = i3KernelSize.y * iYDir;
-				switch (iYDir)
-				{
-				case -1:	iYOffset--;		break;
-				}
-				for(int		iZOffset = -i3KernelSize.z; iZOffset <= i3KernelSize.z; iZOffset++)
-					for(int iXOffset = -i3KernelSize.x; iXOffset <= i3KernelSize.x; iXOffset++)
-					{
-						_UpdateHistogramEntry_device
-						(
-							iActiveVoxelId,	
-							iVoxelX, iVoxelY, iVoxelZ,
-							iXOffset,iYOffset,iZOffset,
-							iYDir,
-							iNrOfBins,
-							i3VolumeSize, 
-							cActiveVoxelsHistorgram_pitched
-						);
-					}
-			}
-
-		#else
 
 		for(int iZDir = -1; iZDir <= +1; iZDir+=2)
 		{
@@ -134,7 +94,6 @@ _UpdateHistogram_kernel
 					);
 				}
 		}
-		#endif
 }
 
 __global__ 
@@ -153,21 +112,11 @@ _CreateHistogram_kernel
 )
 {
 	int iActiveVoxelX = blockIdx.x * blockDim.x + threadIdx.x;
-	#if	0		// MOD-BY-LEETEN 12/19/2009-FROM:
-		int iActiveVoxelZ = blockIdx.y * blockDim.y + threadIdx.y;
-		int iActiveVoxelId = iActiveVoxelX + iActiveVoxelZ * gridDim.x * blockDim.x;
- 		int iVoxelX = i3BlockCorner.x + iActiveVoxelX;
-		int iVoxelY = i3BlockCorner.y;
-		int iVoxelZ = i3BlockCorner.z + iActiveVoxelZ;
-	#else		// MOD-BY-LEETEN 12/19/2009-TO:
-
 	int iActiveVoxelY = blockIdx.y * blockDim.y + threadIdx.y;
 	int iActiveVoxelId = iActiveVoxelX + iActiveVoxelY * gridDim.x * blockDim.x;
  	int iVoxelX = i3BlockCorner.x + iActiveVoxelX;
 	int iVoxelY = i3BlockCorner.y + iActiveVoxelY;
 	int iVoxelZ = i3BlockCorner.z;
-
-	#endif		// MOD-BY-LEETEN 12/19/2009-END
 
 	if( iVoxelX < i3VolumeSize.x && iVoxelY < i3VolumeSize.y && iVoxelZ < i3VolumeSize.z  )
 		for(int				iZOffset = -i3KernelSize.z; iZOffset <= i3KernelSize.z; iZOffset++)
@@ -199,21 +148,11 @@ _ComputeEntropy_kernel
 )
 {
 	int iActiveVoxelX = blockIdx.x * blockDim.x + threadIdx.x;
-	#if	0	// MOD-BY-LEETEN 12/19/2009-FROM:
-		int iActiveVoxelZ = blockIdx.y * blockDim.y + threadIdx.y;
-		int iActiveVoxelId = iActiveVoxelX + iActiveVoxelZ * gridDim.x * blockDim.x;
- 		int iVoxelX = i3BlockCorner.x + iActiveVoxelX;
-		int iVoxelY = i3BlockCorner.y;
-		int iVoxelZ = i3BlockCorner.z + iActiveVoxelZ;
-	#else	// MOD-BY-LEETEN 12/19/2009-TO:
-
 	int iActiveVoxelY = blockIdx.y * blockDim.y + threadIdx.y;
 	int iActiveVoxelId = iActiveVoxelX + iActiveVoxelY * gridDim.x * blockDim.x;
  	int iVoxelX = i3BlockCorner.x + iActiveVoxelX;
 	int iVoxelY = i3BlockCorner.y + iActiveVoxelY;
 	int iVoxelZ = i3BlockCorner.z;
-
-	#endif	// MOD-BY-LEETEN 12/19/2009-END
 
 	int iNrOfNeighbors = (2 * i3KernelSize.x + 1) * (2 * i3KernelSize.y + 1) * (2 * i3KernelSize.z + 1);
 	float fNrOfNeighbors = float(iNrOfNeighbors);
@@ -242,7 +181,6 @@ _ComputeEntropy_kernel
 		iVoxelX, iVoxelY + iVoxelZ * i3VolumeSize.y) = fEntropy;
 }
 
-// ADD-BY-LEETEN 12/23/2009-BEGIN
 __global__ 
 void 
 _ComputeEntropyHierarchically_kernel
@@ -353,7 +291,6 @@ _SumMarginalEntropy_kernel
 		sizeof(float), cEntropyVolume_pitched.pitch, 
 		iVoxelX, iVoxelY + iVoxelZ * i3VolumeSize.y) = fEntropy;
 }
-// ADD-BY-LEETEN 12/23/2009-END
 
 //////////////////////////////////////////////////////////////////////////////
 void 
@@ -381,19 +318,11 @@ CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_TIMING);
 	const unsigned int iMaxMemorySpace = MAX_MEMORY_SIZE;
 	int iMaxNrOfBlocks = int(floorf(float(iMaxMemorySpace) / float(sizeof(int) * iNrOfBins * v3Blk.x * v3Blk.y)));
 	int iNrOfXBlocks = int(ceilf(float(i3VolumeSize.x) / float(v3Blk.x)));
-	#if	0	// MOD-BY-LEETEN 12/19/2009-FROM:
-		int iNrOfZBlocks = int(ceilf(float(i3VolumeSize.z) / float(v3Blk.y)));
-		iMaxNrOfBlocks = min(iMaxNrOfBlocks, iNrOfXBlocks * iNrOfZBlocks);
-		iNrOfXBlocks = min(iNrOfXBlocks, iMaxNrOfBlocks);
-		iNrOfZBlocks = int(ceilf(float(iMaxNrOfBlocks) / float(iNrOfXBlocks)));
-		dim3 v3Grid = dim3(iNrOfXBlocks, iNrOfZBlocks);
-	#else	// MOD-BY-LEETEN 12/19/2009-TO:
 	int iNrOfYBlocks = int(ceilf(float(i3VolumeSize.y) / float(v3Blk.y)));
 	iMaxNrOfBlocks = min(iMaxNrOfBlocks, iNrOfXBlocks * iNrOfYBlocks);
 	iNrOfXBlocks = min(iNrOfXBlocks, iMaxNrOfBlocks);
 	iNrOfYBlocks = int(ceilf(float(iMaxNrOfBlocks) / float(iNrOfXBlocks)));
 	dim3 v3Grid = dim3(iNrOfXBlocks, iNrOfYBlocks);
-	#endif	// MOD-BY-LEETEN 12/19/2009-END
 	fprintf(stderr, "MEM = %d MB; #BLOCKS = %d x %d\n", iMaxMemorySpace/(1<<20), v3Grid.x, v3Grid.y);
 
 	cudaPitchedPtr cActiveVoxelHistorgrams_pitched;
@@ -444,7 +373,6 @@ CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_TIMING);
 			cActiveVoxelHistorgrams_pitched.ysize,
 			cActiveVoxelHistorgrams_pitched.pitch) );
 
-	// ADD-BY-LEETEN 12/23/2009-BEGIN
 	int iNrOfMarginalBins = int(sqrtf(float(iNrOfBins)));
 	int iNrOfMargins = int(ceilf(float(iNrOfBins)/float(iNrOfMarginalBins)));
 
@@ -479,35 +407,22 @@ CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_TIMING);
 			cActiveVoxelMarginalEntropy_pitched.xsize, 
 			cActiveVoxelMarginalEntropy_pitched.ysize,
 			cActiveVoxelMarginalEntropy_pitched.pitch) );
-	// ADD-BY-LEETEN 12/23/2009-END
 
 CLOCK_END(_ComputeEntropyVolume_PRINT_TIMING, false);
 
 CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_TIMING);
 
-	#if	0	// MOD-BY-LEETEN 12/19/2009-FROM:
-		for(int			z = 0; z < i3VolumeSize.z; z += v3Grid.y * v3Blk.y)
-			for(int		x = 0; x < i3VolumeSize.x; x += v3Grid.x * v3Blk.x)
-				for(int y = 0; y < i3VolumeSize.y; y++)
-	#else	// MOD-BY-LEETEN 12/19/2009-TO:
 	for(int			y = 0; y < i3VolumeSize.y; y += v3Grid.y * v3Blk.y)
 		for(int		x = 0; x < i3VolumeSize.x; x += v3Grid.x * v3Blk.x)
 			for(int z = 0; z < i3VolumeSize.z; z++)
-	#endif	// MOD-BY-LEETEN 12/19/2009-END
 			{
 				int3 i3BlockCorner = make_int3(x, y, z);
 
-				// ADD-BY-LEETEN 12/23/2009-BEGIN
 				CLOCK_INIT(_ComputeEntropyVolume_PRINT_LOOP_TIMING, __FUNCTION__ " (main loop): ");
 
 				CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_LOOP_TIMING);
-				// ADD-BY-LEETEN 12/23/2009-END
 
-				// MOD-BY-LEETEN 12/19/2009-FROM:
-					// if( 0 == y )
-				// TO:
 				if( 0 == z )
-				// MOD-BY-LEETEN 12/19/2009-END
 				{
 					_CreateHistogram_kernel<<<v3Grid, v3Blk, 0>>>
 					(
@@ -532,13 +447,11 @@ CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_TIMING);
 					CUT_CHECK_ERROR("_UpdateHistogram_kernel() failed");
 				}
 
-				// ADD-BY-LEETEN 12/23/2009-BEGIN
 				CLOCK_END(_ComputeEntropyVolume_PRINT_LOOP_TIMING, false);
 
 				CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_LOOP_TIMING);
-				// ADD-BY-LEETEN 12/23/2009-END
 
-				#if		SCANNING_METHOD	== SCANNING_METHOD_SCAN_WHOLE_HISTOGRAM					// ADD-BY-LEETEN 12/23/2009
+				#if		SCANNING_METHOD	== SCANNING_METHOD_SCAN_WHOLE_HISTOGRAM					
 				_ComputeEntropy_kernel<<<v3Grid, v3Blk, 0>>>
 				(
 					i3BlockCorner,
@@ -548,9 +461,8 @@ CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_TIMING);
 					cEntropyVolume_pitched
 				);
 				CUT_CHECK_ERROR("_ComputeEntropy_kernel() failed");
-				#endif	// #if		SCANNING_METHOD	== SCANNING_METHOD_SCAN_WHOLE_HISTOGRAM		// ADD-BY-LEETEN 12/23/2009
+				#endif	// #if		SCANNING_METHOD	== SCANNING_METHOD_SCAN_WHOLE_HISTOGRAM
 
-				// ADD-BY-LEETEN 12/23/2009-BEGIN
 				#if		SCANNING_METHOD	== SCANNING_METHOD_HIERARCHICAL_SCAN
 				int iNrOfLevels = int(floorf(log2f(float(iNrOfBins))));
 				int iNrOfThreadsPerVoxel = iNrOfBins/2;
@@ -610,13 +522,10 @@ CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_TIMING);
 				);
 				CUT_CHECK_ERROR("_SumMarginalEntropy_kernel() failed");
 				#endif	// #if	SCANNING_METHOD	== SCANNING_METHOD_SCAN_ROWS_IN_PARALLEL
-				// ADD-BY-LEETEN 12/23/2009-END
 
-				// ADD-BY-LEETEN 12/23/2009-BEGIN
 				CLOCK_END(_ComputeEntropyVolume_PRINT_LOOP_TIMING, false);
 
 				CLOCK_PRINT(_ComputeEntropyVolume_PRINT_LOOP_TIMING);
-				// ADD-BY-LEETEN 12/23/2009-END
 			}
 
 CLOCK_END(_ComputeEntropyVolume_PRINT_TIMING, false);
@@ -625,15 +534,12 @@ CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_TIMING);
 
 	FREE_MEMORY(cActiveVoxelHistorgrams_pitched.ptr);
 
-	// ADD-BY-LEETEN 12/23/2009-BEGIN
 	FREE_MEMORY(cActiveVoxelMarginalEntropy_pitched.ptr);
-	// ADD-BY-LEETEN 12/23/2009-END
 
 CLOCK_END(_ComputeEntropyVolume_PRINT_TIMING, false);
 
 CLOCK_PRINT(_ComputeEntropyVolume_PRINT_TIMING);
 }
-// ADD-BY-LEETEN 12/18/2009-END
 
 #endif	// #if	COMPUTE_ENTROPY_VOLUME_CUDA
 

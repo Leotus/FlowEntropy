@@ -1,10 +1,8 @@
 #if	COMPUTE_ENTROPY_VOLUME_HOST
 
-// ADD-BY-LEETEN 01/06/2010-BEGIN
 int iNrOfMargins;
 int iNrOfMarginalBins;
 static 	TBuffer<int> piMarginalHistogram_host;
-// ADD-BY-LEETEN 01/06/2010-END
 
 __host__
 static 
@@ -58,9 +56,7 @@ _UpdateSliceToHistogram_host
 	// update the histogram
 	piHistorgram_host[iSrcBin] += iHisotgramOp; 
 
-	// ADD-BY-LEETEN 01/06/2010-BEGIN
 	piMarginalHistogram_host[iSrcBin / iNrOfMargins] += iHisotgramOp; 
-	// ADD-BY-LEETEN 01/06/2010-END
 }
 
 static 
@@ -218,18 +214,12 @@ _ComputeEntropy_host
 	int *piHistogram_host,
 
 	int3 i3VolumeSize,
-	// MOD-BY-LEETEN 12/19/2009-FROM:
-		// cudaPitchedPtr cEntropyVolume_pitched
-	// TO:
 	float* pfEntropyVolume_host
-	// MOD-BY-LEETEN 12/19/2009-END
 )
 {
 	float fEntropy = 0.0f;
 
-	// ADD-BY-LEETEN 01/06/2010-BEGIN
 	#if	SCANNING_METHOD == SCANNING_METHOD_SCAN_WHOLE_HISTOGRAM
-	// ADD-BY-LEETEN 01/06/2010-END
 	for(int b = 0; b < iNrOfBins; b++)
 	{
 		if( 0 == piHistogram_host[b] )
@@ -245,7 +235,6 @@ _ComputeEntropy_host
 	}
 	fEntropy = -fEntropy;
 
-	// ADD-BY-LEETEN 01/06/2010-BEGIN
 	#endif
 	
 	#if	SCANNING_METHOD == SCANNING_METHOD_SKIP_WITH_MARGINAL_HISTOGRAM
@@ -270,35 +259,14 @@ _ComputeEntropy_host
 
 	fEntropy = -fEntropy / fNrOfNeighbors + log2(fNrOfNeighbors);
 	#endif
-	// ADD-BY-LEETEN 01/06/2010-END
 
-	// ADD-BY-LEETEN 12/19/2009-BEGIN
 	fEntropy = max(fEntropy, 0.0f);
-	// ADD-BY-LEETEN 12/19/2009-END
 
-	#if	0	// MOD-BY-LEETEN 12/19/2009-FROM:
-		CUDA_SAFE_CALL(
-			cudaMemcpy(
-				ADDRESS_2D(
-					float, cEntropyVolume_pitched.ptr, 
-					sizeof(float), cEntropyVolume_pitched.pitch, 
-					i3Point.x, i3Point.y + i3Point.z * i3VolumeSize.y),
-				&fEntropy,
-				sizeof(fEntropy),
-				cudaMemcpyHostToDevice) );
-	#else	// MOD-BY-LEETEN 12/19/2009-TO:
 	pfEntropyVolume_host[i3Point.x + i3Point.y * i3VolumeSize.x + i3Point.z * i3VolumeSize.x * i3VolumeSize.y] = fEntropy;
-	#endif	// MOD-BY-LEETEN 12/19/2009-END
 }
 
-// ADD-BY-LEETEN 12/18/2009-BEGIN
-
 void 
-// MOD-BY-LEETEN 12/18/2009-FROM:
-	// _ComputeEntropyVolume
-// TO:
 _ComputeEntropyVolume_host
-// MOD-BY-LEETEN 12/18/2009-END
 (
 						// res. of the neighboring region
 	int3 i3KernelSize,
@@ -307,10 +275,6 @@ _ComputeEntropyVolume_host
 	int iNrOfBins,
 	int *piHistogram_global,
 	float *pfLogHistogram_global,
-
-	// DEL-BY-LEETEN 12/18/2009-BEGIN
-		// CUDPPHandle cScanPlanSum,
-	// DEL-BY-LEETEN 12/18/2009-END
 
 						// res. of the volume																
 	int3 i3VolumeSize,	
@@ -327,12 +291,10 @@ CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_TIMING);
 	piHistogram_host = (int*)calloc(sizeof(piHistogram_host[0]), iNrOfBins);
 	assert(piHistogram_host);
 
-	// ADD-BY-LEETEN 01/06/2010-BEGIN
 	iNrOfMargins = int(sqrtf(float(iNrOfBins)));
 	iNrOfMarginalBins = int(ceilf(float(iNrOfBins) / float(iNrOfMargins)));
 
 	piMarginalHistogram_host.alloc(iNrOfMarginalBins);
-	// ADD-BY-LEETEN 01/06/2010-END
 
 	int *piBinVolume_host;
 	piBinVolume_host = (int*)calloc(sizeof(piBinVolume_host[0]), i3VolumeSize.x * i3VolumeSize.y * i3VolumeSize.z);
@@ -340,11 +302,9 @@ CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_TIMING);
 
 	_GetSrcBinVolume(piBinVolume_host);
 
-	// ADD-BY-LEETEN 12/19/2009-BEGIN
 	float* pfEntropyVolume_host;
 	pfEntropyVolume_host = (float*)calloc(sizeof(pfEntropyVolume_host[0]), i3VolumeSize.x * i3VolumeSize.y * i3VolumeSize.z);
 	assert( pfEntropyVolume_host );
-	// ADD-BY-LEETEN 12/19/2009-END
 
 CLOCK_END(_ComputeEntropyVolume_PRINT_TIMING, false);
 
@@ -392,11 +352,7 @@ CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_TIMING);
 					piHistogram_host,
 
 					i3VolumeSize,
-					// MOD-BY-LEETEN 12/19/2009-FROM:
-						// cEntropyVolume_pitched
-					// TO:
 					pfEntropyVolume_host
-					// MOD-BY-LEETEN 12/19/2009-END
 				);
 
 				if( xi < i3VolumeSize.x - 1 )
@@ -454,7 +410,6 @@ CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_TIMING);
 CLOCK_END(_ComputeEntropyVolume_PRINT_TIMING, false);
 
 CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_TIMING);
-	// ADD-BY-LEETEN 12/19/2009-BEGIN
 	CUDA_SAFE_CALL_NO_SYNC(
 		cudaMemcpy2D(
 			cEntropyVolume_pitched.ptr, 
@@ -465,7 +420,6 @@ CLOCK_BEGIN(_ComputeEntropyVolume_PRINT_TIMING);
 			i3VolumeSize.y * i3VolumeSize.z,
 			cudaMemcpyHostToDevice) );
 	free(pfEntropyVolume_host);
-	// ADD-BY-LEETEN 12/19/2009-END
 
 	free(piHistogram_host);
 	free(piBinVolume_host);
@@ -473,7 +427,6 @@ CLOCK_END(_ComputeEntropyVolume_PRINT_TIMING, false);
 
 CLOCK_PRINT(_ComputeEntropyVolume_PRINT_TIMING);
 }
-// ADD-BY-LEETEN 12/18/2009-END
 
 #endif	// #if #if	COMPUTE_ENTROPY_VOLUME_HOST
 

@@ -1,14 +1,8 @@
-// MOD-BY-LEETEN 01/19/2010-FROM:
-	// #version	150 compatibility
-// TO:
 #version	130 
-// MOD-BY-LEETEN 01/19/2010-END
 #extension	GL_EXT_geometry_shader4 : enable
 
-// ADD-BY-LEETEN 01/19/2010-BEGIN
 uniform sampler3D	t3dVolume;	// the texture hold the depths of each knots
 uniform float		fDashThreshold;
-// ADD-BY-LEETEN 01/19/2010-END
 
 uniform float	fWindowWidth;
 uniform float	fWindowHeight;
@@ -22,19 +16,12 @@ smooth	out		vec3	v3Tangent_eye;
 void 
 main()
 {	
-	// ADD-BY-LEETEN 01/19/2010-BEGIN
 	float fEntropy0_normalized = texture3D(t3dVolume, gl_TexCoordIn[0][0].xyz).r;
 	float fEntropy1_normalized = texture3D(t3dVolume, gl_TexCoordIn[1][0].xyz).r;
 	float fEntropy_normalized = 0.5 * (fEntropy0_normalized + fEntropy1_normalized);
 	bool bIsEntropyHigherThanThreshold = ( fEntropy_normalized > fDashThreshold )?true:false;
-	// ADD-BY-LEETEN 01/19/2010-END
 
-
-	// MOD-BY-LEETEN 01/19/2010-FROM:
-		// if( 0 == ibIsGlyphEnabled )
-	// TO:
 	if( 0 == ibIsGlyphEnabled || true == bIsEntropyHigherThanThreshold )
-	// MOD-BY-LEETEN 01/19/2010-END
 	{
 		for(int i=0; i< gl_VerticesIn; i++)
 		{
@@ -52,14 +39,9 @@ main()
 	else
 	{
 
-		#if	0	// MOD-BY-LEETEN 01/19/2010-FROM:
-			int iVertexIndexInStreamline = int(gl_TexCoordIn[0][1]);
-			if( 0 != iVertexIndexInStreamline % iGlyphStep )
-		#else	// MOD-BY-LEETEN 01/19/2010-TO:
 		int iVertexIndexInStreamline = int(gl_TexCoordIn[0][1].x);
 		int iStreamline = int(gl_TexCoordIn[0][1].y);
 		if( 0 != (iVertexIndexInStreamline + iStreamline ) % iGlyphStep )
-		#endif	// MOD-BY-LEETEN 01/19/2010-END
 			return;
 
 		vec4 v4LineDir_ndc = gl_PositionIn[1] - gl_PositionIn[0];

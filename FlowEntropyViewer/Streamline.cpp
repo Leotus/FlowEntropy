@@ -1,32 +1,24 @@
 #include "liblog.h"
 
-// ADD-BY-LEETEN 01/10/2010-BEGIN
 #include <GL/glew.h>
-// ADD-BY-LEETEN 01/10/2010-END
 
 #include <GL/glut.h>
 
 #define _USE_MATH_DEFINES
 #include <math.h>
 
-#include "cuda_macro.h"	// ADD-BY-LEETEN 02/01/2010
+#include "cuda_macro.h"	
 
 #include "Streamline.h"
 
-// DEL-BY-LEETEN 2013/09/10:	#include "SortSlab_cuda.h"
-
-// ADD-BY-LEETY 2009/05/15-BEGIN
 #define RENDER_STREAMLINE_AS_LINES		1
-// ADD-BY-LEETY 2009/05/15-END
 
 #define RENDER_STREAMLINE_AS_TUBES		0
 
-// ADD-BY-LEETEN 02/04/2010-BEGIN
 #define	SORT_ON_CUDA		0
 #ifdef	__DEVICE_EMULATION__
 	#define SORT_ON_CUDA	0
 #endif
-// ADD-BY-LEETEN 02/04/2010-END
 int 
 ISortSlab(const void *p0, const void *p1)
 {
@@ -102,16 +94,8 @@ CStreamline::_SortSlab(
 	}
 
 	// sort the centroids according to their depth
-	// MOD-BY-LEETEN 01/30/2010-FROM:
-		// #if	0	// TEST-DEBUG
-	// TO:
-	// MOD-BY-LEETEN 02/04/2010-FROM:
-		//	#ifdef __DEVICE_EMULATION__
-	// TO:
 	#if	!SORT_ON_CUDA
-	// MOD-BY-LEETEN 02/04/2010-END
 
-	// ADD-BY-LEETEN 02/03/2010-BEGIN
 	if( false == piNrOfLinesPerSlab.BIsAllocated() || iNrOfSlabs != piNrOfLinesPerSlab.USize() )
 		piNrOfLinesPerSlab.alloc(iNrOfSlabs);
 	else
@@ -121,50 +105,24 @@ CStreamline::_SortSlab(
 		piLineOffsetPerSlab.alloc(iNrOfSlabs);
 	else
 		memset(&piLineOffsetPerSlab[0], 0, sizeof(piLineOffsetPerSlab[0]) * piLineOffsetPerSlab.USize());
-	// ADD-BY-LEETEN 02/03/2010-END
 
-	// MOD-BY-LEETEN 01/30/2010-END
 	for(int l = 0; l < int(uNrOfLines); l++)
 	{
-		#if	0	// DEL-BY-LEETEN 02/03/2010-BEGIN
-			double pdCentroid_win[3];
-			double pdCentroid_eye[3];
-		#endif	// DEL-BY-LEETEN 02/03/2010-END
-		#if	0	// MOD-BY-LEETEN 01/30/2010-FROM:
-			gluProject(
-				pfLineCentroids[l * 3 + 0], pfLineCentroids[l * 3 + 1], pfLineCentroids[l * 3 + 2], 
-				pdModelViewMatrix, pdProjectionMatrix, piViewport, 
-				&pdCentroid_win[0], &pdCentroid_win[1], &pdCentroid_win[2]);
-			gluUnProject(
-				pdCentroid_win[0], pdCentroid_win[1], pdCentroid_win[2], 
-				pdIdentityMatrix, pdProjectionMatrix, piViewport, 
-				&pdCentroid_eye[0], &pdCentroid_eye[1], &pdCentroid_eye[2]);
-			double dDepth = pdCentroid_eye[2];
-		#else	// MOD-BY-LEETEN 01/30/2010-TO:
 		double dDepth = 
 			pdModelViewMatrix[2]	* pfLineCentroids[l * 3 + 0] + 
 			pdModelViewMatrix[6]	* pfLineCentroids[l * 3 + 1] + 
 			pdModelViewMatrix[10]	* pfLineCentroids[l * 3 + 2] + 
 			pdModelViewMatrix[14]; 
-		#endif	// MOD-BY-LEETEN 01/30/2010-END
 
 		int iSlab = int(double(iNrOfSlabs) *  (dDepth - dMinZ) / (dMaxZ - dMinZ));
 		iSlab = min(max(iSlab, 0), iNrOfSlabs - 1);
 
-		#if	0	// MOD-BY-LEETEN 02/03/2010-FROM:
-			pi2Slabs[l].x = iSlab; 
-			pi2Slabs[l].y = l; 
-		#else	// MOD-BY-LEETEN 02/03/2010-TO:
 		pi2SlabTemp[l].x = iSlab; 
 		pi2SlabTemp[l].y = l; 
 		piNrOfLinesPerSlab[iSlab]++;
-		#endif	// MOD-BY-LEETEN 02/03/2010-END
 	}
 
 	// sort the indices by the slab indices
-	// MOD-BY-LEETEN 02/03/2010-FROM:
-		// qsort(&pi2Slabs[0], uNrOfLines, sizeof(pi2Slabs[0]), ISortSlab);
-	// TO:
 	for(int s = 1; s < iNrOfSlabs; s++)
 		piLineOffsetPerSlab[s] = piLineOffsetPerSlab[s-1] + piNrOfLinesPerSlab[s-1];
 
@@ -173,17 +131,8 @@ CStreamline::_SortSlab(
 		int iSlab = pi2SlabTemp[l].x;
 		pi2Slabs[piLineOffsetPerSlab[iSlab]++] = pi2SlabTemp[l];
 	}
-	// MOD-BY-LEETEN 02/03/2010-END
 
-	// MOD-BY-LEETEN 01/30/2010-FROM:
-		// #else
-	// TO:
-	// MOD-BY-LEETEN 02/04/2010-FROM:
-		// #else	// #ifdef __DEVICE_EMULATION__
-	// TO:
 	#else	// #if	!SORT_ON_CUDA
-	// MOD-BY-LEETEN 02/04/2010-END
-	// MOD-BY-LEETEN 01/30/2010-END
 	_ComputeDepth_cuda
 	(
 		iNrOfSlabs,
@@ -196,52 +145,26 @@ CStreamline::_SortSlab(
 		int(uNrOfLines),
 		&pi2Slabs[0]
 	);
-	// MOD-BY-LEETEN 01/30/2010-FROM:
-		// #endif
-	// TO:
-	// MOD-BY-LEETEN 02/04/2010-FROM:
-		// #endif	// #ifdef __DEVICE_EMULATION__
-	// TO:
 	#endif	// #if	!SORT_ON_CUDA
-	// MOD-BY-LEETEN 02/04/2010-END
-
-	// MOD-BY-LEETEN 01/30/2010-END
 
 	// reorganize the vertices indices
-	// MOD-BY-LEETEN 01/02/2010-FROM:
-		// for(int l = 0; l < int(uNrOfLines); l++)
-	// TO:
 	for(int iActualNrOfLines = 0, l = 0; l < int(uNrOfLines); l++)
-	// MOD-BY-LEETEN 01/02/2010-END
 	{
 		int iS = pi2Slabs[l].x;	// slab index
 		int iL = pi2Slabs[l].y;	// line index
-		// ADD-BY-LEETEN 01/02/2010-BEGIN
 		int iStreamline = puLineSegmentIndicesToStreamlines[iL]; 
 
-		// ADD-BY-LEETEN 01/08/2010-BEGIN
 		// only consider the first uMaxNrOfStreamlines streamlines
-		// MOD-BY-LEETEN 03/10/2010-FROM:
-			// if( iStreamline >= int(uMaxNrOfStreamlines) )
-		// TO:
 		if( iStreamline >= int(uMaxNrOfStreamlines) || iStreamline < int(uMinNrOfStreamlines) )
-		// MOD-BY-LEETEN 03/10/2010-END
 			continue;
-		// ADD-BY-LEETEN 01/08/2010-END
 
 		if( 0 != iStreamline % int(uSamplingRate) )
 			continue;
-		// ADD-BY-LEETEN 01/02/2010-END
 
 		pi2BaseLengths[iS].y++; // increment the counter for the corresponding slab
-		#if	0	// MOD-BY-LEETEN 01/02/2010-FROM:
-			for(int i = 0; i < 2; i++)
-				pu2SortedLineSegmentIndicesToVertices[2 * l + i] = pu2LineSegmentIndicesToVertices[2 * iL + i];
-		#else	// MOD-BY-LEETEN 01/02/2010-TO:
 		for(int i = 0; i < 2; i++)
 			pu2SortedLineSegmentIndicesToVertices[2 * iActualNrOfLines + i] = pu2LineSegmentIndicesToVertices[2 * iL + i];
 		iActualNrOfLines++;
-		#endif	// MOD-BY-LEETEN 01/02/2010-END
 	}
 	for(int s = 1; s < iNrOfSlabs; s++)
 		pi2BaseLengths[s].x += pi2BaseLengths[s-1].x + pi2BaseLengths[s-1].y;
@@ -249,11 +172,7 @@ CStreamline::_SortSlab(
 
 
 void 
-// MOD-BY-LEETEN 03/28/2010-FROM:
-	// CStreamline::_Read(float fScaleX, float fScaleY, float fScaleZ, char *szStreamlineFilename)
-// TO:
 CStreamline::_Read(float fScaleX, float fScaleY, float fScaleZ, char *szStreamlineFilename, int iMaxNrOfLoadedStreamlines)
-// MOD-BY-LEETEN 03/28/2010-END
 {
 	FILE *fpStreamline;
 	fpStreamline = fopen(szStreamlineFilename, "rb");
@@ -262,17 +181,11 @@ CStreamline::_Read(float fScaleX, float fScaleY, float fScaleZ, char *szStreamli
 	unsigned int uNrOfStreamlines;
 	fread(&uNrOfStreamlines, sizeof(uNrOfStreamlines), 1, fpStreamline);
 
-	// ADD-BY-LEETEN 03/28/2010-BEGIN
 	int iActualNrOfStreamlines = uNrOfStreamlines;
 	if( iMaxNrOfLoadedStreamlines >= 0 )
 		uNrOfStreamlines = min(int(uNrOfStreamlines), iMaxNrOfLoadedStreamlines);
-	// ADD-BY-LEETEN 03/28/2010-END
 
 	uNrOfLines = 0;
-
-	// DEL-BY-LEETY 2009/05/15-BEGIN
-		// vector<unsigned int> vuNrOfVertices;
-	// DEL-BY-LEETY 2009/05/15-END
 
 	for(unsigned int uS = 0; uS < uNrOfStreamlines; uS++)
 	{
@@ -283,60 +196,35 @@ CStreamline::_Read(float fScaleX, float fScaleY, float fScaleZ, char *szStreamli
 		vuNrOfVertices.push_back(uV);
 	}
 
-	// ADD-BY-LEETEN 03/28/2010-BEGIN
 	fseek(fpStreamline, sizeof(unsigned int) * (iActualNrOfStreamlines - uNrOfStreamlines), SEEK_CUR);
-	// ADD-BY-LEETEN 03/28/2010-END
 
-	// ADD-BY-LEETEN 02/03/2010-BEGIN
 	LOG_VAR(uNrOfLines);
 	LOG_VAR(uNrOfVertices);
-	// ADD-BY-LEETEN 02/03/2010-END
 
-	// ADD-BY-LEETEN 03/10/2010-BEGIN
 	uMinNrOfStreamlines = 0;
-	// ADD-BY-LEETEN 03/10/2010-END
-	// ADD-BY-LEETEN 01/08/2010-BEGIN
 	uMaxNrOfStreamlines = uNrOfStreamlines;
-	// ADD-BY-LEETEN 01/08/2010-END
 
 	pfCoords.alloc(3 * uNrOfVertices);
-	// ADD-BY-LEETEN 12/31/2009-BEGIN
 	pfTangent.alloc(3 * uNrOfVertices);
 
-	// ADD-BY-LEETEN 01/10/2010-BEGIN
-	// MOD-BY-LEETEN 01/19/2010-FROM:
-		// piVertexIndicesInStreamline.alloc(uNrOfVertices);
-	// TO:
 	pi4VertexIndicesInStreamline.alloc(uNrOfVertices);
-	// MOD-BY-LEETEN 01/19/2010-END
-	// ADD-BY-LEETEN 01/10/2010-END
 
-	// ADD-BY-LEETEN 12/31/2009-END
 	pu2LineSegmentIndicesToVertices.alloc(2 * uNrOfLines);
 
-	// ADD-BY-LEETEN 01/02/2010-BEGIN
 	puLineSegmentIndicesToStreamlines.alloc(uNrOfLines);
-	// ADD-BY-LEETEN 01/02/2010-END
 
 	pu2SortedLineSegmentIndicesToVertices.alloc(2 * uNrOfLines);
 	pfLineCentroids.alloc(3 * uNrOfLines);
 	pi2Slabs.alloc(uNrOfLines);
-	pi2SlabTemp.alloc(uNrOfLines);	// ADD-BY-LEETEN 02/03/2010
+	pi2SlabTemp.alloc(uNrOfLines);	
 
 	unsigned int uCoordIndex = 0;
 	unsigned int uLineIndex = 0;
-	#if	0	// MOD-BY-LEETEN 01/02/2010-FROM:
-		for(vector<unsigned int>::iterator 
-				ivuNrOfVertices = vuNrOfVertices.begin();
-			ivuNrOfVertices != vuNrOfVertices.end();
-			ivuNrOfVertices ++)
-	#else	// MOD-BY-LEETEN 01/02/2010-TO:
 	unsigned int uStreamline = 0;
 	for(vector<unsigned int>::iterator 
 			ivuNrOfVertices = vuNrOfVertices.begin();
 		ivuNrOfVertices != vuNrOfVertices.end();
 		ivuNrOfVertices ++, uStreamline++)
-	#endif	// MOD-BY-LEETEN 01/02/2010-END
 	{
 		unsigned int uNrOfVertices = *ivuNrOfVertices;
 
@@ -346,30 +234,21 @@ CStreamline::_Read(float fScaleX, float fScaleY, float fScaleZ, char *szStreamli
 			uNrOfVertices * 3, 
 			fpStreamline);
 
-		// ADD-BY-LEETEN 01/10/2010-BEGIN
 		for(unsigned int uV = 0; uV < uNrOfVertices; uV++)
 		{
-			// MOD-BY-LEETEN 01/19/2010-FROM:
-				// piVertexIndicesInStreamline[uCoordIndex + uV] = int(uV);
-			// TO:
 			pi4VertexIndicesInStreamline[uCoordIndex + uV].x = int(uV);
 			pi4VertexIndicesInStreamline[uCoordIndex + uV].y = int(uStreamline);
 			pi4VertexIndicesInStreamline[uCoordIndex + uV].z = 0;
 			pi4VertexIndicesInStreamline[uCoordIndex + uV].w = 0;
-			// MOD-BY-LEETEN 01/19/2010-END
 		}
-		// ADD-BY-LEETEN 01/10/2010-END
 
 		for(unsigned int uV = 0; uV < uNrOfVertices-1; uV++, uLineIndex++)
 		{
 			pu2LineSegmentIndicesToVertices[uLineIndex*2] = uCoordIndex + uV;
 			pu2LineSegmentIndicesToVertices[uLineIndex*2+1] = uCoordIndex + uV + 1;
 
-			// ADD-BY-LEETEN 01/02/2010-BEGIN
 			puLineSegmentIndicesToStreamlines[uLineIndex] = uStreamline;
-			// ADD-BY-LEETEN 01/02/2010-END
 
-			// ADD-BY-LEETEN 12/31/2009-BEGIN
 			// compute tangents
 			if( uV > 0 )
 			{
@@ -390,10 +269,8 @@ CStreamline::_Read(float fScaleX, float fScaleY, float fScaleZ, char *szStreamli
 						pfTangent[iVertexIndex*3 + i] /= fLength;
 				}
 			}
-			// ADD-BY-LEETEN 12/31/2009-END
 		}
 
-		// ADD-BY-LEETEN 12/31/2009-BEGIN
 		// assign tangents to the first and last vertices
 		for(int i = 0; i < 3; i++)
 		{
@@ -449,7 +326,6 @@ CStreamline::_Read(float fScaleX, float fScaleY, float fScaleZ, char *szStreamli
 					pfTangent[iVertexIndex*3 + i] = pfTangent[iNonZeroLengthV*3 + i];
 				}
 		}
-		// ADD-BY-LEETEN 12/31/2009-END
 
 		uCoordIndex += uNrOfVertices;
 
@@ -467,25 +343,6 @@ CStreamline::_Read(float fScaleX, float fScaleY, float fScaleZ, char *szStreamli
 	}
 
 	#if	RENDER_STREAMLINE_AS_LINES
-	#if	0	// MOD-BY-LEETEN 01/30/2010-FROM:
-		glVertexPointer(3, GL_FLOAT, 0, &pfCoords[0]);
-		// ADD-BY-LEETEN 12/31/2009-BEGIN
-		glNormalPointer(GL_FLOAT, 0,	&pfTangent[0]);
-		// ADD-BY-LEETEN 12/31/2009-END
-
-		// ADD-BY-LEETEN 01/10/2010-BEGIN
-							// bind the vertex indices to GL_TEXTURE0
-		glClientActiveTexture(GL_TEXTURE0 + 1);
-		// MOD-BY-LEETEN 01/19/2010-FROM:
-			// glTexCoordPointer(1, GL_INT, 0, &piVertexIndicesInStreamline[0]);
-		// TO:
-		glTexCoordPointer(4, GL_INT, 0, &pi4VertexIndicesInStreamline[0]);
-		// MOD-BY-LEETEN 01/19/2010-END
-
-							// reset the default texture unit
-		glClientActiveTexture(GL_TEXTURE0);
-		// ADD-BY-LEETEN 01/10/2010-END
-	#else	// MOD-BY-LEETEN 01/30/2010-TO:
 	glGenBuffers(1, &vidLines);
 	glBindBufferARB(GL_ARRAY_BUFFER, vidLines);
 	glBufferDataARB(
@@ -509,8 +366,6 @@ CStreamline::_Read(float fScaleX, float fScaleY, float fScaleZ, char *szStreamli
 		&pi4VertexIndicesInStreamline[0]);
 
 	glBindBufferARB(GL_ARRAY_BUFFER, 0);
-	#endif	// MOD-BY-LEETEN 01/30/2010-END
-
 	#endif
 
 	#if	RENDER_STREAMLINE_AS_TUBES
@@ -537,17 +392,13 @@ CStreamline::_Read(float fScaleX, float fScaleY, float fScaleZ, char *szStreamli
 			pfLineCentroids[l * 3 + p] = pdCoord_obj[p];
 	}
 
-	// ADD-BY-LEETEN 02/04/2010-BEGIN
 	#if	SORT_ON_CUDA	
-	// ADD-BY-LEETEN 02/04/2010-END
 	_ComputeDepthInit_cuda
 	(
 		int(uNrOfLines),
 		&pfLineCentroids[0]
 	);
-	// ADD-BY-LEETEN 02/04/2010-BEGIN
 	#endif	// #if	SORT_ON_CUDA
-	// ADD-BY-LEETEN 02/04/2010-END
 }
 
 void 
@@ -570,26 +421,16 @@ CStreamline::_Render()
 void 
 CStreamline::_AddGlui(GLUI* pcGlui)
 {
-	// MOD-BY-LEETEN 01/10/2010-FROM:
-		// GLUI_Panel	*pcPanel_Streamlines = pcGlui->add_panel("Streamlines");
-	// TO:
 	GLUI_Panel	*pcPanel_Streamlines = pcGlui->add_rollout("Streamlines");
-	// MOD-BY-LEETEN 01/10/2010-END
 
-	// ADD-BY-LEETEN 01/02/2010-BEGIN
 	GLUI_Spinner *pcSpinner_SamplingRate = pcGlui->add_spinner_to_panel(pcPanel_Streamlines, "Sampling Rate", GLUI_SPINNER_INT, &uSamplingRate);	
 	pcSpinner_SamplingRate->set_int_limits(1, 256);
-	// ADD-BY-LEETEN 01/02/2010-END
 
-	// ADD-BY-LEETEN 03/10/2010-BEGIN
 	GLUI_Spinner *pcSpinner_MinNrOfStreamlines = pcGlui->add_spinner_to_panel(pcPanel_Streamlines, "Min #Streamlines", GLUI_SPINNER_INT, &uMinNrOfStreamlines);	
 		pcSpinner_MinNrOfStreamlines->set_int_limits(0, uMaxNrOfStreamlines);
-	// ADD-BY-LEETEN 03/10/2010-END
 
-	// ADD-BY-LEETEN 01/08/2010-BEGIN
 	GLUI_Spinner *pcSpinner_MaxNrOfStreamlines = pcGlui->add_spinner_to_panel(pcPanel_Streamlines, "Max #Streamlines", GLUI_SPINNER_INT, &uMaxNrOfStreamlines);	
 		pcSpinner_MaxNrOfStreamlines->set_int_limits(0, uMaxNrOfStreamlines);
-	// ADD-BY-LEETEN 01/08/2010-END
 
 	#if	RENDER_STREAMLINE_AS_LINES
 
@@ -597,7 +438,6 @@ CStreamline::_AddGlui(GLUI* pcGlui)
 		GLUI_Spinner *pcSpinner_InnerWidth = pcGlui->add_spinner_to_panel(pcPanel_Lines, "Inner Width", GLUI_SPINNER_FLOAT, &fInnerWidth);	
 		GLUI_Spinner *pcSpinner_OuterWidth = pcGlui->add_spinner_to_panel(pcPanel_Lines, "Outer Width", GLUI_SPINNER_FLOAT, &fOuterWidth);	
 
-		// ADD-BY-LEETEN 01/12/2010-BEGIN
 		GLUI_Panel	*pcPanel_Glyph = pcGlui->add_panel_to_panel(pcPanel_Lines, "Glyph");
 		pcGlui->add_checkbox_to_panel(pcPanel_Glyph, "Enabled?", &cGlyph.ibIsEnabled);	
 		GLUI_Spinner *pcSpinner_GlyphStep = pcGlui->add_spinner_to_panel(pcPanel_Glyph, "Step", GLUI_SPINNER_INT, &cGlyph.iStep);	
@@ -606,25 +446,15 @@ CStreamline::_AddGlui(GLUI* pcGlui)
 			pcSpinner_GlyphLength->set_float_limits(0.0f, 16.0f);
 		GLUI_Spinner *pcSpinner_GlyphWidth= pcGlui->add_spinner_to_panel(pcPanel_Glyph, "Width", GLUI_SPINNER_FLOAT, &cGlyph.fWidth);	
 			pcSpinner_GlyphWidth->set_float_limits(0.0f, 16.0f);
-		// ADD-BY-LEETEN 01/12/2010-END
 
-		// ADD-BY-LEETEN 01/10/2010-BEGIN
 		GLUI_Panel	*pcPanel_Dash = pcGlui->add_panel_to_panel(pcPanel_Lines, "Dash");
 		GLUI_Spinner *pcSpinner_DashPeriod = pcGlui->add_spinner_to_panel(pcPanel_Dash, "Period", GLUI_SPINNER_INT, &cDash.iPeriod);	
 			pcSpinner_DashPeriod->set_int_limits(0, 32);
 		GLUI_Spinner *pcSpinner_DashOffset = pcGlui->add_spinner_to_panel(pcPanel_Dash, "Offset", GLUI_SPINNER_FLOAT, &cDash.fOffset);
 			pcSpinner_DashOffset->set_float_limits(-M_PI, +M_PI);
-		// ADD-BY-LEETEN 01/12/2010-BEGIN
 		GLUI_Spinner *pcSpinner_DashThreshold = pcGlui->add_spinner_to_panel(pcPanel_Dash, "Threshold", GLUI_SPINNER_FLOAT, &cDash.fThreshold);
 			pcSpinner_DashThreshold->set_float_limits(-1.0f, +1.0f);
 		pcGlui->add_checkbox_to_panel(pcPanel_Dash, "Is Entropy Dependent?", &cDash.ibIsEntropyDependent);	
-		// ADD-BY-LEETEN 01/12/2010-END
-		/*
-		GLUI_Spinner *pcSpinner_DashThreshold = pcGlui->add_spinner_to_panel(pcPanel_Dash, "Threshold", GLUI_SPINNER_FLOAT, &cDash.fThreshold);
-			pcSpinner_DashThreshold->set_float_limits(-1.0f, +1.0f);
-		pcGlui->add_checkbox_to_panel(pcPanel_Dash, "Is Higher Entropy w/ Longer Line?", &cDash.ibIsHigherEntropyWithLongerLine);	
-		*/
-		// ADD-BY-LEETEN 01/10/2010-END
 	#endif
 
 	#if	RENDER_STREAMLINE_AS_TUBES
@@ -647,9 +477,7 @@ CStreamline::_AddGlui(GLUI* pcGlui)
 
 CStreamline::CStreamline(void)
 {
-	// ADD-BY-LEETEN 01/02/2010-BEGIN
 	uSamplingRate = 1;
-	// ADD-BY-LEETEN 01/02/2010-END
 
 	uNrOfLines = 0;
 	uNrOfVertices = 0;
@@ -659,21 +487,14 @@ CStreamline::CStreamline(void)
 	fOuterWidth = 4.0f;
 	fInnerWidth = 2.0f;
 
-	#if	0	// MOD-BY-LEETEN 01/04/2010-FROM:
-		f4Color.x = 1.0f;
-		f4Color.y = 1.0f;
-		f4Color.z = 1.0f;
-	#else	// MOD-BY-LEETEN 01/04/2010-TO:
 	f4Color.x = 0.1f;
 	f4Color.y = 0.1f;
 	f4Color.z = 0.1f;
-	#endif	// MOD-BY-LEETEN 01/04/2010-END
 	f4Color.w = 0.5f;
 }
 
 CStreamline::~CStreamline(void)
 {
-	// DEL-BY-LEETEN 2013/09/10:	_ComputeDeptpFree_cuda();
 }
 
 // ADD-BY-LEETY 2009/05/15-BEGIN
@@ -847,9 +668,7 @@ CStreamline::_CreateTubes(float fTubeWidth)
 	glEnable(GL_LIGHT0);
 
 	glShadeModel(GL_SMOOTH);
-	// ADD-BY-LEETEN 2009/05/18-BEGIN
 	glFrontFace(GL_CW);
-	// ADD-BY-LEETEN 2009/05/18-END
 
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_NORMAL_ARRAY);
@@ -893,22 +712,8 @@ CStreamline::_RenderLinesInSlab
 	glPushAttrib(GL_CURRENT_BIT);
 	glPushAttrib(GL_LINE_BIT);
 	glPushAttrib(GL_DEPTH_BUFFER_BIT);
-	// ADD-BY-LEETEN 01/10/2010-BEGIN
 	glPushClientAttrib(GL_CLIENT_VERTEX_ARRAY_BIT);
 
-	#if	0	// MOD-BY-LEETEN 01/30/2010-FROM:
-		// ADD-BY-LEETEN 01/10/2010-END
-		glEnableClientState(GL_VERTEX_ARRAY);
-		// ADD-BY-LEETEN 12/31/2009-BEGIN
-		glEnableClientState(GL_NORMAL_ARRAY);
-
-		// ADD-BY-LEETEN 01/10/2010-BEGIN
-							// bind the vertex indices to GL_TEXTURE0
-		glClientActiveTexture(GL_TEXTURE0 + 1);
-		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-		// ADD-BY-LEETEN 01/10/2010-END
-		// ADD-BY-LEETEN 12/31/2009-END
-	#else	// MOD-BY-LEETEN 01/30/2010-TO:
 	glBindBuffer(GL_ARRAY_BUFFER, vidLines);
 
 	glVertexPointer(3, GL_FLOAT, 0, (void*)0);	// &pfCoords[0]);
@@ -920,14 +725,9 @@ CStreamline::_RenderLinesInSlab
 	glClientActiveTexture(GL_TEXTURE0 + 1);
 	glTexCoordPointer(4, GL_INT, 0, (void*)(pfCoords.USize() * sizeof(pfCoords[0]) + pfTangent.USize() * sizeof(pfTangent[0])));
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-	#endif	// MOD-BY-LEETEN 01/30/2010-END
 
 	if( bDrawHalo )
 	{
-		// DEL-BY-LEETEN 01/01/2010-BEGIN
-			// glDepthFunc(GL_LEQUAL);
-		// DEL-BY-LEETEN 01/01/2010-END
-
 		glLineWidth(fOuterWidth);
 		glColor4f(
 			f4Color.x * f4Color.w, 
@@ -940,10 +740,8 @@ CStreamline::_RenderLinesInSlab
 			GL_UNSIGNED_INT, 
 			&pu2SortedLineSegmentIndicesToVertices[2*pi2BaseLengths[iSlab].x]); // &pu2LineSegmentIndicesToVertices[0]);
 	}
-	// ADD-BY-LEETEN 01/01/2010-BEGIN
 	else
 	{
-	// ADD-BY-LEETEN 01/01/2010-END
 	
 	glLineWidth(fInnerWidth);
 	glColor4f(
@@ -957,22 +755,11 @@ CStreamline::_RenderLinesInSlab
 		GL_UNSIGNED_INT, 
 		&pu2SortedLineSegmentIndicesToVertices[2*pi2BaseLengths[iSlab].x]); // &pu2LineSegmentIndicesToVertices[0]);
 
-	// ADD-BY-LEETEN 01/01/2010-BEGIN
 	}
-	// ADD-BY-LEETEN 01/01/2010-END
 
-	// ADD-BY-LEETEN 01/30/2010-BEGIN
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	// ADD-BY-LEETEN 01/30/2010-END
 
-	#if	0	// MOD-BY-LEETEN 01/10/2010-FROM:
-		glDisableClientState(GL_VERTEX_ARRAY);
-		// ADD-BY-LEETEN 12/31/2009-BEGIN
-		glDisableClientState(GL_NORMAL_ARRAY);
-		// ADD-BY-LEETEN 12/31/2009-END
-	#else	// MOD-BY-LEETEN 01/10/2010-TO:
 	glPopClientAttrib();	// glPushClientAttrib(GL_CLIENT_VERTEX_ARRAY_BIT);
-	#endif	// MOD-BY-LEETEN 01/10/2010-END
 
 	glPopAttrib();	// glPushAttrib(GL_DEPTH_BUFFER_BIT);
 	glPopAttrib();	// glPushAttrib(GL_LINE_BIT);
@@ -1066,7 +853,6 @@ CStreamline::_RenderTubes()
 	glPopAttrib();	// glPushAttrib(GL_POLYGON_BIT);
 	glPopAttrib();	// glPushAttrib(GL_LIGHTING_BIT);
 }
-// ADD-BY-LEETY 2009/05/15-END
 
 /*
 

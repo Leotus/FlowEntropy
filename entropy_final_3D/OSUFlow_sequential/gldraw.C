@@ -857,7 +857,6 @@ void compute_streamlines()
 	float* c2=new float[grid_res[0]*grid_res[1]*grid_res[2]];
 	float* c3=new float[grid_res[0]*grid_res[1]*grid_res[2]];
 
-	// ADD-BY-LEETEN 2009/11/10-BEGIN
 	_FlowDiffusionInit(grid_res[0], grid_res[1], grid_res[2]);
 	int get_bin_by_angle(float mytheta, float myphi, int binnum, float* theta, float* phi);
 
@@ -877,7 +876,7 @@ void compute_streamlines()
 		}
 
 	_FlowDiffusionSetAngleMap(&ppiAngleMap[0][0], iNrOfPhis, iNrOfThetas);
-	// ADD-BY-LEETEN 2009/11/10-END
+
 	//initial entropy
 	float error=0.05;
 	float target_entropy=-error*log2(error)-(1-error)*log2(1-error)+error*log2(359);
