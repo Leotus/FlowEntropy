@@ -246,7 +246,7 @@ void combinehalflines_check_stop_entropy(list<vtListSeedTrace*> lines, list<vtLi
 //int get_bin_number_3D(float mytheta, float myphi, float* theta, float* phi);
 float calcEntropy_known_bins( int* bins,int* grid_res, VECTOR3 startpt,VECTOR3 endpt,int binnum);
 float calcEntropy1( float* vectors,int* grid_res, VECTOR3 startpt,VECTOR3 endpt,float* theta, float* phi,int binnum);
-float log2(float v);
+// TEST-DEL:	float log2(float v);
 void UpdateOccupied(list<vtListSeedTrace*> lines, int* occupied,int* grid_res,float r);
 float getImportance(list<vtListSeedTrace*> lines,int* grid_res,float* entropies);
 void calc_entropy( int* bins,int* grid_res, int binnum,float* entropies);

@@ -5,7 +5,9 @@ This is the shader program for direct volume rendering
 */
 
 	// ADD-BY-LEETEN 01/05/2010-BEGIN
-	#include "clip_frag_func.frag.h"
+	// TEST-MOD:	#include "clip_frag_func.frag.h"
+	#include "/clip_frag_func.frag.h"
+	// TEST-MOD-END
 	// ADD-BY-LEETEN 01/05/2010-END
 
 	uniform sampler3D t3dVolume;	// the texture hold the depths of each knots
@@ -36,7 +38,9 @@ This is the shader program for direct volume rendering
 		uniform float fTfDomainMin;
 		uniform float fTfDomainMax;
 	#else	// MOD-BY-LEETEN 01/05/2010-TO:
-	#include "tf1d_frag_func.frag.h"
+	// TEST-MOD:	#include "tf1d_frag_func.frag.h"
+	#include "/tf1d_frag_func.frag.h"
+	// TEST-MOD-END
 	#endif	// MOD-BY-LEETEN 01/05/2010-END
 
 void 
